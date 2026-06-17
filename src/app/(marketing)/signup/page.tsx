@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AuthSplit } from "@/components/app/auth-split";
+import { SignupRolePicker } from "@/components/app/auth/signup-role-picker";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
@@ -38,42 +39,7 @@ export default async function SignupPage({
       >
         <div>
           <Label>I&apos;m joining as</Label>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <label className="cursor-pointer">
-              <input
-                type="radio"
-                name="role"
-                value="professional"
-                defaultChecked={role !== "facility"}
-                className="peer sr-only"
-              />
-              <div className="rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 py-3 text-left transition-all peer-checked:border-[color:var(--color-brand-500)] peer-checked:ring-[3px] peer-checked:ring-[color:var(--color-brand-100)] peer-checked:bg-[color:var(--color-brand-50)]">
-                <p className="text-[13px] font-semibold text-[color:var(--color-ink-900)]">
-                  Professional
-                </p>
-                <p className="text-[11.5px] text-[color:var(--color-ink-500)] mt-0.5">
-                  Find locum, contract or permanent roles
-                </p>
-              </div>
-            </label>
-            <label className="cursor-pointer">
-              <input
-                type="radio"
-                name="role"
-                value="facility"
-                defaultChecked={role === "facility"}
-                className="peer sr-only"
-              />
-              <div className="rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 py-3 text-left transition-all peer-checked:border-[color:var(--color-brand-500)] peer-checked:ring-[3px] peer-checked:ring-[color:var(--color-brand-100)] peer-checked:bg-[color:var(--color-brand-50)]">
-                <p className="text-[13px] font-semibold text-[color:var(--color-ink-900)]">
-                  Facility
-                </p>
-                <p className="text-[11.5px] text-[color:var(--color-ink-500)] mt-0.5">
-                  Post roles, hire verified talent
-                </p>
-              </div>
-            </label>
-          </div>
+          <SignupRolePicker defaultRole={role} />
         </div>
 
         <div className="grid gap-1.5">

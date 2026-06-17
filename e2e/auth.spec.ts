@@ -20,9 +20,7 @@ test.describe("auth workflows", () => {
       page.getByRole("heading", { name: "Create your account" }),
     ).toBeVisible();
 
-    await page.locator('input[name="role"][value="facility"]').check({
-      force: true,
-    });
+    await page.getByRole("button", { name: "Facility" }).click();
     await page.getByLabel("Full name").fill("E2E Facility Lead");
     await page.getByLabel("Work email").fill("e2e.signup@example.com");
     await page.getByLabel("Password").fill("secret1");

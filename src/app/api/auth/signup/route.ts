@@ -41,15 +41,15 @@ export async function POST(req: Request) {
 
 async function handlePOST(req: Request) {
   const formData = await req.formData();
-  const rawEmail = formData.get("email");
+  const payload = readSignupPayload(formData);
   const rateLimit = await checkRateLimit(
     "signup",
-    rateLimitKeyFromRequest(req, typeof rawEmail === "string" ? rawEmail : ""),
+    rateLimitKeyFromRequest(req, payload.email ?? ""),
   );
   if (!rateLimit.success) {
     logger.warn("auth.signup_failed", {
       reason: "rate_limited",
-      email: typeof rawEmail === "string" ? rawEmail : undefined,
+      email: payload.email,
     });
     if (wantsJson(req)) {
       return rateLimitJsonResponse(rateLimit);
@@ -62,23 +62,27 @@ async function handlePOST(req: Request) {
     );
   }
 
-  const parsed = SignupSchema.safeParse({
-    name: formData.get("name"),
-    email: rawEmail,
-    password: formData.get("password"),
-    role: formData.get("role"),
-  });
+  const parsed = SignupSchema.safeParse(payload);
 
   if (!parsed.success) {
+    const invalidFields = [
+      ...new Set(
+        parsed.error.issues.map((issue) => String(issue.path[0] ?? "unknown")),
+      ),
+    ];
     logger.warn("auth.signup_failed", {
       reason: "validation_failed",
-      email: typeof rawEmail === "string" ? rawEmail : undefined,
+      invalidFields,
+      email: payload.email,
     });
     if (wantsJson(req)) {
       return validationErrorResponse(parsed.error);
     }
     const url = new URL("/signup", req.url);
     url.searchParams.set("error", "missing");
+    if (payload.role === "professional" || payload.role === "facility") {
+      url.searchParams.set("role", payload.role);
+    }
     return NextResponse.redirect(url, { status: 303 });
   }
 
@@ -149,4 +153,22 @@ async function handlePOST(req: Request) {
 
 function wantsJson(req: Request): boolean {
   return req.headers.get("accept")?.includes("application/json") ?? false;
+}
+
+function readFormText(formData: FormData, key: string): string | undefined {
+  const value = formData.get(key);
+  if (value === null || typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readSignupPayload(formData: FormData) {
+  return {
+    name: readFormText(formData, "name"),
+    email: readFormText(formData, "email"),
+    password: readFormText(formData, "password"),
+    role: readFormText(formData, "role"),
+  };
 }

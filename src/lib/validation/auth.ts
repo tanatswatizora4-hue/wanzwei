@@ -42,11 +42,14 @@ export const SignupSchema = z.object({
     .string()
     .min(6, "Password must be at least 6 characters")
     .max(128, "Password is too long"),
-  role: z
-    .enum(["professional", "facility"], {
-      message: "Role must be 'professional' or 'facility'",
-    })
-    .default("professional"),
+  role: z.preprocess(
+    (value) => (value === null || value === "" ? undefined : value),
+    z
+      .enum(["professional", "facility"], {
+        message: "Role must be 'professional' or 'facility'",
+      })
+      .default("professional"),
+  ),
 });
 
 export type SignupInput = z.infer<typeof SignupSchema>;

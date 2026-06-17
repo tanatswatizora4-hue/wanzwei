@@ -18,6 +18,17 @@ describe("auth validation", () => {
     });
   });
 
+  it("defaults to professional when role is null (FormData missing value)", () => {
+    const parsed = SignupSchema.parse({
+      name: "Tinashe Moyo",
+      email: "pro@example.com",
+      password: "secret1",
+      role: null,
+    });
+
+    expect(parsed.role).toBe("professional");
+  });
+
   it("rejects admin self-signup", () => {
     const parsed = SignupSchema.safeParse({
       name: "Platform Admin",
