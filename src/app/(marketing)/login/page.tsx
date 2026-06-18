@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AuthSplit } from "@/components/app/auth-split";
+import { AuthDivider } from "@/components/app/auth/auth-divider";
+import { GoogleSignInButton } from "@/components/app/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
@@ -43,11 +45,12 @@ export default async function LoginPage({
         </p>
       </div>
 
-      <form
-        action="/api/auth/login"
-        method="post"
-        className="mt-7 flex flex-col gap-3.5"
-      >
+      <div className="mt-7 flex flex-col gap-3.5">
+        <GoogleSignInButton next={next} />
+
+        <AuthDivider />
+
+        <form action="/api/auth/login" method="post" className="flex flex-col gap-3.5">
         {next ? <input type="hidden" name="next" value={next} /> : null}
 
         <div className="grid gap-1.5">
@@ -81,6 +84,12 @@ export default async function LoginPage({
           />
         </div>
 
+        {error === "google" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            Google sign-in is unavailable. Check Supabase Google OAuth settings
+            and try again.
+          </p>
+        ) : null}
         {error === "auth_callback" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
             Sign-in link expired or is invalid. Request a new verification or
@@ -157,7 +166,8 @@ export default async function LoginPage({
             Create one
           </Link>
         </p>
-      </form>
+        </form>
+      </div>
     </AuthSplit>
   );
 }

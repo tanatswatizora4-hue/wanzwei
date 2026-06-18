@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { AuthSplit } from "@/components/app/auth-split";
+import { AuthDivider } from "@/components/app/auth/auth-divider";
+import { GoogleSignInButton } from "@/components/app/auth/google-sign-in-button";
 import { SignupRolePicker } from "@/components/app/auth/signup-role-picker";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -32,11 +34,12 @@ export default async function SignupPage({
         </p>
       </div>
 
-      <form
-        action="/api/auth/signup"
-        method="post"
-        className="mt-7 flex flex-col gap-3.5"
-      >
+      <div className="mt-7 flex flex-col gap-3.5">
+        <GoogleSignInButton />
+
+        <AuthDivider />
+
+        <form action="/api/auth/signup" method="post" className="flex flex-col gap-3.5">
         <div>
           <Label>I&apos;m joining as</Label>
           <SignupRolePicker defaultRole={role} />
@@ -117,7 +120,8 @@ export default async function SignupPage({
             Sign in
           </Link>
         </p>
-      </form>
+        </form>
+      </div>
     </AuthSplit>
   );
 }

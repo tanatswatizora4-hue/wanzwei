@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { dashboardPathForRole, readRoleFromAuth } from "@/lib/auth/session";
-import { withRouteLogging } from "@/lib/observability/logger";
+import { ensureOAuthUserProvisioned } from "@/lib/auth/oauth-provision";
+import { dashboardPathForRole } from "@/lib/auth/session";
+import { logException, withRouteLogging } from "@/lib/observability/logger";
 import { getServerSupabase } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -26,11 +27,21 @@ async function handleGET(req: Request) {
     return NextResponse.redirect(new URL("/login?error=auth_callback", req.url));
   }
 
+  let role;
+  try {
+    role = await ensureOAuthUserProvisioned(supabase, data.user);
+  } catch (e) {
+    logException("auth", "auth.oauth_provision_failed", e, {
+      userId: data.user.id,
+      email: data.user.email,
+    });
+    await supabase.auth.signOut();
+    return NextResponse.redirect(new URL("/login?error=profile_missing", req.url));
+  }
+
   if (next && next.startsWith("/") && !next.startsWith("//")) {
     return NextResponse.redirect(new URL(next, req.url));
   }
 
-  const role = readRoleFromAuth(data.user);
-  const fallback = role ? dashboardPathForRole(role) : "/login";
-  return NextResponse.redirect(new URL(fallback, req.url));
+  return NextResponse.redirect(new URL(dashboardPathForRole(role), req.url));
 }
