@@ -80,6 +80,17 @@ export default async function SignupPage({
             Please fill in all fields.
           </p>
         ) : null}
+        {error === "server" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            We couldn&apos;t create your account right now. Please try again in a
+            moment.
+          </p>
+        ) : null}
+        {error === "rate_limited" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            Too many signup attempts. Please wait and try again.
+          </p>
+        ) : null}
 
         <Button type="submit" size="lg" className="mt-1 w-full">
           Create account

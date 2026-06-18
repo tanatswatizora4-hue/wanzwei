@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
-import { emailVerificationRedirectUrl } from "@/lib/auth/email";
+import {
+  readSignupPayload,
+  signupFieldFlags,
+} from "@/lib/auth/signup-payload";
 import { dashboardPathForRole } from "@/lib/auth/session";
 import {
   addRateLimitHeaders,
@@ -13,7 +16,7 @@ import {
   logException,
   withRouteLogging,
 } from "@/lib/observability/logger";
-import { deleteAuthUser, setUserRole } from "@/lib/supabase/admin";
+import { createAuthUserWithRole } from "@/lib/supabase/admin";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { SignupSchema } from "@/lib/validation/auth";
 import { validationErrorResponse } from "@/lib/validation/errors";
@@ -26,14 +29,10 @@ const logger = createLogger("auth");
  * Sign up flow:
  *   1. Zod-validate input. Admin role is REJECTED at the schema level
  *      so an attacker can't smuggle `role=admin` in the form payload.
- *   2. `supabase.auth.signUp` creates the auth user (no role attached).
- *   3. `setUserRole` writes the requested role into `app_metadata` via
- *      the service-role admin API. This is the ONLY way role can ever
- *      enter the system. A user-writable role field is never set, because
- *      anything in `user_metadata` is self-writable from the browser.
- *   4. If step 3 fails, hard-delete the auth user so we don't leave a
- *      stranded "no-role" account that can authenticate but can't be
- *      authorised.
+ *   2. `admin.auth.admin.createUser` creates the auth user with role in
+ *      `app_metadata` in one atomic service-role call.
+ *   3. `signInWithPassword` establishes a session when email confirmation
+ *      is disabled; otherwise redirect to /login with a check-email hint.
  */
 export async function POST(req: Request) {
   return withRouteLogging("/api/auth/signup", req, () => handlePOST(req));
@@ -42,6 +41,8 @@ export async function POST(req: Request) {
 async function handlePOST(req: Request) {
   const formData = await req.formData();
   const payload = readSignupPayload(formData);
+  const fields = signupFieldFlags(payload);
+
   const rateLimit = await checkRateLimit(
     "signup",
     rateLimitKeyFromRequest(req, payload.email ?? ""),
@@ -49,6 +50,7 @@ async function handlePOST(req: Request) {
   if (!rateLimit.success) {
     logger.warn("auth.signup_failed", {
       reason: "rate_limited",
+      ...fields,
       email: payload.email,
     });
     if (wantsJson(req)) {
@@ -72,6 +74,7 @@ async function handlePOST(req: Request) {
     ];
     logger.warn("auth.signup_failed", {
       reason: "validation_failed",
+      ...fields,
       invalidFields,
       email: payload.email,
     });
@@ -87,59 +90,65 @@ async function handlePOST(req: Request) {
   }
 
   const { name, email, password, role } = parsed.data;
-  const supabase = await getServerSupabase();
 
-  const { data, error } = await supabase.auth.signUp({
+  logger.info("auth.signup_payload", {
+    ...fields,
+    invalidFields: [] as string[],
     email,
-    password,
-    options: {
-      // User metadata is for display-only fields. NEVER put role here — it's
-      // user-writable via supabase.auth.updateUser({ data: {...} }).
-      data: { name },
-      emailRedirectTo: emailVerificationRedirectUrl(req.url),
-    },
   });
 
-  if (error || !data.user) {
-    logger.warn("auth.signup_failed", {
-      reason: "supabase_signup_failed",
-      email,
-      role,
-      supabaseError: error?.message,
-    });
-    const url = new URL("/signup", req.url);
-    const message = error?.message.toLowerCase() ?? "";
-    const code =
-      message.includes("registered") ||
-      message.includes("already") ||
-      message.includes("exists")
-        ? "exists"
-        : "missing";
-    url.searchParams.set("error", code);
-    return NextResponse.redirect(url, { status: 303 });
-  }
-
   try {
-    await setUserRole(data.user.id, role);
+    await createAuthUserWithRole({ email, password, name, role });
   } catch (e) {
-    // Roll back the half-created user. Without this we'd strand a user
-    // who has auth but no role and can never log in.
-    logException("auth", "auth.signup_role_assignment_failed", e, {
+    const message = e instanceof Error ? e.message : String(e);
+    const lowered = message.toLowerCase();
+    logger.warn("auth.signup_failed", {
+      reason: "create_user_failed",
+      ...fields,
       email,
       role,
-      userId: data.user.id,
+      supabaseError: message,
     });
-    await deleteAuthUser(data.user.id);
+
+    if (wantsJson(req)) {
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
     const url = new URL("/signup", req.url);
-    url.searchParams.set("error", "missing");
+    const code =
+      lowered.includes("registered") ||
+      lowered.includes("already") ||
+      lowered.includes("exists")
+        ? "exists"
+        : lowered.includes("rate limit")
+          ? "rate_limited"
+          : "server";
+    url.searchParams.set("error", code);
+    if (role === "professional" || role === "facility") {
+      url.searchParams.set("role", role);
+    }
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  // If email confirmation is enabled, `signUp` returns a user but no
-  // session — bounce to /login with a "check your email" hint. The role
-  // is already set in app_metadata so first login works as soon as they
-  // verify.
-  if (!data.session) {
+  const supabase = await getServerSupabase();
+  const { data: signInData, error: signInError } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+  if (signInError) {
+    logException("auth", "auth.signup_sign_in_failed", signInError, {
+      email,
+      role,
+    });
+    const url = new URL("/login", req.url);
+    url.searchParams.set("check-email", "1");
+    url.searchParams.set("email", email);
+    return NextResponse.redirect(url, { status: 303 });
+  }
+
+  if (!signInData.session) {
     const url = new URL("/login", req.url);
     url.searchParams.set("check-email", "1");
     url.searchParams.set("email", email);
@@ -153,22 +162,4 @@ async function handlePOST(req: Request) {
 
 function wantsJson(req: Request): boolean {
   return req.headers.get("accept")?.includes("application/json") ?? false;
-}
-
-function readFormText(formData: FormData, key: string): string | undefined {
-  const value = formData.get(key);
-  if (value === null || typeof value !== "string") {
-    return undefined;
-  }
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : undefined;
-}
-
-function readSignupPayload(formData: FormData) {
-  return {
-    name: readFormText(formData, "name"),
-    email: readFormText(formData, "email"),
-    password: readFormText(formData, "password"),
-    role: readFormText(formData, "role"),
-  };
 }

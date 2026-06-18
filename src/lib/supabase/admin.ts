@@ -81,6 +81,35 @@ export async function setUserRole(userId: string, role: Role): Promise<void> {
 }
 
 /**
+ * Create a Supabase Auth user with role in app_metadata (service-role only).
+ * Used by signup so role assignment is atomic — anon signUp + admin getUserById
+ * can fail when publishable-key signups are not immediately visible to the
+ * legacy service-role admin API.
+ */
+export async function createAuthUserWithRole(params: {
+  email: string;
+  password: string;
+  name: string;
+  role: Role;
+}): Promise<{ userId: string }> {
+  const admin = getAdminSupabase();
+
+  const { data, error } = await admin.auth.admin.createUser({
+    email: params.email,
+    password: params.password,
+    email_confirm: false,
+    user_metadata: { name: params.name },
+    app_metadata: { role: params.role },
+  });
+
+  if (error || !data.user) {
+    throw new Error(error?.message ?? "Failed to create auth user");
+  }
+
+  return { userId: data.user.id };
+}
+
+/**
  * Hard-delete a Supabase Auth user. Used to roll back partial signups
  * when role assignment fails — without this, we'd leave an account
  * stranded with no role (and therefore no way to log in).
