@@ -27,6 +27,8 @@ const TARGET_TABLES = [
   "listings",
   "professional_documents",
   "facility_verification_documents",
+  "hpa_registry_imports",
+  "hpa_practitioners",
 ] as const;
 
 const METADATA_SQL = `
@@ -46,7 +48,9 @@ const METADATA_SQL = `
       'courses',
       'listings',
       'professional_documents',
-      'facility_verification_documents'
+      'facility_verification_documents',
+      'hpa_registry_imports',
+      'hpa_practitioners'
     ]::text[]) AS table_name
   )
   SELECT
