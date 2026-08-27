@@ -89,6 +89,17 @@ export default async function SignupPage({
             moment.
           </p>
         ) : null}
+        {error === "profile" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            We couldn&apos;t finish setting up your profile. Please try again. If
+            this continues, contact support.
+          </p>
+        ) : null}
+        {error === "db_not_configured" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            Sign-up is temporarily unavailable. Please try again later.
+          </p>
+        ) : null}
         {error === "rate_limited" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
             Too many signup attempts. Please wait and try again.

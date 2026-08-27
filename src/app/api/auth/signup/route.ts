@@ -4,6 +4,7 @@ import {
   readSignupPayload,
   signupFieldFlags,
 } from "@/lib/auth/signup-payload";
+import { completeEmailSignup } from "@/lib/auth/provision-app-user";
 import { dashboardPathForRole } from "@/lib/auth/session";
 import {
   addRateLimitHeaders,
@@ -16,7 +17,6 @@ import {
   logException,
   withRouteLogging,
 } from "@/lib/observability/logger";
-import { createAuthUserWithRole } from "@/lib/supabase/admin";
 import { getServerSupabase } from "@/lib/supabase/server";
 import { SignupSchema } from "@/lib/validation/auth";
 import { validationErrorResponse } from "@/lib/validation/errors";
@@ -29,8 +29,9 @@ const logger = createLogger("auth");
  * Sign up flow:
  *   1. Zod-validate input. Admin role is REJECTED at the schema level
  *      so an attacker can't smuggle `role=admin` in the form payload.
- *   2. `admin.auth.admin.createUser` creates the auth user with role in
- *      `app_metadata` in one atomic service-role call.
+ *   2. Create the Auth user (role in `app_metadata`) and the matching
+ *      `public.users` row (`id` = Auth UUID). Roll back Auth if the
+ *      profile insert fails.
  *   3. `signInWithPassword` establishes a session when email confirmation
  *      is disabled; otherwise redirect to /login with a check-email hint.
  */
@@ -97,36 +98,32 @@ async function handlePOST(req: Request) {
     email,
   });
 
-  try {
-    await createAuthUserWithRole({ email, password, name, role });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : String(e);
-    const lowered = message.toLowerCase();
+  const provisioned = await completeEmailSignup({
+    email,
+    password,
+    name,
+    role,
+  });
+
+  if (!provisioned.ok) {
     logger.warn("auth.signup_failed", {
-      reason: "create_user_failed",
+      reason: provisioned.code,
       ...fields,
       email,
       role,
-      supabaseError: message,
+      error: provisioned.message,
     });
 
     if (wantsJson(req)) {
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json(
+        { error: provisioned.message, code: provisioned.code },
+        { status: signupErrorStatus(provisioned.code) },
+      );
     }
 
     const url = new URL("/signup", req.url);
-    const code =
-      lowered.includes("registered") ||
-      lowered.includes("already") ||
-      lowered.includes("exists")
-        ? "exists"
-        : lowered.includes("rate limit")
-          ? "rate_limited"
-          : "server";
-    url.searchParams.set("error", code);
-    if (role === "professional" || role === "facility") {
-      url.searchParams.set("role", role);
-    }
+    url.searchParams.set("error", signupErrorQuery(provisioned.code));
+    url.searchParams.set("role", role);
     return NextResponse.redirect(url, { status: 303 });
   }
 
@@ -162,4 +159,42 @@ async function handlePOST(req: Request) {
 
 function wantsJson(req: Request): boolean {
   return req.headers.get("accept")?.includes("application/json") ?? false;
+}
+
+function signupErrorStatus(
+  code: Exclude<
+    Awaited<ReturnType<typeof completeEmailSignup>>,
+    { ok: true }
+  >["code"],
+): number {
+  switch (code) {
+    case "exists":
+      return 409;
+    case "db_not_configured":
+      return 503;
+    case "profile_create_failed":
+      return 500;
+    case "create_user_failed":
+    default:
+      return 400;
+  }
+}
+
+function signupErrorQuery(
+  code: Exclude<
+    Awaited<ReturnType<typeof completeEmailSignup>>,
+    { ok: true }
+  >["code"],
+): string {
+  switch (code) {
+    case "exists":
+      return "exists";
+    case "db_not_configured":
+      return "db_not_configured";
+    case "profile_create_failed":
+      return "profile";
+    case "create_user_failed":
+    default:
+      return "server";
+  }
 }

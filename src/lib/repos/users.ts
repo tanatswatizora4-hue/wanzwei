@@ -30,8 +30,8 @@ export function toUser(row: DbUser): User {
  *
  * Used as the bridge between Supabase Auth (which identifies users by
  * UUID in `auth.users`) and our app tables (which reference users by
- * `public.users.id`). For PR-4 the two tables are not yet linked, so
- * we lookup-by-email on every read.
+ * `public.users.id`). New email/OAuth signups write `public.users.id` =
+ * Auth user id; reads still go by email until an `auth.users` FK lands.
  */
 export async function findUserByEmail(email: string): Promise<User | null> {
   if (!hasDbConfig()) return null;
