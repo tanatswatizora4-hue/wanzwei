@@ -1,7 +1,8 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
+import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, users } from "@/lib/db/schema";
 import { withRepositoryLogging } from "@/lib/observability/logger";
@@ -37,15 +38,16 @@ export function toUser(row: DbUser): User {
  */
 export async function findUserByEmail(email: string): Promise<User | null> {
   if (!hasDbConfig()) return null;
+  const normalized = normalizeEmailAddress(email);
   return withRepositoryLogging("users", "findUserByEmail", async () => {
     const db = getDb();
     const rows = await db
       .select()
       .from(users)
-      .where(eq(users.email, email))
+      .where(sql`lower(${users.email}) = ${normalized}`)
       .limit(1);
     return rows[0] ? toUser(rows[0]) : null;
-  }, { email });
+  }, { email: normalized });
 }
 
 export async function listUsers(limit = 100): Promise<User[]> {
@@ -92,11 +94,15 @@ export async function findUserById(id: string): Promise<User | null> {
 
 export async function createUser(user: NewDbUser): Promise<User | null> {
   if (!hasDbConfig()) return null;
+  const normalized = {
+    ...user,
+    email: normalizeEmailAddress(user.email),
+  };
   return withRepositoryLogging("users", "createUser", async () => {
     const db = getDb();
-    const rows = await db.insert(users).values(user).returning();
+    const rows = await db.insert(users).values(normalized).returning();
     return rows[0] ? toUser(rows[0]) : null;
-  }, { email: user.email, role: user.role });
+  }, { email: normalized.email, role: user.role });
 }
 
 export async function updateUser(

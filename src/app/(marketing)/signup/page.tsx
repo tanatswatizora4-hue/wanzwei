@@ -3,6 +3,7 @@ import { AuthSplit } from "@/components/app/auth-split";
 import { AuthDivider } from "@/components/app/auth/auth-divider";
 import { GoogleSignInButton } from "@/components/app/auth/google-sign-in-button";
 import { SignupRolePicker } from "@/components/app/auth/signup-role-picker";
+import { ResendConfirmationForm } from "@/components/app/auth/resend-confirmation-form";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
@@ -13,6 +14,7 @@ export const metadata = {
 type SearchParams = Promise<{
   role?: string;
   error?: string;
+  email?: string;
 }>;
 
 export default async function SignupPage({
@@ -20,7 +22,7 @@ export default async function SignupPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { role: roleParam, error } = await searchParams;
+  const { role: roleParam, error, email } = await searchParams;
   const role = roleParam === "facility" ? "facility" : "professional";
 
   return (
@@ -38,6 +40,16 @@ export default async function SignupPage({
         <GoogleSignInButton />
 
         <AuthDivider />
+
+        {error === "incomplete_signup" ? (
+          <div className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            <p>
+              We couldn&apos;t finish creating this account. If you already started
+              signup, check your email for a confirmation link or contact support.
+            </p>
+            <ResendConfirmationForm email={email} />
+          </div>
+        ) : null}
 
         <form action="/api/auth/signup" method="post" className="flex flex-col gap-3.5">
         <div>
@@ -57,6 +69,7 @@ export default async function SignupPage({
             name="email"
             type="email"
             placeholder="you@hospital.co.zw"
+            defaultValue={email}
             required
           />
         </div>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AuthSplit } from "@/components/app/auth-split";
 import { AuthDivider } from "@/components/app/auth/auth-divider";
 import { GoogleSignInButton } from "@/components/app/auth/google-sign-in-button";
+import { ResendConfirmationForm } from "@/components/app/auth/resend-confirmation-form";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 
@@ -49,6 +50,19 @@ export default async function LoginPage({
         <GoogleSignInButton next={next} />
 
         <AuthDivider />
+
+        {error === "unconfirmed" ? (
+          <div className="rounded-[var(--radius-sm)] bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">
+            <p>You need to confirm your email before signing in.</p>
+            <ResendConfirmationForm email={email} />
+          </div>
+        ) : null}
+        {checkEmail === "1" ? (
+          <div className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
+            <p>Check your email to verify your account before signing in.</p>
+            <ResendConfirmationForm email={email} />
+          </div>
+        ) : null}
 
         <form action="/api/auth/login" method="post" className="flex flex-col gap-3.5">
         {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -121,11 +135,6 @@ export default async function LoginPage({
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
             We couldn&apos;t sign you in. Please try again. If this keeps
             happening, contact support.
-          </p>
-        ) : null}
-        {checkEmail === "1" ? (
-          <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
-            Check your email to verify your account before signing in.
           </p>
         ) : null}
         {resetEmail === "1" ? (

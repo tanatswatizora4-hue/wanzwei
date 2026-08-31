@@ -13,7 +13,7 @@ export const SUPABASE_AUTH_EMAIL_SETUP = [
 ] as const;
 
 export function emailVerificationRedirectUrl(requestUrl: string): string {
-  return buildAuthCallbackUrl(requestUrl, "/login?verified=1");
+  return new URL("/auth/callback", requestUrl).toString();
 }
 
 export function passwordResetRedirectUrl(requestUrl: string): string {
@@ -48,7 +48,7 @@ export async function resendVerificationEmail(
   const supabase = await getServerSupabase();
   const { error } = await supabase.auth.resend({
     type: "signup",
-    email,
+    email: email.trim().toLowerCase(),
     options: {
       emailRedirectTo: emailVerificationRedirectUrl(requestUrl),
     },

@@ -14,6 +14,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
+    "db:ping": "tsx --env-file=.env.local scripts/check-db-connection.ts",
+    "auth:diagnose": "tsx --env-file=.env.local --tsconfig scripts/tsconfig.diagnose.json scripts/check-auth-provisioning.ts",
     "auth:bootstrap": "tsx --env-file=.env.local scripts/bootstrap-demo-auth.ts",
     "db:seed": "tsx --env-file=.env.local scripts/seed-staging-data.ts",
     "smoke:test": "tsx --env-file=.env.local scripts/smoke-test-db.ts",

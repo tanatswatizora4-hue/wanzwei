@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["src/*"],
+      "server-only": ["test/server-only.ts"]
+    }
+  },
+  "include": [
+    "./check-auth-provisioning.ts",
+    "../src/lib/db/**/*.ts",
+    "../src/lib/repos/users.ts",
+    "../src/lib/supabase/admin.ts",
+    "../src/lib/observability/**/*.ts",
+    "../src/lib/types.ts",
+    "../test/server-only.ts"
+  ]
+}

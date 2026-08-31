@@ -9,6 +9,7 @@ import {
 } from "./provision-app-user";
 import type { NewDbUser } from "@/lib/db/schema";
 import type { User } from "@/lib/types";
+import type { ExistingAuthUser } from "@/lib/supabase/admin";
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -27,7 +28,8 @@ function memoryStore(seed: User[] = []): AppUserStore & { rows: User[] } {
     rows,
     hasDbConfig: () => true,
     findUserByEmail: async (email) =>
-      rows.find((row) => row.email === email) ?? null,
+      rows.find((row) => row.email.toLowerCase() === email.toLowerCase()) ??
+      null,
     createUser: async (user: NewDbUser) => {
       const created = makeUser({
         id: user.id ?? "generated-id",
@@ -51,7 +53,8 @@ function signupDeps(
     createAuthUserWithRole: async () => ({
       userId: "11111111-1111-4111-8111-111111111111",
     }),
-    deleteAuthUser: async () => undefined,
+    deleteAuthUser: async () => true,
+    findAuthUserByEmail: async () => null,
     ...overrides,
   };
 }
@@ -86,6 +89,32 @@ describe("ensureAppUserProfile", () => {
       verified: false,
     });
     expect(store.rows).toHaveLength(1);
+  });
+
+  it("stores a normalized email so mixed case cannot split identities", async () => {
+    const store = memoryStore();
+    const profile = await ensureAppUserProfile(
+      {
+        authUserId: "11111111-1111-4111-8111-111111111111",
+        email: "Pro@Example.com",
+        name: "Tinashe Moyo",
+        role: "professional",
+      },
+      store,
+    );
+
+    expect(profile.email).toBe("pro@example.com");
+    await expect(
+      ensureAppUserProfile(
+        {
+          authUserId: "22222222-2222-4222-8222-222222222222",
+          email: "PRO@example.com",
+          name: "Someone Else",
+          role: "professional",
+        },
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "email_taken" });
   });
 
   it("reuses an existing profile when the Auth id already matches", async () => {
@@ -214,7 +243,7 @@ describe("completeEmailSignup", () => {
     role: "professional" as const,
   };
 
-  it("creates Auth then a public.users row with the same id", async () => {
+  it("creates Auth then a public.users row with the same id, unverified", async () => {
     const store = memoryStore();
     const authIds: string[] = [];
     const result = await completeEmailSignup(
@@ -233,6 +262,8 @@ describe("completeEmailSignup", () => {
     expect(result).toEqual({
       ok: true,
       userId: "11111111-1111-4111-8111-111111111111",
+      recovered: false,
+      emailConfirmed: false,
     });
     expect(store.rows[0]).toMatchObject({
       id: "11111111-1111-4111-8111-111111111111",
@@ -272,7 +303,79 @@ describe("completeEmailSignup", () => {
     expect(authCreated).toBe(0);
   });
 
-  it("maps an already-registered Auth error to exists", async () => {
+  it("treats mixed-case repeats of a profiled email as exists", async () => {
+    const store = memoryStore([makeUser({ email: "pro@example.com" })]);
+    let authCreated = 0;
+    const result = await completeEmailSignup(
+      { ...input, email: "Pro@Example.com" },
+      signupDeps(store, {
+        createAuthUserWithRole: async () => {
+          authCreated += 1;
+          return { userId: "new-auth-id" };
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "exists" });
+    expect(authCreated).toBe(0);
+  });
+
+  it("does not treat a schema-missing Auth error as exists", async () => {
+    const store = memoryStore();
+    const result = await completeEmailSignup(
+      input,
+      signupDeps(store, {
+        createAuthUserWithRole: async () => {
+          throw new Error('relation "auth.users" does not exist');
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "create_user_failed" });
+    expect(store.rows).toHaveLength(0);
+  });
+
+  it("completes a legacy Auth-without-profile user onto the same UUID", async () => {
+    const store = memoryStore();
+    let authCreated = 0;
+    const existingAuth: ExistingAuthUser = {
+      userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      email: "pro@example.com",
+      role: "professional",
+      name: "Legacy Name",
+      emailConfirmed: false,
+    };
+    const result = await completeEmailSignup(
+      input,
+      signupDeps(store, {
+        createAuthUserWithRole: async () => {
+          authCreated += 1;
+          throw Object.assign(new Error("User already registered"), {
+            code: "email_exists",
+          });
+        },
+        findAuthUserByEmail: async () => existingAuth,
+      }),
+    );
+
+    expect(authCreated).toBe(1);
+    expect(result).toEqual({
+      ok: true,
+      userId: existingAuth.userId,
+      recovered: true,
+      emailConfirmed: false,
+    });
+    expect(store.rows).toHaveLength(1);
+    expect(store.rows[0]).toMatchObject({
+      id: existingAuth.userId,
+      email: "pro@example.com",
+      role: "professional",
+      name: "Legacy Name",
+      verified: false,
+    });
+  });
+
+  it("does not mint admin or invent a profile when the Auth role is not public", async () => {
     const store = memoryStore();
     const result = await completeEmailSignup(
       input,
@@ -280,11 +383,61 @@ describe("completeEmailSignup", () => {
         createAuthUserWithRole: async () => {
           throw new Error("User already registered");
         },
+        findAuthUserByEmail: async () => ({
+          userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          email: "pro@example.com",
+          role: "admin",
+          name: "Platform Admin",
+          emailConfirmed: true,
+        }),
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "incomplete_signup" });
+    expect(store.rows).toHaveLength(0);
+  });
+
+  it("returns incomplete_signup when Auth is duplicate but cannot be loaded safely", async () => {
+    const store = memoryStore();
+    const result = await completeEmailSignup(
+      input,
+      signupDeps(store, {
+        createAuthUserWithRole: async () => {
+          throw new Error("User already registered");
+        },
+        findAuthUserByEmail: async () => null,
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "incomplete_signup" });
+    expect(store.rows).toHaveLength(0);
+  });
+
+  it("keeps email_taken when recovering would overwrite another profile", async () => {
+    const store = memoryStore([makeUser({ id: "other-user" })]);
+    let lookups = 0;
+    store.findUserByEmail = async () => {
+      lookups += 1;
+      return lookups === 1 ? null : makeUser({ id: "other-user" });
+    };
+
+    const result = await completeEmailSignup(
+      input,
+      signupDeps(store, {
+        createAuthUserWithRole: async () => {
+          throw new Error("User already registered");
+        },
+        findAuthUserByEmail: async () => ({
+          userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          email: "pro@example.com",
+          role: "professional",
+          name: "Legacy Name",
+          emailConfirmed: false,
+        }),
       }),
     );
 
     expect(result).toMatchObject({ ok: false, code: "exists" });
-    expect(store.rows).toHaveLength(0);
   });
 
   it("rolls back the Auth user when profile creation fails", async () => {
@@ -299,6 +452,7 @@ describe("completeEmailSignup", () => {
       signupDeps(store, {
         deleteAuthUser: async (userId) => {
           deleted.push(userId);
+          return true;
         },
       }),
     );
@@ -311,6 +465,25 @@ describe("completeEmailSignup", () => {
     expect(deleted).toEqual(["11111111-1111-4111-8111-111111111111"]);
   });
 
+  it("does not claim success when Auth rollback also fails", async () => {
+    const store = memoryStore();
+    store.createUser = async () => {
+      throw new Error("insert failed");
+    };
+
+    const result = await completeEmailSignup(
+      input,
+      signupDeps(store, {
+        deleteAuthUser: async () => false,
+      }),
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "profile_create_failed",
+    });
+  });
+
   it("rolls back Auth and returns exists when a raced profile has a different id", async () => {
     const deleted: string[] = [];
     let lookups = 0;
@@ -318,9 +491,6 @@ describe("completeEmailSignup", () => {
       hasDbConfig: () => true,
       findUserByEmail: async () => {
         lookups += 1;
-        // 1: completeEmailSignup pre-check
-        // 2: ensureAppUserProfile pre-insert check
-        // 3: unique-violation re-read
         return lookups < 3 ? null : makeUser({ id: "other-user" });
       },
       createUser: async () => {
@@ -331,7 +501,9 @@ describe("completeEmailSignup", () => {
       }),
       deleteAuthUser: async (userId) => {
         deleted.push(userId);
+        return true;
       },
+      findAuthUserByEmail: async () => null,
     });
 
     expect(result).toMatchObject({ ok: false, code: "exists" });
@@ -350,7 +522,8 @@ describe("completeEmailSignup", () => {
         authCreated += 1;
         return { userId: "should-not-run" };
       },
-      deleteAuthUser: async () => undefined,
+      deleteAuthUser: async () => true,
+      findAuthUserByEmail: async () => null,
     });
 
     expect(result).toMatchObject({ ok: false, code: "db_not_configured" });

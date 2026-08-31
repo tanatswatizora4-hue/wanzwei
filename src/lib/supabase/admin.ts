@@ -2,8 +2,17 @@ import "server-only";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { createLogger } from "@/lib/observability/logger";
+import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
+import { createLogger, safeErrorDetail } from "@/lib/observability/logger";
 import type { Role } from "@/lib/types";
+
+export type ExistingAuthUser = {
+  userId: string;
+  email: string;
+  role: Role | null;
+  name: string;
+  emailConfirmed: boolean;
+};
 
 /**
  * Service-role Supabase client.
@@ -97,7 +106,7 @@ export async function createAuthUserWithRole(params: {
   const admin = getAdminSupabase();
 
   const { data, error } = await admin.auth.admin.createUser({
-    email: params.email,
+    email: normalizeEmailAddress(params.email),
     password: params.password,
     email_confirm: false,
     user_metadata: { name: params.name },
@@ -105,24 +114,90 @@ export async function createAuthUserWithRole(params: {
   });
 
   if (error || !data.user) {
-    throw new Error(error?.message ?? "Failed to create auth user");
+    const thrown = new Error(error?.message ?? "Failed to create auth user");
+    if (error?.code) {
+      (thrown as Error & { code: string }).code = error.code;
+    }
+    if (typeof error?.status === "number") {
+      (thrown as Error & { status: number }).status = error.status;
+    }
+    throw thrown;
   }
 
   return { userId: data.user.id };
 }
 
+export async function findAuthUserByEmail(
+  email: string,
+): Promise<ExistingAuthUser | null> {
+  const admin = getAdminSupabase();
+  const needle = normalizeEmailAddress(email);
+
+  for (let page = 1; page <= 50; page += 1) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error) {
+      throw new Error(safeErrorDetail(error));
+    }
+    const batch = data.users ?? [];
+    const match = batch.find(
+      (user) =>
+        typeof user.email === "string" &&
+        normalizeEmailAddress(user.email) === needle,
+    );
+    if (match) {
+      const roleCandidate = (match.app_metadata as { role?: unknown } | undefined)
+        ?.role;
+      const role =
+        roleCandidate === "professional" ||
+        roleCandidate === "facility" ||
+        roleCandidate === "admin"
+          ? roleCandidate
+          : null;
+      return {
+        userId: match.id,
+        email: needle,
+        role,
+        name: explicitAuthDisplayName(match.user_metadata),
+        emailConfirmed: Boolean(match.email_confirmed_at),
+      };
+    }
+    if (batch.length < 200) break;
+  }
+
+  return null;
+}
+
+export function isPublicSignupRole(
+  role: Role | null | undefined,
+): role is Exclude<Role, "admin"> {
+  return role === "professional" || role === "facility";
+}
+
+function explicitAuthDisplayName(userMetadata: unknown): string {
+  const metadata = userMetadata as
+    | { full_name?: unknown; name?: unknown }
+    | undefined;
+  const fullName = metadata?.full_name ?? metadata?.name;
+  if (typeof fullName === "string" && fullName.trim().length > 0) {
+    return fullName.trim();
+  }
+  return "";
+}
+
 /**
  * Hard-delete a Supabase Auth user. Used to roll back partial signups
- * when role assignment fails — without this, we'd leave an account
- * stranded with no role (and therefore no way to log in).
- *
- * Best-effort: errors are logged, not thrown, because the caller is
- * already in an error path.
+ * when profile creation fails. Returns false when Auth deletion fails so
+ * the caller can log a critical error without claiming signup succeeded.
  */
-export async function deleteAuthUser(userId: string): Promise<void> {
+export async function deleteAuthUser(userId: string): Promise<boolean> {
   const admin = getAdminSupabase();
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) {
     logger.error("auth.rollback_delete_failed", error, { userId });
+    return false;
   }
+  return true;
 }

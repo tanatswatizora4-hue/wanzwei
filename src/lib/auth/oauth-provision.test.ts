@@ -31,7 +31,8 @@ function memoryStore(seed: User[] = []): AppUserStore & {
     created,
     hasDbConfig: () => true,
     findUserByEmail: async (email) =>
-      rows.find((row) => row.email === email) ?? null,
+      rows.find((row) => row.email.toLowerCase() === email.toLowerCase()) ??
+      null,
     createUser: async (user: NewDbUser) => {
       created.push(user);
       const profile = makeUser({
@@ -127,6 +128,25 @@ describe("ensureOAuthUserProvisioned", () => {
     expect(persistCalls).toBe(0);
     expect(store.created).toHaveLength(0);
     expect(store.rows[0]).toEqual(existing);
+  });
+
+  it("reuses the existing profile after email confirmation instead of creating another", async () => {
+    const existing = makeUser({ verified: false });
+    const store = memoryStore([existing]);
+    const role = await ensureOAuthUserProvisioned(
+      googleUser({ app_metadata: { role: "professional" } }),
+      {
+        store,
+        persistAppRole: async () => {
+          throw new Error("should not persist when JWT already matches");
+        },
+      },
+    );
+
+    expect(role).toBe("professional");
+    expect(store.created).toHaveLength(0);
+    expect(store.rows).toHaveLength(1);
+    expect(store.rows[0]?.verified).toBe(false);
   });
 
   it("syncs a stale JWT to the existing public.users role", async () => {

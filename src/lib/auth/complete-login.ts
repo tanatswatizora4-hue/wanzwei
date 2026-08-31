@@ -3,6 +3,7 @@ import "server-only";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 
 import { displayNameFromAuthUser } from "@/lib/auth/display-name";
+import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import {
   AppUserProvisionError,
   ensureAppUserProfile,
@@ -148,7 +149,9 @@ async function runCompleteLoginAfterAuth(
 ): Promise<LoginAfterAuthResult> {
   const missingRoleBehavior = options.missingRoleBehavior ?? "reject";
   const jwtRole = readRoleFromAuth(authUser);
-  const email = authUser.email?.trim();
+  const email = authUser.email
+    ? normalizeEmailAddress(authUser.email)
+    : "";
 
   logger.info("auth.complete_login_stage", {
     stage: "start",

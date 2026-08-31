@@ -46,7 +46,8 @@ function memoryStore(seed: User[] = []): AppUserStore & {
     created,
     hasDbConfig: () => true,
     findUserByEmail: async (email) =>
-      rows.find((row) => row.email === email) ?? null,
+      rows.find((row) => row.email.toLowerCase() === email.toLowerCase()) ??
+      null,
     createUser: async (user: NewDbUser) => {
       created.push(user);
       const profile = makeUser({
@@ -65,6 +66,20 @@ function memoryStore(seed: User[] = []): AppUserStore & {
 describe("completeLoginAfterAuth", () => {
   it("continues login when a matching public.users profile already exists", async () => {
     const existing = makeUser();
+    const store = memoryStore([existing]);
+    const result = await completeLoginAfterAuth(authUser(), store);
+
+    expect(result).toEqual({
+      ok: true,
+      role: "professional",
+      profile: existing,
+      repaired: false,
+    });
+    expect(store.created).toHaveLength(0);
+  });
+
+  it("matches an existing profile when the Auth email differs only by case", async () => {
+    const existing = makeUser({ email: "Pro@Example.com" });
     const store = memoryStore([existing]);
     const result = await completeLoginAfterAuth(authUser(), store);
 

@@ -1,13 +1,21 @@
 import "server-only";
 
+import { isDuplicateAuthUserError } from "@/lib/auth/auth-errors";
+import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import { hasDbConfig } from "@/lib/db/client";
 import type { NewDbUser } from "@/lib/db/schema";
 import { createUser, findUserByEmail } from "@/lib/repos/users";
+import { createLogger, safeErrorDetail } from "@/lib/observability/logger";
 import {
   createAuthUserWithRole,
   deleteAuthUser,
+  findAuthUserByEmail,
+  isPublicSignupRole,
+  type ExistingAuthUser,
 } from "@/lib/supabase/admin";
 import type { Role, User } from "@/lib/types";
+
+const logger = createLogger("auth");
 
 export type AppUserProvisionCode =
   | "db_not_configured"
@@ -25,14 +33,15 @@ export class AppUserProvisionError extends Error {
 }
 
 export type EmailSignupResult =
-  | { ok: true; userId: string }
+  | { ok: true; userId: string; recovered: boolean; emailConfirmed: boolean }
   | {
       ok: false;
       code:
         | "exists"
         | "db_not_configured"
         | "profile_create_failed"
-        | "create_user_failed";
+        | "create_user_failed"
+        | "incomplete_signup";
       message: string;
     };
 
@@ -49,7 +58,8 @@ export type EmailSignupDeps = AppUserStore & {
     name: string;
     role: Role;
   }) => Promise<{ userId: string }>;
-  deleteAuthUser: (userId: string) => Promise<void>;
+  deleteAuthUser: (userId: string) => Promise<boolean>;
+  findAuthUserByEmail: (email: string) => Promise<ExistingAuthUser | null>;
 };
 
 const defaultStore: AppUserStore = {
@@ -62,6 +72,7 @@ const defaultSignupDeps: EmailSignupDeps = {
   ...defaultStore,
   createAuthUserWithRole,
   deleteAuthUser,
+  findAuthUserByEmail,
 };
 
 /**
@@ -100,7 +111,8 @@ export async function ensureAppUserProfile(
     );
   }
 
-  const existing = await store.findUserByEmail(input.email);
+  const email = normalizeEmailAddress(input.email);
+  const existing = await store.findUserByEmail(email);
   if (existing) {
     if (existing.id === input.authUserId) {
       return existing;
@@ -114,7 +126,7 @@ export async function ensureAppUserProfile(
   try {
     const created = await store.createUser({
       id: input.authUserId,
-      email: input.email,
+      email,
       name: input.name,
       role: input.role,
       verified: false,
@@ -129,7 +141,7 @@ export async function ensureAppUserProfile(
   } catch (error) {
     if (error instanceof AppUserProvisionError) throw error;
     if (isUniqueViolation(error)) {
-      const raced = await store.findUserByEmail(input.email);
+      const raced = await store.findUserByEmail(email);
       if (raced?.id === input.authUserId) return raced;
       throw new AppUserProvisionError(
         "email_taken",
@@ -143,15 +155,6 @@ export async function ensureAppUserProfile(
         : "Failed to create public.users profile.",
     );
   }
-}
-
-function isAlreadyRegisteredMessage(message: string): boolean {
-  const lowered = message.toLowerCase();
-  return (
-    lowered.includes("registered") ||
-    lowered.includes("already") ||
-    lowered.includes("exists")
-  );
 }
 
 /**
@@ -176,7 +179,8 @@ export async function completeEmailSignup(
     };
   }
 
-  const existing = await deps.findUserByEmail(input.email);
+  const email = normalizeEmailAddress(input.email);
+  const existing = await deps.findUserByEmail(email);
   if (existing) {
     return {
       ok: false,
@@ -188,25 +192,26 @@ export async function completeEmailSignup(
   let userId: string;
   try {
     const created = await deps.createAuthUserWithRole({
-      email: input.email,
+      email,
       password: input.password,
       name: input.name,
       role: input.role,
     });
     userId = created.userId;
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (isAlreadyRegisteredMessage(message)) {
-      return {
-        ok: false,
-        code: "exists",
-        message: "An account with that email already exists.",
-      };
+    if (isDuplicateAuthUserError(error)) {
+      return recoverIncompleteSignup(
+        {
+          email,
+          name: input.name,
+        },
+        deps,
+      );
     }
     return {
       ok: false,
       code: "create_user_failed",
-      message,
+      message: error instanceof Error ? error.message : String(error),
     };
   }
 
@@ -214,14 +219,20 @@ export async function completeEmailSignup(
     await ensureAppUserProfile(
       {
         authUserId: userId,
-        email: input.email,
+        email,
         name: input.name,
         role: input.role,
       },
       deps,
     );
   } catch (error) {
-    await deps.deleteAuthUser(userId);
+    const rolledBack = await deps.deleteAuthUser(userId);
+    if (!rolledBack) {
+      logger.error("auth.signup_rollback_failed", error, {
+        userId,
+        stage: "profile_create_failed",
+      });
+    }
     if (
       error instanceof AppUserProvisionError &&
       error.code === "email_taken"
@@ -242,5 +253,89 @@ export async function completeEmailSignup(
     };
   }
 
-  return { ok: true, userId };
+  return {
+    ok: true,
+    userId,
+    recovered: false,
+    emailConfirmed: false,
+  };
+}
+
+async function recoverIncompleteSignup(
+  input: {
+    email: string;
+    name: string;
+  },
+  deps: EmailSignupDeps,
+): Promise<EmailSignupResult> {
+  let existingAuth: ExistingAuthUser | null;
+  try {
+    existingAuth = await deps.findAuthUserByEmail(input.email);
+  } catch (error) {
+    logger.error("auth.incomplete_signup_lookup_failed", error, {
+      detail: safeErrorDetail(error),
+    });
+    return {
+      ok: false,
+      code: "incomplete_signup",
+      message:
+        "This signup could not be finished. Request a confirmation email or contact support.",
+    };
+  }
+
+  if (!existingAuth) {
+    return {
+      ok: false,
+      code: "incomplete_signup",
+      message:
+        "This signup could not be finished. Request a confirmation email or contact support.",
+    };
+  }
+
+  if (!isPublicSignupRole(existingAuth.role)) {
+    return {
+      ok: false,
+      code: "incomplete_signup",
+      message:
+        "This signup could not be finished. Request a confirmation email or contact support.",
+    };
+  }
+
+  const profileName = existingAuth.name.trim() || input.name;
+
+  try {
+    await ensureAppUserProfile(
+      {
+        authUserId: existingAuth.userId,
+        email: input.email,
+        name: profileName,
+        role: existingAuth.role,
+      },
+      deps,
+    );
+  } catch (error) {
+    if (
+      error instanceof AppUserProvisionError &&
+      error.code === "email_taken"
+    ) {
+      return {
+        ok: false,
+        code: "exists",
+        message: error.message,
+      };
+    }
+    return {
+      ok: false,
+      code: "incomplete_signup",
+      message:
+        "This signup could not be finished. Request a confirmation email or contact support.",
+    };
+  }
+
+  return {
+    ok: true,
+    userId: existingAuth.userId,
+    recovered: true,
+    emailConfirmed: existingAuth.emailConfirmed,
+  };
 }

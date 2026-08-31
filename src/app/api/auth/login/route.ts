@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { isEmailNotConfirmedError } from "@/lib/auth/auth-errors";
 import { completeLoginAfterAuth } from "@/lib/auth/complete-login";
 import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
 import { dashboardPathForRole } from "@/lib/auth/session";
@@ -87,13 +88,21 @@ async function handlePOST(req: Request) {
     const isNetworkFailure =
       supabaseMessage === "fetch failed" ||
       /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network/i.test(supabaseMessage);
+    const unconfirmed = isEmailNotConfirmedError(error);
     logger.warn("auth.login_failed", {
-      reason: isNetworkFailure ? "supabase_unreachable" : "invalid_credentials",
+      reason: isNetworkFailure
+        ? "supabase_unreachable"
+        : unconfirmed
+          ? "email_not_confirmed"
+          : "invalid_credentials",
       email,
       supabaseError: supabaseMessage || undefined,
     });
     const url = new URL("/login", req.url);
-    url.searchParams.set("error", isNetworkFailure ? "unavailable" : "invalid");
+    url.searchParams.set(
+      "error",
+      isNetworkFailure ? "unavailable" : unconfirmed ? "unconfirmed" : "invalid",
+    );
     url.searchParams.set("email", email);
     return NextResponse.redirect(url, { status: 303 });
   }

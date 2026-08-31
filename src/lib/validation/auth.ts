@@ -1,15 +1,20 @@
 import { z } from "zod";
 
+import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
+
+const EmailSchema = z
+  .string()
+  .trim()
+  .min(1, "Email is required")
+  .email("Invalid email")
+  .transform((value) => normalizeEmailAddress(value));
+
 // ---------------------------------------------------------------------
 // Login
 // ---------------------------------------------------------------------
 
 export const LoginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .email("Invalid email"),
+  email: EmailSchema,
   password: z.string().min(1, "Password is required"),
   next: z
     .string()
@@ -33,11 +38,7 @@ export type LoginInput = z.infer<typeof LoginSchema>;
 
 export const SignupSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .email("Invalid email"),
+  email: EmailSchema,
   password: z
     .string()
     .min(6, "Password must be at least 6 characters")
@@ -55,11 +56,7 @@ export const SignupSchema = z.object({
 export type SignupInput = z.infer<typeof SignupSchema>;
 
 export const AuthEmailRequestSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email is required")
-    .email("Invalid email"),
+  email: EmailSchema,
 });
 
 export const PasswordResetRequestSchema = AuthEmailRequestSchema;

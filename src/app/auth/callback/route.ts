@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { parseCallbackSessionParams, postAuthNextPath } from "@/lib/auth/callback-params";
 import { ensureOAuthUserProvisioned, createOAuthPersistAppRole } from "@/lib/auth/oauth-provision";
 import { dashboardPathForRole } from "@/lib/auth/session";
 import { logException, withRouteLogging } from "@/lib/observability/logger";
@@ -13,37 +14,40 @@ export async function GET(req: Request) {
 
 async function handleGET(req: Request) {
   const url = new URL(req.url);
-  const code = url.searchParams.get("code");
   const next = url.searchParams.get("next");
+  const sessionParams = parseCallbackSessionParams(url);
 
-  if (!code) {
+  if (sessionParams.kind === "none") {
     return NextResponse.redirect(new URL("/login?error=auth_callback", req.url));
   }
 
   const supabase = await getServerSupabase();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+  const sessionResult =
+    sessionParams.kind === "otp"
+      ? await supabase.auth.verifyOtp({
+          type: sessionParams.type,
+          token_hash: sessionParams.tokenHash,
+        })
+      : await supabase.auth.exchangeCodeForSession(sessionParams.code);
 
-  if (error || !data.user) {
+  if (sessionResult.error || !sessionResult.data.user) {
     return NextResponse.redirect(new URL("/login?error=auth_callback", req.url));
   }
 
   let role;
   try {
-    role = await ensureOAuthUserProvisioned(data.user, {
+    role = await ensureOAuthUserProvisioned(sessionResult.data.user, {
       persistAppRole: createOAuthPersistAppRole(supabase),
     });
   } catch (e) {
     logException("auth", "auth.oauth_provision_failed", e, {
-      userId: data.user.id,
-      email: data.user.email,
+      userId: sessionResult.data.user.id,
+      email: sessionResult.data.user.email,
     });
     await supabase.auth.signOut();
     return NextResponse.redirect(new URL("/login?error=profile_missing", req.url));
   }
 
-  if (next && next.startsWith("/") && !next.startsWith("//")) {
-    return NextResponse.redirect(new URL(next, req.url));
-  }
-
-  return NextResponse.redirect(new URL(dashboardPathForRole(role), req.url));
+  const destination = postAuthNextPath(next, dashboardPathForRole(role));
+  return NextResponse.redirect(new URL(destination, req.url));
 }

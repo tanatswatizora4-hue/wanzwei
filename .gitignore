@@ -30,8 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — never commit local secrets (.env.local included)
 .env*
+.env.local
 
 # vercel
 .vercel
@@ -46,3 +47,6 @@ next-env.d.ts
 
 # Accidental nested clone of this repository.
 /wanzwei/
+
+# Local one-off repair snapshots (may contain profile rows).
+.tmp/

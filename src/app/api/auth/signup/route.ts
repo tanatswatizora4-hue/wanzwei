@@ -4,8 +4,8 @@ import {
   readSignupPayload,
   signupFieldFlags,
 } from "@/lib/auth/signup-payload";
+import { resendVerificationEmail } from "@/lib/auth/email";
 import { completeEmailSignup } from "@/lib/auth/provision-app-user";
-import { dashboardPathForRole } from "@/lib/auth/session";
 import {
   addRateLimitHeaders,
   checkRateLimit,
@@ -14,10 +14,8 @@ import {
 } from "@/lib/rate-limit";
 import {
   createLogger,
-  logException,
   withRouteLogging,
 } from "@/lib/observability/logger";
-import { getServerSupabase } from "@/lib/supabase/server";
 import { SignupSchema } from "@/lib/validation/auth";
 import { validationErrorResponse } from "@/lib/validation/errors";
 
@@ -32,8 +30,8 @@ const logger = createLogger("auth");
  *   2. Create the Auth user (role in `app_metadata`) and the matching
  *      `public.users` row (`id` = Auth UUID). Roll back Auth if the
  *      profile insert fails.
- *   3. `signInWithPassword` establishes a session when email confirmation
- *      is disabled; otherwise redirect to /login with a check-email hint.
+ *   3. Request a real confirmation email. Do not sign in while the
+ *      Auth user is unconfirmed.
  */
 export async function POST(req: Request) {
   return withRouteLogging("/api/auth/signup", req, () => handlePOST(req));
@@ -124,37 +122,45 @@ async function handlePOST(req: Request) {
     const url = new URL("/signup", req.url);
     url.searchParams.set("error", signupErrorQuery(provisioned.code));
     url.searchParams.set("role", role);
+    if (provisioned.code === "incomplete_signup") {
+      url.searchParams.set("email", email);
+    }
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const supabase = await getServerSupabase();
-  const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-  if (signInError) {
-    logException("auth", "auth.signup_sign_in_failed", signInError, {
-      email,
-      role,
-    });
-    const url = new URL("/login", req.url);
-    url.searchParams.set("check-email", "1");
-    url.searchParams.set("email", email);
-    return NextResponse.redirect(url, { status: 303 });
+  if (!provisioned.emailConfirmed) {
+    const confirmation = await resendVerificationEmail(email, req.url);
+    if (!confirmation.ok) {
+      logger.warn("auth.signup_confirmation_send_failed", {
+        email,
+        role,
+        recovered: provisioned.recovered,
+      });
+    }
   }
 
-  if (!signInData.session) {
-    const url = new URL("/login", req.url);
-    url.searchParams.set("check-email", "1");
-    url.searchParams.set("email", email);
-    return NextResponse.redirect(url, { status: 303 });
-  }
-
-  return NextResponse.redirect(new URL(dashboardPathForRole(role), req.url), {
-    status: 303,
+  logger.info("auth.signup_ok", {
+    email,
+    role,
+    recovered: provisioned.recovered,
+    emailConfirmed: provisioned.emailConfirmed,
   });
+
+  if (wantsJson(req)) {
+    return NextResponse.json({
+      ok: true,
+      needsConfirmation: !provisioned.emailConfirmed,
+    });
+  }
+
+  const url = new URL("/login", req.url);
+  if (provisioned.emailConfirmed) {
+    url.searchParams.set("verified", "1");
+  } else {
+    url.searchParams.set("check-email", "1");
+  }
+  url.searchParams.set("email", email);
+  return NextResponse.redirect(url, { status: 303 });
 }
 
 function wantsJson(req: Request): boolean {
@@ -169,6 +175,8 @@ function signupErrorStatus(
 ): number {
   switch (code) {
     case "exists":
+      return 409;
+    case "incomplete_signup":
       return 409;
     case "db_not_configured":
       return 503;
@@ -189,6 +197,8 @@ function signupErrorQuery(
   switch (code) {
     case "exists":
       return "exists";
+    case "incomplete_signup":
+      return "incomplete_signup";
     case "db_not_configured":
       return "db_not_configured";
     case "profile_create_failed":

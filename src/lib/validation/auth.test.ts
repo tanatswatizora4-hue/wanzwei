@@ -18,6 +18,22 @@ describe("auth validation", () => {
     });
   });
 
+  it("normalizes signup and login emails to lowercase", () => {
+    expect(
+      SignupSchema.parse({
+        name: "Tinashe Moyo",
+        email: "Pro@Example.com",
+        password: "secret1",
+      }).email,
+    ).toBe("pro@example.com");
+    expect(
+      LoginSchema.parse({
+        email: "Pro@Example.com",
+        password: "demo",
+      }).email,
+    ).toBe("pro@example.com");
+  });
+
   it("defaults to professional when role is null (FormData missing value)", () => {
     const parsed = SignupSchema.parse({
       name: "Tinashe Moyo",
