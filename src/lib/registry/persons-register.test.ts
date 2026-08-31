@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveStatus,
+  isPlaceholderPersonNumber,
   isPlaceholderRegistration,
   missingPersonsRegisterColumns,
   normalizePersonName,
   normalizeQualification,
   normalizeRegistrationNumber,
   parseExpiryDate,
+  parseNormalizedPersonNumber,
   parsePersonNumber,
   parsePersonsRegisterRows,
   parseRegistryImportArgs,
@@ -39,6 +41,24 @@ describe("HPA persons register parser", () => {
   it("strips spaces and hyphens from the normalized registration number", () => {
     expect(normalizeRegistrationNumber(" p01-6420-2026 ")).toBe("P0164202026");
     expect(normalizeRegistrationNumber("P01 6420 2026")).toBe("P0164202026");
+  });
+
+  it("parses compact and spaced numbers via the canonical normalizer without changing hyphen-only Excel parse", () => {
+    expect(parsePersonNumber("P0164202026")).toBeNull();
+    expect(parsePersonNumber("P01 6420 2026")).toBeNull();
+    expect(parseNormalizedPersonNumber("P0164202026")).toEqual({
+      registrationNumber: "P01-6420-2026",
+      registrationNumberNormalized: "P0164202026",
+      licenceClass: "P01",
+      licenceSerial: "6420",
+      licenceYear: 2026,
+    });
+    expect(parseNormalizedPersonNumber("P01 6420 2026")?.registrationNumber).toBe(
+      "P01-6420-2026",
+    );
+    expect(isPlaceholderPersonNumber("P0300002026")).toBe(true);
+    expect(isPlaceholderPersonNumber("P03-0000-2026")).toBe(true);
+    expect(isPlaceholderPersonNumber("P01-6420-2026")).toBe(false);
   });
 
   it("treats P03-0000-2026 as a placeholder", () => {

@@ -122,6 +122,44 @@ export function parsePersonNumber(raw: unknown): ParsedLicenceNumber | null {
   };
 }
 
+const COMPACT_PERSON_NO_PATTERN = /^([A-Z]\d{2})(\d{4})(\d{4})$/;
+
+/**
+ * Parse a person number after canonical normalization.
+ * Accepts hyphenated, spaced, or compact forms (e.g. P01-6420-2026,
+ * P01 6420 2026, P0164202026). Reconstructs A99-9999-YYYY and reuses
+ * {@link parsePersonNumber} so importer grammar stays the source of truth.
+ */
+export function parseNormalizedPersonNumber(
+  raw: unknown,
+): ParsedLicenceNumber | null {
+  const hyphenated = parsePersonNumber(raw);
+  if (hyphenated) {
+    return {
+      ...hyphenated,
+      registrationNumber: `${hyphenated.licenceClass}-${hyphenated.licenceSerial}-${String(hyphenated.licenceYear).padStart(4, "0")}`,
+    };
+  }
+  if (typeof raw !== "string" && typeof raw !== "number") return null;
+  const compact = normalizeRegistrationNumber(String(raw));
+  if (!compact) return null;
+  const match = COMPACT_PERSON_NO_PATTERN.exec(compact);
+  if (!match) return null;
+  return parsePersonNumber(`${match[1]}-${match[2]}-${match[3]}`);
+}
+
+export function formatParsedPersonNumber(parsed: ParsedLicenceNumber): string {
+  return `${parsed.licenceClass}-${parsed.licenceSerial}-${String(parsed.licenceYear).padStart(4, "0")}`;
+}
+
+export function isPlaceholderPersonNumber(raw: string): boolean {
+  const parsed = parseNormalizedPersonNumber(raw);
+  return (
+    parsed != null &&
+    isPlaceholderRegistration(parsed.licenceClass, parsed.licenceSerial)
+  );
+}
+
 export function parseExpiryDate(raw: unknown): string | null {
   if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
     return formatUtcDate(raw);

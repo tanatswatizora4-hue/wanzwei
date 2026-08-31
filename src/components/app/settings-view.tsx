@@ -9,7 +9,8 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ProfileAvatarUploader } from "@/components/app/profile-avatar-uploader";
 import { cn } from "@/lib/cn";
-import type { User } from "@/lib/types";
+import type { User, Verification } from "@/lib/types";
+import { VerificationCredentialsForm } from "@/components/app/professional/verification-credentials-form";
 
 type SettingsSection =
   | "profile"
@@ -30,10 +31,12 @@ export function SettingsView({
   user,
   avatarUrl,
   avatarUploadEnabled,
+  verification = null,
 }: {
   user: User;
   avatarUrl?: string | null;
   avatarUploadEnabled: boolean;
+  verification?: Verification | null;
 }) {
   const [section, setSection] = React.useState<SettingsSection>("profile");
 
@@ -68,11 +71,11 @@ export function SettingsView({
                 </p>
                 {user.verified ? (
                   <Badge tone="success" withDot className="mt-2">
-                    Verified
+                    Account verification: Verified
                   </Badge>
                 ) : (
                   <Badge tone="amber" withDot className="mt-2">
-                    Verification pending
+                    Account verification: Not verified
                   </Badge>
                 )}
               </div>
@@ -102,6 +105,16 @@ export function SettingsView({
         </aside>
 
         <div className="flex min-w-0 flex-col gap-6">
+          {user.role === "professional" ? (
+            <VerificationCredentialsForm
+              defaultProfession={user.profession}
+              defaultRegisteringBody={user.registeringBody}
+              defaultRegistrationNumber={user.registrationNumber}
+              initialVerification={verification}
+              accountVerified={user.verified === true}
+            />
+          ) : null}
+
           {section === "profile" ? (
             <Card>
               <CardBody className="pt-5">

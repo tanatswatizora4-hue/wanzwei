@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth/session";
 import { withRouteLogging, createLogger } from "@/lib/observability/logger";
-import { updateVerificationStatus } from "@/lib/repos/verifications";
+import { applyAdminVerificationDecision } from "@/lib/verification/admin-decision";
 
 const logger = createLogger("admin-verification-decision");
 
@@ -18,7 +18,7 @@ export async function POST(
 }
 
 async function handlePost(verificationId: string, req: Request) {
-  await requireRole(["admin"]);
+  const admin = await requireRole(["admin"]);
 
   let body: unknown;
   try {
@@ -37,7 +37,11 @@ async function handlePost(verificationId: string, req: Request) {
   }
   const status = payload.status as "Verified" | "Rejected";
 
-  const updated = await updateVerificationStatus(verificationId, status);
+  const updated = await applyAdminVerificationDecision(
+    admin,
+    verificationId,
+    status,
+  );
 
   if (!updated) {
     return NextResponse.json(
@@ -48,9 +52,8 @@ async function handlePost(verificationId: string, req: Request) {
 
   logger.info("admin.verification_status_updated", {
     verificationId,
-    status: updated.status,
+    status: updated.verification.status,
   });
 
-  return NextResponse.json({ ok: true, verification: updated });
+  return NextResponse.json({ ok: true, verification: updated.verification });
 }
-

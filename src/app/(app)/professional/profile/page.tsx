@@ -72,9 +72,15 @@ export default async function ProfilePage() {
                     <h2 className="text-[20px] font-semibold tracking-tight">
                       {user.name}
                     </h2>
-                    <Badge tone="success" withDot>
-                      <Shield className="h-3 w-3" /> Verified
-                    </Badge>
+                    {user.verified ? (
+                      <Badge tone="success" withDot>
+                        <Shield className="h-3 w-3" /> Account verification: Verified
+                      </Badge>
+                    ) : (
+                      <Badge tone="amber" withDot>
+                        Account verification: Not verified
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-[13.5px] text-[color:var(--color-ink-500)]">
                     {user.profession ?? "Healthcare Professional"} · {user.location}
