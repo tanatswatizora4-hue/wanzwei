@@ -7,11 +7,14 @@ import { displayNameFromAuthUser } from "@/lib/auth/display-name";
 import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
 import type { AppUserStore } from "@/lib/auth/provision-app-user";
 import { hasDbConfig } from "@/lib/db/client";
+import { createLogger } from "@/lib/observability/logger";
 import { createUser, findUserByEmail } from "@/lib/repos/users";
 import type { Role } from "@/lib/types";
 
 export { displayNameFromAuthUser };
 export { createSessionPersistAppRole as createOAuthPersistAppRole };
+
+const logger = createLogger("auth");
 
 const defaultStore: AppUserStore = {
   hasDbConfig,
@@ -42,6 +45,12 @@ export async function ensureOAuthUserProvisioned(
     },
   );
   if (!result.ok) {
+    logger.warn("auth.oauth_provision_failed", {
+      userId: authUser.id,
+      reason: result.logReason,
+      detail: result.logDetail,
+      code: result.code,
+    });
     throw new Error(
       result.logDetail ?? `OAuth provisioning failed (${result.logReason})`,
     );

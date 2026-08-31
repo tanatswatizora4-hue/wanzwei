@@ -136,7 +136,10 @@ function shouldLog(level: LogLevel) {
 
 function sanitizeContext(value: unknown): unknown {
   if (value == null) return value;
-  if (typeof value === "string") return EMAIL_PATTERN.test(value) ? redactEmail(value) : value;
+  if (typeof value === "string") {
+    if (EMAIL_PATTERN.test(value)) return redactEmail(value);
+    return redactSensitiveText(value);
+  }
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(sanitizeContext);
@@ -154,11 +157,37 @@ function sanitizeContext(value: unknown): unknown {
   );
 }
 
+/**
+ * Strip secrets that often appear in driver/Auth error messages.
+ * Never log passwords, JWTs, tokens, service-role keys, or DB URLs.
+ */
+export function redactSensitiveText(value: string): string {
+  return value
+    .replace(/[a-z][a-z0-9+.-]*:\/\/[^\s"'`]+/gi, "[redacted-url]")
+    .replace(
+      /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
+      "[redacted-token]",
+    )
+    .replace(/\b(sb_secret_[A-Za-z0-9]+|service_role)\b/gi, "[redacted]")
+    .slice(0, 400);
+}
+
+export function safeErrorDetail(error: unknown): string {
+  if (error instanceof Error) {
+    return redactSensitiveText(error.message);
+  }
+  if (error != null && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return redactSensitiveText(message);
+  }
+  return "Unknown error";
+}
+
 function serializeError(error: unknown) {
   if (error instanceof Error) {
     return {
       name: error.name,
-      message: error.message,
+      message: redactSensitiveText(error.message),
       stack: process.env.NODE_ENV === "production" ? undefined : error.stack,
     };
   }
@@ -167,14 +196,18 @@ function serializeError(error: unknown) {
     if (typeof obj.message === "string") {
       return {
         name: typeof obj.name === "string" ? obj.name : "Error",
-        message: obj.message,
+        message: redactSensitiveText(obj.message),
         ...(typeof obj.code === "string" ? { code: obj.code } : {}),
-        ...(typeof obj.details === "string" ? { details: obj.details } : {}),
-        ...(typeof obj.hint === "string" ? { hint: obj.hint } : {}),
+        ...(typeof obj.details === "string"
+          ? { details: redactSensitiveText(obj.details) }
+          : {}),
+        ...(typeof obj.hint === "string"
+          ? { hint: redactSensitiveText(obj.hint) }
+          : {}),
       };
     }
   }
-  return { message: String(error) };
+  return { message: redactSensitiveText(String(error)) };
 }
 
 function redactEmail(email: string) {

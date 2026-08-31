@@ -167,4 +167,20 @@ describe("ensureOAuthUserProvisioned", () => {
     expect(role).toBe("professional");
     expect(store.rows[0]?.role).toBe("professional");
   });
+
+  it("does not throw an unhandled error when profile lookup fails", async () => {
+    const store = memoryStore();
+    store.findUserByEmail = async () => {
+      throw new Error(
+        "connect ECONNREFUSED postgres://user:supersecret@db.internal:5432/postgres",
+      );
+    };
+
+    await expect(
+      ensureOAuthUserProvisioned(googleUser(), {
+        store,
+        persistAppRole: async () => undefined,
+      }),
+    ).rejects.toThrow(/\[redacted-url\]|OAuth provisioning failed/i);
+  });
 });

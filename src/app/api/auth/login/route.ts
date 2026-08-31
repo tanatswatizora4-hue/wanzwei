@@ -101,9 +101,22 @@ async function handlePOST(req: Request) {
   // Existing public.users.role is authoritative. app_metadata.role is the
   // signed session cache and is synced from the profile when they differ.
   // Missing public.users rows for a valid Auth user are repaired in-place.
-  const login = await completeLoginAfterAuth(data.user, undefined, {
-    persistAppRole: createSessionPersistAppRole(supabase),
-  });
+  let login;
+  try {
+    login = await completeLoginAfterAuth(data.user, undefined, {
+      persistAppRole: createSessionPersistAppRole(supabase),
+    });
+  } catch (error) {
+    logger.error("auth.login_unhandled", error, {
+      userId: data.user.id,
+      email,
+    });
+    await supabase.auth.signOut();
+    const url = new URL("/login", req.url);
+    url.searchParams.set("error", "profile_missing");
+    url.searchParams.set("email", email);
+    return NextResponse.redirect(url, { status: 303 });
+  }
   if (!login.ok) {
     logger.warn("auth.login_failed", {
       reason: login.logReason,

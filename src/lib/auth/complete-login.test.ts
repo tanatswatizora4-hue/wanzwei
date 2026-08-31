@@ -447,4 +447,40 @@ describe("completeLoginAfterAuth", () => {
     expect(result.role).toBe("professional");
     expect(result.role).not.toBe("admin");
   });
+
+  it("maps a thrown profile lookup to a controlled failure instead of throwing", async () => {
+    const store = memoryStore();
+    store.findUserByEmail = async () => {
+      throw new Error(
+        "connect ECONNREFUSED postgres://user:supersecret@db.internal:5432/postgres",
+      );
+    };
+
+    const result = await completeLoginAfterAuth(authUser(), store);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("profile_unavailable");
+    expect(result.logReason).toBe("profile_lookup_failed");
+    expect(result.logDetail).toContain("[redacted-url]");
+    expect(JSON.stringify(result)).not.toMatch(/postgres:\/\/|supersecret/i);
+  });
+
+  it("maps unexpected store errors to a controlled failure instead of throwing", async () => {
+    const result = await completeLoginAfterAuth(authUser(), {
+      hasDbConfig: () => {
+        throw new Error("env read failed");
+      },
+      findUserByEmail: async () => null,
+      createUser: async () => {
+        throw new Error("should not insert");
+      },
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("profile_unavailable");
+    expect(result.logReason).toBe("unexpected");
+    expect(result.logDetail).toBe("env read failed");
+  });
 });
