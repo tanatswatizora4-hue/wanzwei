@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -180,6 +182,8 @@ export const users = pgTable(
     facilityId: uuid("facility_id").references(() => facilities.id, {
       onDelete: "set null",
     }),
+    registeringBody: text("registering_body"),
+    registrationNumber: text("registration_number"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -191,6 +195,10 @@ export const users = pgTable(
     uniqueIndex("users_email_uniq").on(t.email),
     index("users_facility_id_idx").on(t.facilityId),
     index("users_role_idx").on(t.role),
+    index("users_registering_body_registration_number_idx").on(
+      t.registeringBody,
+      t.registrationNumber,
+    ),
   ],
 );
 
@@ -341,6 +349,64 @@ export const notifications = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// practitioner_registry
+// Server-side HPA (and later council) licence dump. Not exposed to clients.
+// ---------------------------------------------------------------------------
+
+export const practitionerRegistry = pgTable(
+  "practitioner_registry",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    registeringBody: text("registering_body").notNull().default("HPA"),
+    registrationNumber: text("registration_number").notNull(),
+    registrationNumberNormalized: text("registration_number_normalized").notNull(),
+    licenceClass: text("licence_class").notNull(),
+    licenceSerial: text("licence_serial").notNull(),
+    licenceYear: integer("licence_year").notNull(),
+    fullName: text("full_name").notNull(),
+    fullNameNormalized: text("full_name_normalized").notNull(),
+    qualification: text("qualification").notNull(),
+    qualificationNormalized: text("qualification_normalized").notNull(),
+    address: text("address"),
+    town: text("town"),
+    expiryDate: date("expiry_date").notNull(),
+    derivedStatus: text("derived_status").notNull(),
+    isPlaceholder: boolean("is_placeholder").notNull().default(false),
+    sourceFile: text("source_file").notNull(),
+    sourceImportedAt: timestamp("source_imported_at", { withTimezone: true })
+      .notNull(),
+    sourceRow: jsonb("source_row")
+      .$type<Record<string, unknown>>()
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("practitioner_registry_body_number_nonplaceholder_uniq")
+      .on(t.registeringBody, t.registrationNumberNormalized)
+      .where(sql`${t.isPlaceholder} = false`),
+    index("practitioner_registry_body_number_idx").on(
+      t.registeringBody,
+      t.registrationNumberNormalized,
+    ),
+    index("practitioner_registry_body_class_serial_idx").on(
+      t.registeringBody,
+      t.licenceClass,
+      t.licenceSerial,
+    ),
+    index("practitioner_registry_expiry_date_idx").on(t.expiryDate),
+    index("practitioner_registry_qualification_normalized_idx").on(
+      t.qualificationNormalized,
+    ),
+    index("practitioner_registry_derived_status_idx").on(t.derivedStatus),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // verifications
 // ---------------------------------------------------------------------------
 
@@ -362,6 +428,13 @@ export const verifications = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
+    registeringBody: text("registering_body"),
+    registrationNumber: text("registration_number"),
+    matchedRegistryId: uuid("matched_registry_id").references(
+      () => practitionerRegistry.id,
+      { onDelete: "set null" },
+    ),
+    matchOutcome: text("match_outcome"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -373,6 +446,11 @@ export const verifications = pgTable(
     index("verifications_user_id_idx").on(t.userId),
     index("verifications_status_idx").on(t.status),
     index("verifications_submitted_at_idx").on(t.submittedAt),
+    index("verifications_matched_registry_id_idx").on(t.matchedRegistryId),
+    index("verifications_registering_body_registration_number_idx").on(
+      t.registeringBody,
+      t.registrationNumber,
+    ),
   ],
 );
 
@@ -406,6 +484,41 @@ export const verificationDocuments = pgTable(
       t.storageBucket,
       t.storagePath,
     ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// verification_events
+// Append-only audit. actor_user_id is null for automatic registry decisions.
+// ---------------------------------------------------------------------------
+
+export const verificationEvents = pgTable(
+  "verification_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    verificationId: uuid("verification_id")
+      .notNull()
+      .references(() => verifications.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
+    method: text("method").notNull(),
+    matchRegistryId: uuid("match_registry_id").references(
+      () => practitionerRegistry.id,
+      { onDelete: "set null" },
+    ),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("verification_events_verification_id_idx").on(t.verificationId),
+    index("verification_events_actor_user_id_idx").on(t.actorUserId),
+    index("verification_events_match_registry_id_idx").on(t.matchRegistryId),
+    index("verification_events_created_at_idx").on(t.createdAt),
   ],
 );
 
@@ -560,6 +673,12 @@ export type NewDbNotification = typeof notifications.$inferInsert;
 
 export type DbVerification = typeof verifications.$inferSelect;
 export type NewDbVerification = typeof verifications.$inferInsert;
+
+export type DbPractitionerRegistry = typeof practitionerRegistry.$inferSelect;
+export type NewDbPractitionerRegistry = typeof practitionerRegistry.$inferInsert;
+
+export type DbVerificationEvent = typeof verificationEvents.$inferSelect;
+export type NewDbVerificationEvent = typeof verificationEvents.$inferInsert;
 
 export type DbVerificationDocument =
   typeof verificationDocuments.$inferSelect;

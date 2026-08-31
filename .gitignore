@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local HPA / council register dumps (PII). Keep these outside the repo.
+/registers/
+/data/registers/

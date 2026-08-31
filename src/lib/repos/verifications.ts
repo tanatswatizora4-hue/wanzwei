@@ -11,7 +11,26 @@ import type {
   NewDbVerification,
   NewDbVerificationDocument,
 } from "@/lib/db/schema";
-import type { Verification } from "@/lib/types";
+import type { Verification, VerificationMatchOutcome } from "@/lib/types";
+
+const MATCH_OUTCOMES: readonly VerificationMatchOutcome[] = [
+  "matched",
+  "not_found",
+  "expired",
+  "ambiguous",
+  "profession_mismatch",
+  "name_mismatch",
+  "missing_registration_number",
+  "registry_lookup_failed",
+  "non_clinical_qualification",
+];
+
+function toMatchOutcome(
+  value: string | null,
+): VerificationMatchOutcome | undefined {
+  if (value == null) return undefined;
+  return MATCH_OUTCOMES.find((outcome) => outcome === value);
+}
 
 export function toVerification(row: DbVerification): Verification {
   return {
@@ -23,6 +42,10 @@ export function toVerification(row: DbVerification): Verification {
     documentCount: row.documentCount,
     submittedAt: row.submittedAt.toISOString(),
     flags: row.flags.length > 0 ? row.flags : undefined,
+    registeringBody: row.registeringBody ?? undefined,
+    registrationNumber: row.registrationNumber ?? undefined,
+    matchedRegistryId: row.matchedRegistryId ?? undefined,
+    matchOutcome: toMatchOutcome(row.matchOutcome),
   };
 }
 

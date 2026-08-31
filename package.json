@@ -17,7 +17,8 @@
     "auth:bootstrap": "tsx --env-file=.env.local scripts/bootstrap-demo-auth.ts",
     "db:seed": "tsx --env-file=.env.local scripts/seed-staging-data.ts",
     "smoke:test": "tsx --env-file=.env.local scripts/smoke-test-db.ts",
-    "verify:rls": "tsx --env-file=.env.local scripts/verify-rls-metadata.ts"
+    "verify:rls": "tsx --env-file=.env.local scripts/verify-rls-metadata.ts",
+    "registry:import": "tsx scripts/import-practitioner-registry.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -71,6 +72,7 @@
     "tailwindcss": "^4",
     "tsx": "^4.22.3",
     "typescript": "^5",
-    "vitest": "^4.1.8"
+    "vitest": "^4.1.8",
+    "xlsx": "^0.18.5"
   }
 }
