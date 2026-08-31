@@ -4,10 +4,17 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE } from "@/lib/auth/professional-verification";
 import { respondToAlertAction } from "@/app/(app)/professional/dashboard/actions";
 import { Button } from "@/components/ui/button";
 
-export function EmergencyAlertRespondButtons({ alertId }: { alertId: string }) {
+export function EmergencyAlertRespondButtons({
+  alertId,
+  verified = false,
+}: {
+  alertId: string;
+  verified?: boolean;
+}) {
   const router = useRouter();
   const [pending, setPending] = React.useState<"Accepted" | "Declined" | null>(
     null,
@@ -15,6 +22,10 @@ export function EmergencyAlertRespondButtons({ alertId }: { alertId: string }) {
 
   const respond = async (response: "Accepted" | "Declined") => {
     if (pending) return;
+    if (!verified) {
+      toast.error(PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE);
+      return;
+    }
     setPending(response);
     try {
       const formData = new FormData();

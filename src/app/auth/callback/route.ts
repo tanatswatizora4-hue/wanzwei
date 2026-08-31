@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { ensureOAuthUserProvisioned } from "@/lib/auth/oauth-provision";
+import { ensureOAuthUserProvisioned, createOAuthPersistAppRole } from "@/lib/auth/oauth-provision";
 import { dashboardPathForRole } from "@/lib/auth/session";
 import { logException, withRouteLogging } from "@/lib/observability/logger";
 import { getServerSupabase } from "@/lib/supabase/server";
@@ -29,7 +29,9 @@ async function handleGET(req: Request) {
 
   let role;
   try {
-    role = await ensureOAuthUserProvisioned(supabase, data.user);
+    role = await ensureOAuthUserProvisioned(data.user, {
+      persistAppRole: createOAuthPersistAppRole(supabase),
+    });
   } catch (e) {
     logException("auth", "auth.oauth_provision_failed", e, {
       userId: data.user.id,

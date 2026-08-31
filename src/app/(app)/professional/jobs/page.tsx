@@ -128,6 +128,7 @@ export default async function JobsPage() {
                   jobId={job.id}
                   jobTitle={job.title}
                   defaultApplied={Boolean(job.applied)}
+                  verified={user.verified === true}
                 />
               </footer>
             </article>

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE } from "@/lib/auth/professional-verification";
 import { applyForJobAction } from "@/app/(app)/professional/jobs/actions";
 import { Button } from "@/components/ui/button";
 
@@ -11,17 +12,23 @@ export function ApplyJobButton({
   jobTitle,
   defaultApplied = false,
   size = "sm",
+  verified = false,
 }: {
   jobId: string;
   jobTitle: string;
   defaultApplied?: boolean;
   size?: "sm" | "md";
+  verified?: boolean;
 }) {
   const [applied, setApplied] = React.useState(defaultApplied);
   const [pending, setPending] = React.useState(false);
 
   const handleApply = async () => {
     if (applied || pending) return;
+    if (!verified) {
+      toast.error(PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE);
+      return;
+    }
     setPending(true);
     try {
       const result = await applyForJobAction(jobId);

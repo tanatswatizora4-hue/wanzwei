@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
 
-import {
-  dashboardPathForRole,
-  readRoleFromAuth,
-} from "@/lib/auth/session";
-import { hasDbConfig } from "@/lib/db/client";
-import { findUserByEmail } from "@/lib/repos/users";
+import { completeLoginAfterAuth } from "@/lib/auth/complete-login";
+import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
+import { dashboardPathForRole } from "@/lib/auth/session";
 import {
   addRateLimitHeaders,
   checkRateLimit,
@@ -101,53 +98,30 @@ async function handlePOST(req: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  // Read role from app_metadata only — see `readRoleFromAuth` for why
-  // `user_metadata` is never trusted. A signed-in user with no role is
-  // an inconsistent state (signup rollback failed, or the account was
-  // created out-of-band without one) and we refuse to issue a session
-  // for them.
-  const role = readRoleFromAuth(data.user);
-  if (!role) {
+  // Existing public.users.role is authoritative. app_metadata.role is the
+  // signed session cache and is synced from the profile when they differ.
+  // Missing public.users rows for a valid Auth user are repaired in-place.
+  const login = await completeLoginAfterAuth(data.user, undefined, {
+    persistAppRole: createSessionPersistAppRole(supabase),
+  });
+  if (!login.ok) {
     logger.warn("auth.login_failed", {
-      reason: "missing_role",
+      reason: login.logReason,
       email,
       userId: data.user.id,
+      detail: login.logDetail,
     });
     await supabase.auth.signOut();
     const url = new URL("/login", req.url);
-    url.searchParams.set("error", "no_role");
+    url.searchParams.set(
+      "error",
+      login.code === "profile_unavailable" ? "profile_missing" : login.code,
+    );
     url.searchParams.set("email", email);
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  if (!hasDbConfig()) {
-    logger.warn("auth.login_failed", {
-      reason: "db_not_configured",
-      email,
-      userId: data.user.id,
-    });
-    await supabase.auth.signOut();
-    const url = new URL("/login", req.url);
-    url.searchParams.set("error", "db_not_configured");
-    url.searchParams.set("email", email);
-    return NextResponse.redirect(url, { status: 303 });
-  }
-
-  const profile = await findUserByEmail(email);
-  if (!profile) {
-    logger.warn("auth.login_failed", {
-      reason: "profile_missing",
-      email,
-      userId: data.user.id,
-    });
-    await supabase.auth.signOut();
-    const url = new URL("/login", req.url);
-    url.searchParams.set("error", "profile_missing");
-    url.searchParams.set("email", email);
-    return NextResponse.redirect(url, { status: 303 });
-  }
-
-  const redirectTo = nextPath ?? dashboardPathForRole(role);
+  const redirectTo = nextPath ?? dashboardPathForRole(login.role);
   return NextResponse.redirect(new URL(redirectTo, req.url), { status: 303 });
 }
 

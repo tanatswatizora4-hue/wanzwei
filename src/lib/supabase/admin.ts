@@ -53,8 +53,10 @@ export function getAdminSupabase(): SupabaseClient {
  *
  * `app_metadata` is writable ONLY by the service role API (this helper)
  * and is embedded in the signed JWT. It cannot be modified client-side
- * and cannot be forged without the service-role key. This is the
- * authoritative source of truth for `role` everywhere in the app.
+ * and cannot be forged without the service-role key. It is the signed
+ * session cache used by middleware. For an existing app profile,
+ * `public.users.role` is the application source of truth and this claim
+ * is synced from that row on login/OAuth.
  *
  * Implementation detail: `admin.updateUserById` REPLACES `app_metadata`
  * on write, so we must spread the existing object to preserve Supabase

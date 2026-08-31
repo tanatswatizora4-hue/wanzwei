@@ -103,33 +103,24 @@ export default async function LoginPage({
         ) : null}
         {error === "unavailable" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
-            Could not reach Supabase. Check your network and{" "}
-            <code className="text-[11px]">NEXT_PUBLIC_SUPABASE_URL</code> in
-            .env.local, then restart the dev server.
+            Sign-in is temporarily unavailable. Please try again in a moment.
           </p>
         ) : null}
         {error === "no_role" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
-            This account has no assigned role. Run{" "}
-            <code className="text-[11px]">npm run auth:bootstrap</code> to
-            provision the demo master account.
+            This account is not set up for sign-in. Contact support if you need
+            help.
           </p>
         ) : null}
         {error === "db_not_configured" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
-            Server database is not configured. Add{" "}
-            <code className="text-[11px]">SUPABASE_DB_URL</code> to .env.local
-            (Supabase Dashboard → Database → Connection string), run{" "}
-            <code className="text-[11px]">npm run db:push</code>, then{" "}
-            <code className="text-[11px]">npm run auth:bootstrap</code>.
+            Sign-in is temporarily unavailable. Please try again later.
           </p>
         ) : null}
         {error === "profile_missing" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
-            Auth succeeded but the app profile is missing. Run{" "}
-            <code className="text-[11px]">npm run db:push</code> then{" "}
-            <code className="text-[11px]">npm run auth:bootstrap</code> from the
-            wanzwei directory.
+            We couldn&apos;t sign you in. Please try again. If this keeps
+            happening, contact support.
           </p>
         ) : null}
         {checkEmail === "1" ? (

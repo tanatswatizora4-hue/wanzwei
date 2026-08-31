@@ -8,6 +8,8 @@ const PROTECTED_PREFIXES = ["/professional", "/facility", "/admin"] as const;
 type AppRole = "professional" | "facility" | "admin";
 
 function readRole(user: User): AppRole | null {
+  // Signed session cache only. Never read user_metadata. Login/OAuth sync
+  // this claim from public.users.role before the session continues.
   const candidate = (user.app_metadata as { role?: unknown } | undefined)?.role;
   if (
     candidate === "professional" ||

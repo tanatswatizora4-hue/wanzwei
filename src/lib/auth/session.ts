@@ -6,14 +6,20 @@ import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { findUserByEmail } from "@/lib/repos/users";
 import { getServerSupabase } from "@/lib/supabase/server";
 import type { Role, User } from "@/lib/types";
+import {
+  PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE,
+  isVerifiedProfessional,
+} from "@/lib/auth/professional-verification";
 
 const ROLES: readonly Role[] = ["professional", "facility", "admin"];
 
 /**
  * Return the currently signed-in user, or null.
  *
- * Supabase Auth owns the session. The app profile is loaded from Postgres
- * by email until auth users are linked to `public.users` by FK.
+ * Supabase Auth owns the session. Application authorization for pages and
+ * API routes uses `public.users.role` (this profile), not the JWT claim.
+ * Middleware uses `app_metadata.role` as a signed cache that login/OAuth
+ * sync from this profile when they differ.
  *
  * If an authenticated Supabase user has no profile row, return `null`.
  * Protected pages require a persisted app profile and will redirect to login.
@@ -41,6 +47,20 @@ export async function requireRole(allowedRoles: Role[]): Promise<User> {
     redirect(dashboardPathForRole(user.role));
   }
   return user;
+}
+
+/**
+ * Authenticated professional whose HPA credentials are verified.
+ * Does not redirect unverified users to login; callers must fail safely.
+ */
+export async function requireVerifiedProfessional(): Promise<
+  { ok: true; user: User } | { ok: false; error: string }
+> {
+  const user = await requireRole(["professional"]);
+  if (!isVerifiedProfessional(user)) {
+    return { ok: false, error: PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE };
+  }
+  return { ok: true, user };
 }
 
 export async function getCurrentUserWithRole(
@@ -75,6 +95,10 @@ export function dashboardPathForRole(role: Role): string {
 /**
  * Read a Supabase Auth user's role from `app_metadata.role`.
  *
+ * This is the signed session cache used by middleware. For an existing
+ * app profile, `public.users.role` is the application source of truth;
+ * login/OAuth sync this JWT claim from that row when they differ.
+ *
  * SECURITY: do not fall back to a role stored in user-writable metadata.
  *
  * `user_metadata` is writable by the user themselves through the
@@ -88,8 +112,7 @@ export function dashboardPathForRole(role: Role): string {
  *
  * `app_metadata` is writable only by the service role API
  * (see `setUserRole` in `@/lib/supabase/admin`) and is embedded in
- * the signed JWT — clients cannot modify or forge it. It is the
- * single authoritative source of truth for role.
+ * the signed JWT — clients cannot modify or forge it.
  *
  * Returns null when no valid role is set. Callers must treat a null
  * role as "not authorised", never as a default role.

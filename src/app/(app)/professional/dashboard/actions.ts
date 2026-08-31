@@ -5,14 +5,18 @@ import { revalidatePath } from "next/cache";
 import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
 import { hasDbConfig } from "@/lib/db/client";
 import { respondToEmergencyAlertForProfessionalEmail } from "@/lib/repos/emergency-alerts";
-import { requireRole } from "@/lib/auth/session";
+import { requireVerifiedProfessional } from "@/lib/auth/session";
 import { RespondToEmergencyAlertSchema } from "@/lib/validation/emergency";
 import { ServerActionValidationError } from "@/lib/validation/errors";
 
 export async function respondToAlertAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const user = await requireRole(["professional"]);
+  const access = await requireVerifiedProfessional();
+  if (!access.ok) {
+    return actionError(access.error);
+  }
+  const user = access.user;
   if (!hasDbConfig()) {
     return actionError("Database is not configured.");
   }

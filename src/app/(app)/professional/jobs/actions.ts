@@ -6,11 +6,15 @@ import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
 import { hasDbConfig } from "@/lib/db/client";
 import { applyForJob } from "@/lib/repos/applications";
 import { saveJob, unsaveJob } from "@/lib/repos/jobs";
-import { requireRole } from "@/lib/auth/session";
+import { requireRole, requireVerifiedProfessional } from "@/lib/auth/session";
 import { JobIdSchema } from "@/lib/validation/jobs";
 
 export async function applyForJobAction(jobId: string): Promise<ActionResult> {
-  const user = await requireRole(["professional"]);
+  const access = await requireVerifiedProfessional();
+  if (!access.ok) {
+    return actionError(access.error);
+  }
+  const user = access.user;
   if (!hasDbConfig()) {
     return actionError("Database is not configured.");
   }

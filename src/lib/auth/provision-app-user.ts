@@ -117,6 +117,7 @@ export async function ensureAppUserProfile(
       email: input.email,
       name: input.name,
       role: input.role,
+      verified: false,
     });
     if (!created) {
       throw new AppUserProvisionError(

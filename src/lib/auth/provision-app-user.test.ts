@@ -16,6 +16,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     email: "pro@example.com",
     role: "professional",
     name: "Tinashe Moyo",
+    verified: false,
     ...overrides,
   };
 }
@@ -33,6 +34,7 @@ function memoryStore(seed: User[] = []): AppUserStore & { rows: User[] } {
         email: user.email,
         name: user.name,
         role: user.role,
+        verified: user.verified === true,
       });
       rows.push(created);
       return created;
@@ -81,6 +83,7 @@ describe("ensureAppUserProfile", () => {
       email: "pro@example.com",
       role: "facility",
       name: "Tinashe Moyo",
+      verified: false,
     });
     expect(store.rows).toHaveLength(1);
   });
@@ -235,6 +238,7 @@ describe("completeEmailSignup", () => {
       id: "11111111-1111-4111-8111-111111111111",
       email: "pro@example.com",
       role: "professional",
+      verified: false,
     });
     expect(authIds).toHaveLength(1);
   });
@@ -248,6 +252,7 @@ describe("completeEmailSignup", () => {
 
     expect(result.ok).toBe(true);
     expect(store.rows[0]?.role).toBe("facility");
+    expect(store.rows[0]?.verified).toBe(false);
   });
 
   it("returns exists without creating Auth when the email is already profiled", async () => {

@@ -14,10 +14,12 @@ export function EmergencyAlertsPanel({
   alerts,
   facilitiesById = {},
   nowMs,
+  verified = false,
 }: {
   alerts: EmergencyAlert[];
   facilitiesById?: Record<string, Facility>;
   nowMs?: number;
+  verified?: boolean;
 }) {
   if (alerts.length === 0) return null;
 
@@ -50,6 +52,7 @@ export function EmergencyAlertsPanel({
             alert={a}
             facility={facilitiesById[a.facilityId]}
             nowMs={nowMs}
+            verified={verified}
           />
         ))}
       </div>
@@ -61,10 +64,12 @@ function EmergencyAlertCard({
   alert,
   facility,
   nowMs,
+  verified,
 }: {
   alert: EmergencyAlert;
   facility?: Facility;
   nowMs?: number;
+  verified: boolean;
 }) {
   const f = facility;
   const createdAtMs = new Date(alert.createdAt).getTime();
@@ -209,7 +214,10 @@ function EmergencyAlertCard({
         <p className="text-[11px] text-[color:var(--color-ink-400)]">
           Pushed {timeAgoLong(alert.createdAt)}
         </p>
-        <EmergencyAlertRespondButtons alertId={alert.id} />
+        <EmergencyAlertRespondButtons
+          alertId={alert.id}
+          verified={verified}
+        />
       </footer>
     </article>
   );
