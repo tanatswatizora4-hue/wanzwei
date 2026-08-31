@@ -4,6 +4,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -135,17 +136,6 @@ export const listingKindEnum = pgEnum("listing_kind", [
 
 export const listingModeEnum = pgEnum("listing_mode", ["Sale", "Lease"]);
 
-export const hpaImportStatusEnum = pgEnum("hpa_import_status", [
-  "Pending",
-  "Completed",
-  "Failed",
-]);
-
-export const verificationMatchMethodEnum = pgEnum("verification_match_method", [
-  "manual",
-  "hpa_auto",
-]);
-
 // ---------------------------------------------------------------------------
 // facilities
 // ---------------------------------------------------------------------------
@@ -192,6 +182,8 @@ export const users = pgTable(
     facilityId: uuid("facility_id").references(() => facilities.id, {
       onDelete: "set null",
     }),
+    registeringBody: text("registering_body"),
+    registrationNumber: text("registration_number"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -203,6 +195,10 @@ export const users = pgTable(
     uniqueIndex("users_email_uniq").on(t.email),
     index("users_facility_id_idx").on(t.facilityId),
     index("users_role_idx").on(t.role),
+    index("users_registering_body_registration_number_idx").on(
+      t.registeringBody,
+      t.registrationNumber,
+    ),
   ],
 );
 
@@ -353,50 +349,35 @@ export const notifications = pgTable(
 );
 
 // ---------------------------------------------------------------------------
-// hpa_registry_imports
+// practitioner_registry
+// Server-side HPA (and later council) licence dump. Not exposed to clients.
 // ---------------------------------------------------------------------------
 
-export const hpaRegistryImports = pgTable(
-  "hpa_registry_imports",
+export const practitionerRegistry = pgTable(
+  "practitioner_registry",
   {
     id: uuid("id").primaryKey().defaultRandom(),
-    sourceName: text("source_name").notNull(),
-    sourceDate: date("source_date"),
-    importedAt: timestamp("imported_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    importedBy: uuid("imported_by").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    recordCount: integer("record_count").notNull().default(0),
-    status: hpaImportStatusEnum("status").notNull().default("Pending"),
-    notes: text("notes"),
-  },
-  (t) => [
-    index("hpa_registry_imports_imported_at_idx").on(t.importedAt),
-    index("hpa_registry_imports_status_idx").on(t.status),
-    index("hpa_registry_imports_imported_by_idx").on(t.importedBy),
-  ],
-);
-
-// ---------------------------------------------------------------------------
-// hpa_practitioners
-// person_no is intentionally not unique — the source register has duplicates.
-// ---------------------------------------------------------------------------
-
-export const hpaPractitioners = pgTable(
-  "hpa_practitioners",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    personNo: text("person_no").notNull(),
+    registeringBody: text("registering_body").notNull().default("HPA"),
+    registrationNumber: text("registration_number").notNull(),
+    registrationNumberNormalized: text("registration_number_normalized").notNull(),
+    licenceClass: text("licence_class").notNull(),
+    licenceSerial: text("licence_serial").notNull(),
+    licenceYear: integer("licence_year").notNull(),
     fullName: text("full_name").notNull(),
+    fullNameNormalized: text("full_name_normalized").notNull(),
     qualification: text("qualification").notNull(),
+    qualificationNormalized: text("qualification_normalized").notNull(),
     address: text("address"),
     town: text("town"),
-    expiryDate: date("expiry_date"),
-    importId: uuid("import_id")
-      .notNull()
-      .references(() => hpaRegistryImports.id, { onDelete: "cascade" }),
+    expiryDate: date("expiry_date").notNull(),
+    derivedStatus: text("derived_status").notNull(),
+    isPlaceholder: boolean("is_placeholder").notNull().default(false),
+    sourceFile: text("source_file").notNull(),
+    sourceImportedAt: timestamp("source_imported_at", { withTimezone: true })
+      .notNull(),
+    sourceRow: jsonb("source_row")
+      .$type<Record<string, unknown>>()
+      .notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -405,10 +386,23 @@ export const hpaPractitioners = pgTable(
       .defaultNow(),
   },
   (t) => [
-    index("hpa_practitioners_person_no_idx").on(t.personNo),
-    index("hpa_practitioners_import_id_idx").on(t.importId),
-    index("hpa_practitioners_full_name_idx").on(t.fullName),
-    index("hpa_practitioners_expiry_date_idx").on(t.expiryDate),
+    uniqueIndex("practitioner_registry_body_number_nonplaceholder_uniq")
+      .on(t.registeringBody, t.registrationNumberNormalized)
+      .where(sql`${t.isPlaceholder} = false`),
+    index("practitioner_registry_body_number_idx").on(
+      t.registeringBody,
+      t.registrationNumberNormalized,
+    ),
+    index("practitioner_registry_body_class_serial_idx").on(
+      t.registeringBody,
+      t.licenceClass,
+      t.licenceSerial,
+    ),
+    index("practitioner_registry_expiry_date_idx").on(t.expiryDate),
+    index("practitioner_registry_qualification_normalized_idx").on(
+      t.qualificationNormalized,
+    ),
+    index("practitioner_registry_derived_status_idx").on(t.derivedStatus),
   ],
 );
 
@@ -434,20 +428,13 @@ export const verifications = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::text[]`),
-    hpaPractitionerId: uuid("hpa_practitioner_id").references(
-      () => hpaPractitioners.id,
+    registeringBody: text("registering_body"),
+    registrationNumber: text("registration_number"),
+    matchedRegistryId: uuid("matched_registry_id").references(
+      () => practitionerRegistry.id,
       { onDelete: "set null" },
     ),
-    matchMethod: verificationMatchMethodEnum("match_method")
-      .notNull()
-      .default("manual"),
-    matchConfidence: numeric("match_confidence", { precision: 5, scale: 4 }),
-    registryCheckedAt: timestamp("registry_checked_at", { withTimezone: true }),
-    registryStatus: text("registry_status"),
-    reviewerId: uuid("reviewer_id").references(() => users.id, {
-      onDelete: "set null",
-    }),
-    reviewNotes: text("review_notes"),
+    matchOutcome: text("match_outcome"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -459,9 +446,11 @@ export const verifications = pgTable(
     index("verifications_user_id_idx").on(t.userId),
     index("verifications_status_idx").on(t.status),
     index("verifications_submitted_at_idx").on(t.submittedAt),
-    index("verifications_hpa_practitioner_id_idx").on(t.hpaPractitionerId),
-    index("verifications_reviewer_id_idx").on(t.reviewerId),
-    index("verifications_match_method_idx").on(t.matchMethod),
+    index("verifications_matched_registry_id_idx").on(t.matchedRegistryId),
+    index("verifications_registering_body_registration_number_idx").on(
+      t.registeringBody,
+      t.registrationNumber,
+    ),
   ],
 );
 
@@ -495,6 +484,41 @@ export const verificationDocuments = pgTable(
       t.storageBucket,
       t.storagePath,
     ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// verification_events
+// Append-only audit. actor_user_id is null for automatic registry decisions.
+// ---------------------------------------------------------------------------
+
+export const verificationEvents = pgTable(
+  "verification_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    verificationId: uuid("verification_id")
+      .notNull()
+      .references(() => verifications.id, { onDelete: "cascade" }),
+    actorUserId: uuid("actor_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    fromStatus: text("from_status"),
+    toStatus: text("to_status").notNull(),
+    method: text("method").notNull(),
+    matchRegistryId: uuid("match_registry_id").references(
+      () => practitionerRegistry.id,
+      { onDelete: "set null" },
+    ),
+    reason: text("reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("verification_events_verification_id_idx").on(t.verificationId),
+    index("verification_events_actor_user_id_idx").on(t.actorUserId),
+    index("verification_events_match_registry_id_idx").on(t.matchRegistryId),
+    index("verification_events_created_at_idx").on(t.createdAt),
   ],
 );
 
@@ -647,14 +671,14 @@ export type NewDbInterview = typeof interviews.$inferInsert;
 export type DbNotification = typeof notifications.$inferSelect;
 export type NewDbNotification = typeof notifications.$inferInsert;
 
-export type DbHpaRegistryImport = typeof hpaRegistryImports.$inferSelect;
-export type NewDbHpaRegistryImport = typeof hpaRegistryImports.$inferInsert;
-
-export type DbHpaPractitioner = typeof hpaPractitioners.$inferSelect;
-export type NewDbHpaPractitioner = typeof hpaPractitioners.$inferInsert;
-
 export type DbVerification = typeof verifications.$inferSelect;
 export type NewDbVerification = typeof verifications.$inferInsert;
+
+export type DbPractitionerRegistry = typeof practitionerRegistry.$inferSelect;
+export type NewDbPractitionerRegistry = typeof practitionerRegistry.$inferInsert;
+
+export type DbVerificationEvent = typeof verificationEvents.$inferSelect;
+export type NewDbVerificationEvent = typeof verificationEvents.$inferInsert;
 
 export type DbVerificationDocument =
   typeof verificationDocuments.$inferSelect;

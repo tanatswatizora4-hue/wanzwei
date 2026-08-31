@@ -103,6 +103,8 @@ describe("repository mapping helpers", () => {
         cpdCredits: "15.50",
         cpdTarget: null,
         facilityId: null,
+        registeringBody: null,
+        registrationNumber: null,
         createdAt: now,
         updatedAt: now,
       }),

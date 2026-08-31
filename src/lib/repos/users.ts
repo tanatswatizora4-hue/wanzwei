@@ -20,6 +20,8 @@ export function toUser(row: DbUser): User {
     verified: row.verified,
     facilityId: row.facilityId ?? undefined,
     profession: row.profession ?? undefined,
+    registeringBody: row.registeringBody ?? undefined,
+    registrationNumber: row.registrationNumber ?? undefined,
     cpdCredits: row.cpdCredits == null ? undefined : Number(row.cpdCredits),
     cpdTarget: row.cpdTarget == null ? undefined : Number(row.cpdTarget),
   };

@@ -27,9 +27,15 @@ const TARGET_TABLES = [
   "listings",
   "professional_documents",
   "facility_verification_documents",
-  "hpa_registry_imports",
-  "hpa_practitioners",
+  "practitioner_registry",
+  "verification_events",
 ] as const;
+
+/** Registry/audit tables are RLS-enabled with no client policies (default deny). */
+const DEFAULT_DENY_TABLES = new Set<string>([
+  "practitioner_registry",
+  "verification_events",
+]);
 
 const METADATA_SQL = `
   WITH targets AS (
@@ -49,8 +55,8 @@ const METADATA_SQL = `
       'listings',
       'professional_documents',
       'facility_verification_documents',
-      'hpa_registry_imports',
-      'hpa_practitioners'
+      'practitioner_registry',
+      'verification_events'
     ]::text[]) AS table_name
   )
   SELECT
@@ -121,7 +127,9 @@ function printTable(rows: TableMetadata[]): void {
 
   for (const row of rows) {
     const rlsOk = row.rls_enabled === true;
-    const policiesOk = row.policy_count >= 1;
+    const policiesOk = DEFAULT_DENY_TABLES.has(row.table_name)
+      ? row.policy_count === 0
+      : row.policy_count >= 1;
     const statusOk = rlsOk && policiesOk;
 
     console.log(
@@ -179,9 +187,13 @@ async function verifyRls(): Promise<void> {
 
     printTable(orderedRows);
 
-    const failures = orderedRows.filter(
-      (row) => row.rls_enabled !== true || row.policy_count < 1,
-    );
+    const failures = orderedRows.filter((row) => {
+      const rlsOk = row.rls_enabled === true;
+      const policiesOk = DEFAULT_DENY_TABLES.has(row.table_name)
+        ? row.policy_count === 0
+        : row.policy_count >= 1;
+      return !rlsOk || !policiesOk;
+    });
 
     console.log("");
     if (failures.length > 0) {

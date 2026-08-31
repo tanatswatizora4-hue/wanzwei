@@ -13,6 +13,21 @@ export type ApplicationStatus =
   | "Rejected";
 export type VerificationStatus = "Pending" | "Under Review" | "Verified" | "Rejected";
 
+export type RegistryDerivedStatus = "active" | "expired";
+
+export type VerificationMatchOutcome =
+  | "matched"
+  | "not_found"
+  | "expired"
+  | "ambiguous"
+  | "profession_mismatch"
+  | "name_mismatch"
+  | "missing_registration_number"
+  | "registry_lookup_failed"
+  | "non_clinical_qualification";
+
+export type VerificationEventMethod = "auto" | "admin";
+
 export type User = {
   id: string;
   email: string;
@@ -28,6 +43,8 @@ export type User = {
   facilityType?: "Hospital" | "Clinic" | "Pharmacy" | "Laboratory" | "Radiology";
   // professional-specific
   profession?: string;
+  registeringBody?: string;
+  registrationNumber?: string;
   cpdCredits?: number;
   cpdTarget?: number;
 };
@@ -118,6 +135,10 @@ export type Verification = {
   documentCount: number;
   submittedAt: string;
   flags?: string[];
+  registeringBody?: string;
+  registrationNumber?: string;
+  matchedRegistryId?: string;
+  matchOutcome?: VerificationMatchOutcome;
 };
 
 export type Notification = {
