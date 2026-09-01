@@ -61,7 +61,7 @@ export function SignupRolePicker({
             Facility
           </p>
           <p className="mt-0.5 text-[11.5px] text-[color:var(--color-ink-500)]">
-            Post roles, hire verified talent
+            Post roles and review applicants
           </p>
         </button>
       </div>

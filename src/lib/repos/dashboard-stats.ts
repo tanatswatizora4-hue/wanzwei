@@ -43,6 +43,25 @@ const JOB_STATUSES: JobStatus[] = [
   "Closed",
 ];
 
+function pipelineTone(
+  status: ApplicationStatus,
+): "emerald" | "sky" | "amber" | "violet" | "slate" {
+  switch (status) {
+    case "Under Review":
+    case "Hired":
+      return "emerald";
+    case "Screening":
+      return "sky";
+    case "Shortlisted":
+      return "amber";
+    case "Interview":
+    case "Offer":
+      return "violet";
+    case "Rejected":
+      return "slate";
+  }
+}
+
 const WEEK_BUCKETS = 13;
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
@@ -412,13 +431,11 @@ export async function getProfessionalDashboardStats(
 export async function getFacilityDashboardStats(
   facilityId: string,
 ): Promise<FacilityDashboardStats> {
-  const emptyPipeline = [
-    { label: "Open", value: 0, tone: "emerald" as const },
-    { label: "Interested", value: 0, tone: "sky" as const },
-    { label: "Shortlisted", value: 0, tone: "amber" as const },
-    { label: "Matched", value: 0, tone: "violet" as const },
-    { label: "Closed", value: 0, tone: "slate" as const },
-  ];
+  const emptyPipeline = APPLICATION_STATUSES.map((status) => ({
+    label: status,
+    value: 0,
+    tone: pipelineTone(status),
+  }));
 
   if (!hasDbConfig()) {
     return {
@@ -506,33 +523,11 @@ export async function getFacilityDashboardStats(
         avgDaysToHire = Math.round(totalDays / hiredRows.length);
       }
 
-      const pipeline = [
-        {
-          label: "Open",
-          value: statusCounts["Under Review"],
-          tone: "emerald" as const,
-        },
-        {
-          label: "Interested",
-          value: statusCounts.Screening,
-          tone: "sky" as const,
-        },
-        {
-          label: "Shortlisted",
-          value: statusCounts.Shortlisted,
-          tone: "amber" as const,
-        },
-        {
-          label: "Matched",
-          value: statusCounts.Interview + statusCounts.Offer,
-          tone: "violet" as const,
-        },
-        {
-          label: "Closed",
-          value: statusCounts.Hired + statusCounts.Rejected,
-          tone: "slate" as const,
-        },
-      ];
+      const pipeline = APPLICATION_STATUSES.map((status) => ({
+        label: status,
+        value: statusCounts[status],
+        tone: pipelineTone(status),
+      }));
 
       const totalApplicants = applicationDates.length;
       const openJobs = openJobDates.length;

@@ -98,10 +98,16 @@ export default function PrivacyPage() {
             Contact and legal review
           </h2>
           <p className="mt-2">
-            A dedicated privacy contact, registered office, and jurisdiction
-            statement will be published after legal review. Until then, use
-            the contact options available in the service. Do not treat this
-            baseline as a complete regulatory notice.
+            Until a dedicated privacy contact, registered office, and
+            jurisdiction statement are published after legal review, contact
+            the platform operator through the signed-in Wanzwei application at{" "}
+            <a
+              href="https://wanzwei.vercel.app"
+              className="font-medium text-[color:var(--color-brand-600)] hover:underline"
+            >
+              https://wanzwei.vercel.app
+            </a>
+            . Do not treat this baseline as a complete regulatory notice.
           </p>
         </section>
       </div>

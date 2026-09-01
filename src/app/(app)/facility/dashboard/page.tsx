@@ -78,7 +78,7 @@ export default async function FacilityDashboardPage() {
                   {facility ? `${facility.type} · ${facility.location}` : "Link your facility profile"}
                 </p>
                 <p className="mt-1 text-[12px] text-[color:var(--color-ink-500)]">
-                  {facility?.openRoles ?? 0} open roles
+                  {stats?.openJobs.value ?? 0} open roles
                 </p>
               </div>
             </div>

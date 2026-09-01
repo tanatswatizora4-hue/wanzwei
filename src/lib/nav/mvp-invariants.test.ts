@@ -161,13 +161,41 @@ describe("MVP navigation and security invariants", () => {
     expect(source).toContain("/terms");
   });
 
-  it("public login does not offer Google until redirect URI is verified", () => {
+  it("public login offers Google sign-in through the existing OAuth route", () => {
     const login = readFileSync("src/app/(marketing)/login/page.tsx", "utf8");
     const signup = readFileSync("src/app/(marketing)/signup/page.tsx", "utf8");
     const route = readFileSync("src/app/api/auth/google/route.ts", "utf8");
+    const flag = readFileSync("src/lib/auth/google-signin-public.ts", "utf8");
+    expect(flag).toContain("export const GOOGLE_SIGNIN_PUBLIC = true");
     expect(login).toContain("GOOGLE_SIGNIN_PUBLIC");
     expect(signup).toContain("GOOGLE_SIGNIN_PUBLIC");
     expect(route).toContain("if (!GOOGLE_SIGNIN_PUBLIC)");
+    expect(login).toContain("GoogleSignInButton");
+    expect(signup).toContain("GoogleSignInButton");
+  });
+
+  it("facility dashboard pipeline uses canonical application statuses", () => {
+    const source = readFileSync("src/lib/repos/dashboard-stats.ts", "utf8");
+    expect(source).toContain('label: status');
+    expect(source).not.toMatch(/label: "Open"/);
+    expect(source).not.toMatch(/label: "Interested"/);
+    expect(source).not.toMatch(/label: "Matched"/);
+    expect(source).not.toMatch(/label: "Closed"/);
+  });
+
+  it("gated talent and matching pages do not ship demo ratings or scores", () => {
+    const talent = readFileSync(
+      "src/app/(app)/facility/talent/page.tsx",
+      "utf8",
+    );
+    const matching = readFileSync(
+      "src/app/(app)/admin/matching/page.tsx",
+      "utf8",
+    );
+    expect(talent).toContain("mvpSurfaceUnavailable");
+    expect(matching).toContain("mvpSurfaceUnavailable");
+    expect(talent).not.toContain("rating");
+    expect(matching).not.toContain("score:");
   });
 
   it("facility dashboard does not display a rating", () => {

@@ -116,7 +116,14 @@ export default function TermsPage() {
           <p className="mt-2">
             Governing-law, entity, and notice details will be published after
             legal review. Until then, contact the platform operator through
-            the Wanzwei application.
+            the signed-in Wanzwei application at{" "}
+            <a
+              href="https://wanzwei.vercel.app"
+              className="font-medium text-[color:var(--color-brand-600)] hover:underline"
+            >
+              https://wanzwei.vercel.app
+            </a>
+            .
           </p>
         </section>
       </div>

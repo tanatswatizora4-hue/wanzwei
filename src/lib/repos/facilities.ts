@@ -1,9 +1,9 @@
 import "server-only";
 
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
-import { facilities, users } from "@/lib/db/schema";
+import { facilities, jobs, users } from "@/lib/db/schema";
 import { facilityInitialsFromName } from "@/lib/facilities/initials";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type { Facility as DbFacilityRow, NewFacility } from "@/lib/db/schema";
@@ -32,8 +32,46 @@ export function toFacility(row: DbFacilityRow): Facility {
   };
 }
 
+/** `facilities.open_roles` is stale denormalized data. Display counts come from jobs. */
+export function withOpenJobCounts(
+  items: Facility[],
+  counts: Map<string, number>,
+): Facility[] {
+  return items.map((facility) => ({
+    ...facility,
+    openRoles: counts.get(facility.id) ?? 0,
+  }));
+}
+
+async function loadOpenJobCounts(
+  facilityIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (!hasDbConfig() || facilityIds.length === 0) return counts;
+  const db = getDb();
+  const rows = await db
+    .select({
+      facilityId: jobs.facilityId,
+      openCount: count(),
+    })
+    .from(jobs)
+    .where(and(inArray(jobs.facilityId, facilityIds), eq(jobs.status, "Open")))
+    .groupBy(jobs.facilityId);
+  for (const row of rows) {
+    counts.set(row.facilityId, Number(row.openCount));
+  }
+  return counts;
+}
+
+async function overlayOpenJobCounts(items: Facility[]): Promise<Facility[]> {
+  return withOpenJobCounts(
+    items,
+    await loadOpenJobCounts(items.map((facility) => facility.id)),
+  );
+}
+
 /**
- * Top N facilities by open-role count. Used by the professional
+ * Top N facilities by actual open jobs. Used by the professional
  * dashboard's "Top Facilities Hiring" card.
  */
 export async function listTopHiringFacilities(
@@ -42,12 +80,30 @@ export async function listTopHiringFacilities(
   if (!hasDbConfig()) return [];
   return withRepositoryLogging("facilities", "listTopHiringFacilities", async () => {
     const db = getDb();
+    const ranked = await db
+      .select({
+        facilityId: jobs.facilityId,
+        openCount: count(),
+      })
+      .from(jobs)
+      .where(eq(jobs.status, "Open"))
+      .groupBy(jobs.facilityId)
+      .orderBy(desc(count()))
+      .limit(limit);
+    if (ranked.length === 0) return [];
+    const ids = ranked.map((row) => row.facilityId);
     const rows = await db
       .select()
       .from(facilities)
-      .orderBy(desc(facilities.openRoles))
-      .limit(limit);
-    return rows.map(toFacility);
+      .where(inArray(facilities.id, ids));
+    const byId = new Map(rows.map((row) => [row.id, toFacility(row)]));
+    const counts = new Map(
+      ranked.map((row) => [row.facilityId, Number(row.openCount)]),
+    );
+    return ids.flatMap((id) => {
+      const facility = byId.get(id);
+      return facility ? withOpenJobCounts([facility], counts) : [];
+    });
   }, { limit });
 }
 
@@ -58,9 +114,9 @@ export async function listFacilities(limit = 100): Promise<Facility[]> {
     const rows = await db
       .select()
       .from(facilities)
-      .orderBy(desc(facilities.openRoles))
+      .orderBy(facilities.name)
       .limit(limit);
-    return rows.map(toFacility);
+    return overlayOpenJobCounts(rows.map(toFacility));
   }, { limit });
 }
 
@@ -72,7 +128,7 @@ export async function listFacilitiesByIds(ids: string[]): Promise<Facility[]> {
       .select()
       .from(facilities)
       .where(inArray(facilities.id, ids));
-    return rows.map(toFacility);
+    return overlayOpenJobCounts(rows.map(toFacility));
   }, { count: ids.length });
 }
 
@@ -97,7 +153,7 @@ export async function listFacilitiesForAdmin(limit = 100): Promise<
         users,
         and(eq(users.facilityId, facilities.id), eq(users.role, "facility")),
       )
-      .orderBy(desc(facilities.openRoles))
+      .orderBy(facilities.name)
       .limit(limit);
 
     const seen = new Set<string>();
@@ -115,7 +171,11 @@ export async function listFacilitiesForAdmin(limit = 100): Promise<
         contactEmail: row.contactEmail ?? null,
       });
     }
-    return result;
+    const counted = await overlayOpenJobCounts(result.map((row) => row.facility));
+    return result.map((row, index) => ({
+      ...row,
+      facility: counted[index] ?? row.facility,
+    }));
   }, { limit });
 }
 
@@ -128,7 +188,9 @@ export async function getFacility(id: string): Promise<Facility | null> {
       .from(facilities)
       .where(eq(facilities.id, id))
       .limit(1);
-    return rows[0] ? toFacility(rows[0]) : null;
+    if (!rows[0]) return null;
+    const [facility] = await overlayOpenJobCounts([toFacility(rows[0])]);
+    return facility ?? null;
   }, { id });
 }
 
@@ -153,7 +215,10 @@ export async function findFacilityForUserEmail(
       .where(eq(users.email, email))
       .limit(1);
     if (!rows[0]) return null;
-    return toFacility(rows[0].facility);
+    const [facility] = await overlayOpenJobCounts([
+      toFacility(rows[0].facility),
+    ]);
+    return facility ?? null;
   }, { email });
 }
 

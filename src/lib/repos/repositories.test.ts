@@ -5,7 +5,7 @@ import {
   getApplicationsForProfessional,
   toApplication,
 } from "./applications";
-import { toFacility, listTopHiringFacilities } from "./facilities";
+import { toFacility, listTopHiringFacilities, withOpenJobCounts } from "./facilities";
 import { getEmergencyAlertsForProfessional, matchProfessionals } from "./emergency-alerts";
 import { createJob, listOpenJobsWithFacility, toJob } from "./jobs";
 import { toUser, findUserByEmail } from "./users";
@@ -88,6 +88,27 @@ describe("repository mapping helpers", () => {
       logoColor: "from-slate-400 to-slate-600",
       initials: "CU",
     });
+
+    expect(
+      withOpenJobCounts(
+        [
+          {
+            id: "facility-1",
+            name: "Cure Hospital",
+            type: "Hospital",
+            location: "Harare",
+            verified: true,
+            rating: 4.8,
+            openRoles: 12,
+            logoColor: "from-slate-400 to-slate-600",
+            initials: "CU",
+          },
+        ],
+        new Map([["facility-1", 2]]),
+      ),
+    ).toEqual([
+      expect.objectContaining({ id: "facility-1", openRoles: 2 }),
+    ]);
 
     expect(
       toUser({
