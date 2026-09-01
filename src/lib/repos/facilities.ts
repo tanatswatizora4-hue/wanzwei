@@ -4,9 +4,12 @@ import { desc, eq, inArray } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, users } from "@/lib/db/schema";
+import { facilityInitialsFromName } from "@/lib/facilities/initials";
 import { withRepositoryLogging } from "@/lib/observability/logger";
-import type { Facility as DbFacilityRow } from "@/lib/db/schema";
+import type { Facility as DbFacilityRow, NewFacility } from "@/lib/db/schema";
 import type { Facility } from "@/lib/types";
+
+const DEFAULT_FACILITY_LOGO = "from-slate-400 to-slate-600";
 
 /**
  * Convert a Drizzle row into the legacy UI `Facility` shape so the
@@ -109,4 +112,186 @@ export async function findFacilityForUserEmail(
     if (!rows[0]) return null;
     return toFacility(rows[0].facility);
   }, { email });
+}
+
+export type NewUnverifiedFacilityInput = {
+  name: string;
+  type: Facility["type"];
+  location: string;
+};
+
+/**
+ * Create a facility row that is never verified. Callers cannot pass
+ * verified/rating/openRoles — those stay at schema defaults.
+ */
+export async function createUnverifiedFacility(
+  input: NewUnverifiedFacilityInput,
+): Promise<Facility | null> {
+  if (!hasDbConfig()) return null;
+  const values: NewFacility = {
+    name: input.name,
+    type: input.type,
+    location: input.location,
+    verified: false,
+    rating: "0",
+    openRoles: 0,
+    initials: facilityInitialsFromName(input.name),
+    logoColor: DEFAULT_FACILITY_LOGO,
+  };
+  return withRepositoryLogging("facilities", "createUnverifiedFacility", async () => {
+    const db = getDb();
+    const rows = await db.insert(facilities).values(values).returning();
+    return rows[0] ? toFacility(rows[0]) : null;
+  }, { name: input.name });
+}
+
+export type FacilityProfilePatch = {
+  name?: string;
+  type?: Facility["type"];
+  location?: string;
+};
+
+export async function updateFacilityPublicProfile(
+  facilityId: string,
+  patch: FacilityProfilePatch,
+): Promise<Facility | null> {
+  if (!hasDbConfig()) return null;
+  const set: Partial<NewFacility> & { updatedAt: Date } = {
+    updatedAt: new Date(),
+  };
+  if (patch.name !== undefined) {
+    set.name = patch.name;
+    set.initials = facilityInitialsFromName(patch.name);
+  }
+  if (patch.type !== undefined) set.type = patch.type;
+  if (patch.location !== undefined) set.location = patch.location;
+  return withRepositoryLogging(
+    "facilities",
+    "updateFacilityPublicProfile",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .update(facilities)
+        .set(set)
+        .where(eq(facilities.id, facilityId))
+        .returning();
+      return rows[0] ? toFacility(rows[0]) : null;
+    },
+    { facilityId },
+  );
+}
+
+export async function provisionFacilityUser(input: {
+  userId: string;
+  email: string;
+  contactName: string;
+  organisationName: string;
+  location: string;
+  facilityType: Facility["type"];
+}): Promise<{ userId: string; facilityId: string; verified: boolean } | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging("facilities", "provisionFacilityUser", async () => {
+    const db = getDb();
+    return db.transaction(async (tx) => {
+      const userRows = await tx
+        .insert(users)
+        .values({
+          id: input.userId,
+          email: input.email,
+          name: input.contactName,
+          role: "facility",
+          verified: false,
+          location: input.location,
+        })
+        .returning({ id: users.id });
+      const userId = userRows[0]?.id;
+      if (!userId) return null;
+
+      const facilityRows = await tx
+        .insert(facilities)
+        .values({
+          name: input.organisationName,
+          type: input.facilityType,
+          location: input.location,
+          verified: false,
+          rating: "0",
+          openRoles: 0,
+          initials: facilityInitialsFromName(input.organisationName),
+          logoColor: DEFAULT_FACILITY_LOGO,
+        })
+        .returning({ id: facilities.id, verified: facilities.verified });
+      const facility = facilityRows[0];
+      if (!facility) return null;
+
+      await tx
+        .update(users)
+        .set({ facilityId: facility.id, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+
+      return {
+        userId,
+        facilityId: facility.id,
+        verified: facility.verified,
+      };
+    });
+  }, { email: input.email });
+}
+
+export async function attachFacilityToExistingUser(input: {
+  userId: string;
+  organisationName: string;
+  location: string;
+  facilityType: Facility["type"];
+}): Promise<{ facilityId: string; verified: boolean } | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "facilities",
+    "attachFacilityToExistingUser",
+    async () => {
+      const db = getDb();
+      return db.transaction(async (tx) => {
+        const current = await tx
+          .select({ facilityId: users.facilityId, role: users.role })
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+        const row = current[0];
+        if (!row || row.role !== "facility") return null;
+        if (row.facilityId) {
+          return { facilityId: row.facilityId, verified: false };
+        }
+
+        const facilityRows = await tx
+          .insert(facilities)
+          .values({
+            name: input.organisationName,
+            type: input.facilityType,
+            location: input.location,
+            verified: false,
+            rating: "0",
+            openRoles: 0,
+            initials: facilityInitialsFromName(input.organisationName),
+            logoColor: DEFAULT_FACILITY_LOGO,
+          })
+          .returning({ id: facilities.id, verified: facilities.verified });
+        const facility = facilityRows[0];
+        if (!facility) return null;
+
+        await tx
+          .update(users)
+          .set({
+            facilityId: facility.id,
+            location: input.location,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, input.userId));
+
+        return {
+          facilityId: facility.id,
+          verified: facility.verified,
+        };
+      });
+    },
+    { userId: input.userId },
+  );
 }

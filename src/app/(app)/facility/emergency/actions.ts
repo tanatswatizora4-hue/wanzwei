@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cancelOwnedEmergencyAlert } from "@/lib/emergency/cancel-owned-alert";
 import {
-  cancelEmergencyAlert,
+  cancelEmergencyAlertForFacility,
   createEmergencyAlert,
 } from "@/lib/repos/emergency-alerts";
 import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireRole } from "@/lib/auth/session";
 import {
@@ -86,14 +88,19 @@ export async function createAlertAction(formData: FormData) {
 }
 
 export async function cancelAlertAction(formData: FormData) {
-  await requireRole(["facility"]);
+  const user = await requireRole(["facility"]);
   const parsed = CancelEmergencyAlertSchema.safeParse({
     alertId: formData.get("alertId"),
   });
   if (!parsed.success) {
     throw new ServerActionValidationError(parsed.error);
   }
-  await cancelEmergencyAlert(parsed.data.alertId);
+  const facilityId = await resolveFacilityIdForUser(user);
+  await cancelOwnedEmergencyAlert(
+    { role: user.role, facilityId },
+    parsed.data.alertId,
+    { cancelForFacility: cancelEmergencyAlertForFacility },
+  );
   revalidatePath("/facility/emergency");
   revalidatePath("/professional/dashboard");
 }

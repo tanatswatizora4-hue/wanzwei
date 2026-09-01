@@ -26,7 +26,7 @@ export function JobRow({
 }: {
   job: Job;
   facility: Facility;
-  href?: string;
+  href: string;
   showBookmark?: boolean;
   compact?: boolean;
 }) {
@@ -44,7 +44,7 @@ export function JobRow({
       />
       <div className="min-w-0 flex-1">
         <Link
-          href={href ?? "#"}
+          href={href}
           className="text-[13.5px] font-semibold text-[color:var(--color-ink-900)] hover:text-[color:var(--color-brand-700)]"
         >
           {job.title}

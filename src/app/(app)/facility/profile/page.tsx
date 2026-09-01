@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
+import { FacilityVerifiedBadge } from "@/components/app/facility-verified-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FacilityLogo } from "@/components/ui/avatar";
@@ -80,9 +81,7 @@ export default async function FacilityProfilePage() {
                 <h2 className="text-[20px] font-semibold tracking-tight">
                   {f?.name ?? "Facility profile pending"}
                 </h2>
-                <Badge tone="success" withDot>
-                  <CheckCircle2 className="h-3 w-3" /> Verified
-                </Badge>
+                <FacilityVerifiedBadge verified={f?.verified === true} />
                 <Badge tone="brand">Pro plan</Badge>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-[12.5px] text-[color:var(--color-ink-500)]">

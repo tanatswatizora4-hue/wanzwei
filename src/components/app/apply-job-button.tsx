@@ -13,18 +13,20 @@ export function ApplyJobButton({
   defaultApplied = false,
   size = "sm",
   verified = false,
+  acceptingApplications = true,
 }: {
   jobId: string;
   jobTitle: string;
   defaultApplied?: boolean;
   size?: "sm" | "md";
   verified?: boolean;
+  acceptingApplications?: boolean;
 }) {
   const [applied, setApplied] = React.useState(defaultApplied);
   const [pending, setPending] = React.useState(false);
 
   const handleApply = async () => {
-    if (applied || pending) return;
+    if (applied || pending || !acceptingApplications) return;
     if (!verified) {
       toast.error(PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE);
       return;
@@ -50,13 +52,15 @@ export function ApplyJobButton({
     <Button
       type="button"
       size={size}
-      disabled={applied || pending}
+      disabled={applied || pending || !acceptingApplications}
       onClick={handleApply}
     >
       {pending ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
       ) : applied ? (
         "Applied"
+      ) : !acceptingApplications ? (
+        "Closed"
       ) : (
         <>
           Apply <ArrowRight className="h-3.5 w-3.5" />

@@ -120,3 +120,24 @@ export async function updateUser(
     return rows[0] ? toUser(rows[0]) : null;
   }, { id });
 }
+
+/** Settings-safe user patch. Never writes role, verified, facilityId, or HPA fields. */
+export async function updateOwnUserProfile(
+  userId: string,
+  patch: { name: string; location?: string | null },
+): Promise<User | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging("users", "updateOwnUserProfile", async () => {
+    const db = getDb();
+    const rows = await db
+      .update(users)
+      .set({
+        name: patch.name,
+        location: patch.location ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return rows[0] ? toUser(rows[0]) : null;
+  }, { id: userId });
+}

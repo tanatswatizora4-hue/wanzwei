@@ -3,8 +3,19 @@
 import { useState } from "react";
 
 import { cn } from "@/lib/cn";
+import { Input, Label } from "@/components/ui/input";
+import { FacilityTypeSchema } from "@/lib/validation/auth";
 
 type SignupRole = "professional" | "facility";
+
+const FACILITY_TYPES = FacilityTypeSchema.options;
+
+const nativeSelectClassName = cn(
+  "flex h-9 w-full rounded-[var(--radius-sm)] border bg-white px-3 text-sm",
+  "border-[color:var(--color-border-default)] text-[color:var(--color-ink-900)]",
+  "shadow-[var(--shadow-xs)] transition-colors",
+  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--color-brand-100)] focus-visible:border-[color:var(--color-brand-500)]",
+);
 
 export function SignupRolePicker({
   defaultRole,
@@ -54,6 +65,48 @@ export function SignupRolePicker({
           </p>
         </button>
       </div>
+
+      {selectedRole === "facility" ? (
+        <div className="mt-3.5 flex flex-col gap-3.5">
+          <div className="grid gap-1.5">
+            <Label htmlFor="organisationName">Organisation name</Label>
+            <Input
+              id="organisationName"
+              name="organisationName"
+              placeholder="Cure Hospital"
+              required
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="location">City / location</Label>
+            <Input
+              id="location"
+              name="location"
+              placeholder="Harare"
+              required
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="facilityType">Facility type</Label>
+            <select
+              id="facilityType"
+              name="facilityType"
+              required
+              defaultValue=""
+              className={nativeSelectClassName}
+            >
+              <option value="" disabled>
+                Select type
+              </option>
+              {FACILITY_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      ) : null}
     </>
   );
 }

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/session";
+import { professionalJobPath } from "@/lib/jobs/paths";
 import { getSavedJobsWithFacilityForUserEmail } from "@/lib/repos/jobs";
 
 export default async function SavedJobsPage() {
@@ -32,7 +33,11 @@ export default async function SavedJobsPage() {
           <ul className="p-2 flex flex-col">
             {saved.map(({ job, facility }) => (
               <li key={job.id}>
-                <JobRow job={job} facility={facility} />
+                <JobRow
+                  job={job}
+                  facility={facility}
+                  href={professionalJobPath(job.id)}
+                />
               </li>
             ))}
           </ul>

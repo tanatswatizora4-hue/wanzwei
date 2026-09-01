@@ -36,6 +36,7 @@ export async function applyForJobAction(jobId: string): Promise<ActionResult> {
   }
 
   revalidatePath("/professional/jobs");
+  revalidatePath(`/professional/jobs/${parsed.data.jobId}`);
   revalidatePath("/professional/applications");
   revalidatePath("/professional/dashboard");
   revalidatePath("/professional/saved");
@@ -69,6 +70,7 @@ export async function toggleSaveJobAction(
   }
 
   revalidatePath("/professional/jobs");
+  revalidatePath(`/professional/jobs/${parsed.data.jobId}`);
   revalidatePath("/professional/saved");
   revalidatePath("/professional/dashboard");
   return actionOk();

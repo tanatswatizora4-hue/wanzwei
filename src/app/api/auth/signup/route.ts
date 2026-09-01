@@ -88,7 +88,8 @@ async function handlePOST(req: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const { name, email, password, role } = parsed.data;
+  const { name, email, password, role, organisationName, location, facilityType } =
+    parsed.data;
 
   logger.info("auth.signup_payload", {
     ...fields,
@@ -101,6 +102,14 @@ async function handlePOST(req: Request) {
     password,
     name,
     role,
+    facility:
+      role === "facility" && organisationName && location && facilityType
+        ? {
+            organisationName,
+            location,
+            facilityType,
+          }
+        : undefined,
   });
 
   if (!provisioned.ok) {
@@ -182,6 +191,8 @@ function signupErrorStatus(
       return 503;
     case "profile_create_failed":
       return 500;
+    case "facility_create_failed":
+      return 500;
     case "create_user_failed":
     default:
       return 400;
@@ -202,6 +213,8 @@ function signupErrorQuery(
     case "db_not_configured":
       return "db_not_configured";
     case "profile_create_failed":
+      return "profile";
+    case "facility_create_failed":
       return "profile";
     case "create_user_failed":
     default:

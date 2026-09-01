@@ -52,14 +52,14 @@ export default async function SignupPage({
         ) : null}
 
         <form action="/api/auth/signup" method="post" className="flex flex-col gap-3.5">
-        <div>
-          <Label>I&apos;m joining as</Label>
-          <SignupRolePicker defaultRole={role} />
-        </div>
-
         <div className="grid gap-1.5">
           <Label htmlFor="name">Full name</Label>
           <Input id="name" name="name" placeholder="Tinashe Moyo" required />
+        </div>
+
+        <div>
+          <Label>I&apos;m joining as</Label>
+          <SignupRolePicker defaultRole={role} />
         </div>
 
         <div className="grid gap-1.5">

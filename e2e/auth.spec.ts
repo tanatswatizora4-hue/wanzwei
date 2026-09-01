@@ -22,6 +22,9 @@ test.describe("auth workflows", () => {
 
     await page.getByRole("button", { name: "Facility" }).click();
     await page.getByLabel("Full name").fill("E2E Facility Lead");
+    await page.getByLabel("Organisation name").fill("E2E Clinic");
+    await page.getByLabel("City / location").fill("Harare");
+    await page.getByLabel("Facility type").selectOption("Clinic");
     await page.getByLabel("Work email").fill("e2e.signup@example.com");
     await page.getByLabel("Password").fill("secret1");
     await page.getByRole("button", { name: "Create account" }).click();
@@ -29,6 +32,9 @@ test.describe("auth workflows", () => {
     await expect.poll(() => submitted).toContain("role=facility");
     expect(submitted).toContain("name=E2E+Facility+Lead");
     expect(submitted).toContain("email=e2e.signup%40example.com");
+    expect(submitted).toContain("organisationName=E2E+Clinic");
+    expect(submitted).toContain("location=Harare");
+    expect(submitted).toContain("facilityType=Clinic");
   });
 
   test("login submits credentials and preserves safe next redirect", async ({

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { FacilityLogo } from "@/components/ui/avatar";
 import { Card, CardBody } from "@/components/ui/card";
 import { timeAgoLong } from "@/lib/format";
+import { professionalJobPath } from "@/lib/jobs/paths";
 import { listOpenJobsWithFacilityForProfessional } from "@/lib/repos/jobs";
 import { requireRole } from "@/lib/auth/session";
 
@@ -57,7 +58,7 @@ export default async function JobsPage() {
                 />
                 <div className="min-w-0 flex-1">
                   <Link
-                    href={`/professional/jobs/${job.id}`}
+                    href={professionalJobPath(job.id)}
                     className="font-display text-[15.5px] font-semibold tracking-tight text-[color:var(--color-ink-900)] hover:text-[color:var(--color-brand-700)] line-clamp-1"
                   >
                     {job.title}

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  CheckCircle2,
   Star,
   Eye,
   Pencil,
@@ -12,17 +11,10 @@ import {
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/app/stat-card";
+import { FacilityVerifiedBadge } from "@/components/app/facility-verified-badge";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FacilityLogo, Avatar } from "@/components/ui/avatar";
-import { Input, Label, Textarea } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -82,9 +74,7 @@ export default async function FacilityDashboardPage() {
                   <h2 className="text-[18px] font-semibold tracking-tight">
                     {facility?.name ?? "Facility profile pending"}
                   </h2>
-                  <Badge tone="success" withDot>
-                    <CheckCircle2 className="h-3 w-3" /> Verified Facility
-                  </Badge>
+                  <FacilityVerifiedBadge verified={facility?.verified === true} />
                   <Badge tone="brand">Pro plan</Badge>
                 </div>
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
@@ -187,61 +177,22 @@ export default async function FacilityDashboardPage() {
             <div>
               <CardTitle>Post a new role</CardTitle>
               <p className="mt-0.5 text-[12.5px] text-[color:var(--color-ink-500)]">
-                Quick post — gets you in front of verified candidates in
-                minutes.
+                Use the job composer to publish a role to verified professionals.
               </p>
             </div>
           </CardHeader>
           <CardBody>
-            <form className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="grid gap-1.5 sm:col-span-2">
-                <Label>Role title</Label>
-                <Input placeholder="e.g. Registered Nurse" />
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Employment type</Label>
-                <Select defaultValue="full-time">
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full-time">Full-time</SelectItem>
-                    <SelectItem value="part-time">Part-time</SelectItem>
-                    <SelectItem value="locum">Locum</SelectItem>
-                    <SelectItem value="contract">Contract</SelectItem>
-                    <SelectItem value="permanent">Permanent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-1.5">
-                <Label>Location</Label>
-                <Input placeholder="Harare" defaultValue="Harare" />
-              </div>
-              <div className="grid gap-1.5 sm:col-span-2">
-                <Label>Salary range</Label>
-                <Input placeholder="$1,200 – $1,600 / month" />
-              </div>
-              <div className="grid gap-1.5 sm:col-span-2">
-                <Label>Description</Label>
-                <Textarea
-                  rows={4}
-                  placeholder="Brief description of the role, responsibilities and required experience…"
-                />
-              </div>
-              <div className="sm:col-span-2 flex items-center justify-between">
-                <p className="text-[11.5px] text-[color:var(--color-ink-500)]">
-                  Published roles are reviewed by Wanzwei within 1 hour.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="secondary" type="button">
-                    Save draft
-                  </Button>
-                  <Button type="button">
-                    <Plus className="h-3.5 w-3.5" /> Publish role
-                  </Button>
-                </div>
-              </div>
-            </form>
+            <p className="text-[13px] leading-relaxed text-[color:var(--color-ink-500)]">
+              Role title, type, location, pay, and description are collected on
+              the jobs page so every posting uses the same validated create flow.
+            </p>
+            <div className="mt-4">
+              <Button asChild>
+                <Link href="/facility/jobs?new=1">
+                  <Plus className="h-3.5 w-3.5" /> Post a role
+                </Link>
+              </Button>
+            </div>
           </CardBody>
         </Card>
 

@@ -22,10 +22,15 @@ function makeUser(overrides: Partial<User> = {}): User {
   };
 }
 
-function memoryStore(seed: User[] = []): AppUserStore & { rows: User[] } {
+function memoryStore(seed: User[] = []): AppUserStore & {
+  rows: User[];
+  facilities: { id: string; verified: boolean }[];
+} {
   const rows = [...seed];
+  const facilities: { id: string; verified: boolean }[] = [];
   return {
     rows,
+    facilities,
     hasDbConfig: () => true,
     findUserByEmail: async (email) =>
       rows.find((row) => row.email.toLowerCase() === email.toLowerCase()) ??
@@ -37,9 +42,37 @@ function memoryStore(seed: User[] = []): AppUserStore & { rows: User[] } {
         name: user.name,
         role: user.role,
         verified: user.verified === true,
+        facilityId: user.facilityId ?? undefined,
       });
       rows.push(created);
       return created;
+    },
+    provisionFacilityUser: async (input) => {
+      const facilityId = `fac-${input.userId}`;
+      const created = makeUser({
+        id: input.userId,
+        email: input.email,
+        name: input.contactName,
+        role: "facility",
+        verified: false,
+        facilityId,
+        location: input.location,
+      });
+      rows.push(created);
+      facilities.push({ id: facilityId, verified: false });
+      return { userId: input.userId, facilityId, verified: false };
+    },
+    attachFacilityToExistingUser: async (input) => {
+      const user = rows.find((row) => row.id === input.userId);
+      if (!user || user.role !== "facility") return null;
+      if (user.facilityId) {
+        return { facilityId: user.facilityId, verified: false };
+      }
+      const facilityId = `fac-${input.userId}`;
+      user.facilityId = facilityId;
+      user.location = input.location;
+      facilities.push({ id: facilityId, verified: false });
+      return { facilityId, verified: false };
     },
   };
 }
@@ -76,7 +109,7 @@ describe("ensureAppUserProfile", () => {
         authUserId: "11111111-1111-4111-8111-111111111111",
         email: "pro@example.com",
         name: "Tinashe Moyo",
-        role: "facility",
+        role: "professional",
       },
       store,
     );
@@ -84,7 +117,7 @@ describe("ensureAppUserProfile", () => {
     expect(profile).toMatchObject({
       id: "11111111-1111-4111-8111-111111111111",
       email: "pro@example.com",
-      role: "facility",
+      role: "professional",
       name: "Tinashe Moyo",
       verified: false,
     });
@@ -277,13 +310,22 @@ describe("completeEmailSignup", () => {
   it("preserves the facility role on the profile row", async () => {
     const store = memoryStore();
     const result = await completeEmailSignup(
-      { ...input, role: "facility" },
+      {
+        ...input,
+        role: "facility",
+        facility: {
+          organisationName: "Cure Hospital",
+          location: "Harare",
+          facilityType: "Hospital",
+        },
+      },
       signupDeps(store),
     );
 
     expect(result.ok).toBe(true);
     expect(store.rows[0]?.role).toBe("facility");
     expect(store.rows[0]?.verified).toBe(false);
+    expect(store.rows[0]?.facilityId).toBeTruthy();
   });
 
   it("returns exists without creating Auth when the email is already profiled", async () => {
@@ -528,5 +570,194 @@ describe("completeEmailSignup", () => {
 
     expect(result).toMatchObject({ ok: false, code: "db_not_configured" });
     expect(authCreated).toBe(0);
+  });
+});
+
+const FACILITY_SIGNUP = {
+  organisationName: "Cure Hospital",
+  location: "Harare",
+  facilityType: "Hospital" as const,
+};
+
+describe("facility signup provisioning", () => {
+  it("creates an unverified facility and links users.facility_id", async () => {
+    const store = memoryStore();
+    const result = await completeEmailSignup(
+      {
+        email: "facility@example.com",
+        password: "secret1",
+        name: "Chipo Ncube",
+        role: "facility",
+        facility: FACILITY_SIGNUP,
+      },
+      signupDeps(store, {
+        createAuthUserWithRole: async ({ role }) => {
+          expect(role).toBe("facility");
+          return { userId: "11111111-1111-4111-8111-111111111111" };
+        },
+      }),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(store.rows[0]).toMatchObject({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "facility@example.com",
+      role: "facility",
+      verified: false,
+      facilityId: "fac-11111111-1111-4111-8111-111111111111",
+    });
+    expect(store.facilities).toEqual([
+      { id: "fac-11111111-1111-4111-8111-111111111111", verified: false },
+    ]);
+  });
+
+  it("does not mint verified or admin during facility signup", async () => {
+    const store = memoryStore();
+    await completeEmailSignup(
+      {
+        email: "facility@example.com",
+        password: "secret1",
+        name: "Chipo Ncube",
+        role: "facility",
+        facility: FACILITY_SIGNUP,
+      },
+      signupDeps(store),
+    );
+
+    expect(store.rows[0]?.role).toBe("facility");
+    expect(store.rows[0]?.role).not.toBe("admin");
+    expect(store.rows[0]?.verified).toBe(false);
+    expect(store.facilities[0]?.verified).toBe(false);
+  });
+
+  it("fails closed when facility details are missing", async () => {
+    const store = memoryStore();
+    const deleted: string[] = [];
+    const result = await completeEmailSignup(
+      {
+        email: "facility@example.com",
+        password: "secret1",
+        name: "Chipo Ncube",
+        role: "facility",
+      },
+      signupDeps(store, {
+        deleteAuthUser: async (userId) => {
+          deleted.push(userId);
+          return true;
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "facility_create_failed" });
+    expect(store.rows).toHaveLength(0);
+    expect(deleted).toEqual(["11111111-1111-4111-8111-111111111111"]);
+  });
+
+  it("does not present a verified facility if provisioning tries to mint verified", async () => {
+    const store = memoryStore();
+    store.provisionFacilityUser = async () => ({
+      userId: "11111111-1111-4111-8111-111111111111",
+      facilityId: "should-not-count",
+      verified: true,
+    });
+    const deleted: string[] = [];
+    const result = await completeEmailSignup(
+      {
+        email: "facility@example.com",
+        password: "secret1",
+        name: "Chipo Ncube",
+        role: "facility",
+        facility: FACILITY_SIGNUP,
+      },
+      signupDeps(store, {
+        deleteAuthUser: async (userId) => {
+          deleted.push(userId);
+          return true;
+        },
+      }),
+    );
+
+    expect(result).toMatchObject({ ok: false, code: "facility_create_failed" });
+    expect(deleted).toHaveLength(1);
+  });
+
+  it("leaves an already-linked seeded facility account unchanged", async () => {
+    const existing = makeUser({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "facility@example.com",
+      role: "facility",
+      facilityId: "seeded-facility",
+      verified: false,
+    });
+    const store = memoryStore([existing]);
+    let attached = 0;
+    store.attachFacilityToExistingUser = async () => {
+      attached += 1;
+      return { facilityId: "new-facility", verified: false };
+    };
+
+    const profile = await ensureAppUserProfile(
+      {
+        authUserId: existing.id,
+        email: existing.email,
+        name: existing.name,
+        role: "facility",
+        facility: FACILITY_SIGNUP,
+      },
+      store,
+    );
+
+    expect(profile.facilityId).toBe("seeded-facility");
+    expect(attached).toBe(0);
+    expect(store.facilities).toHaveLength(0);
+  });
+
+  it("attaches a facility to a legacy facility profile that is missing facility_id", async () => {
+    const existing = makeUser({
+      id: "11111111-1111-4111-8111-111111111111",
+      email: "facility@example.com",
+      role: "facility",
+      verified: false,
+    });
+    const store = memoryStore([existing]);
+
+    const profile = await ensureAppUserProfile(
+      {
+        authUserId: existing.id,
+        email: existing.email,
+        name: existing.name,
+        role: "facility",
+        facility: FACILITY_SIGNUP,
+      },
+      store,
+    );
+
+    expect(profile.role).toBe("facility");
+    expect(profile.facilityId).toBe("fac-11111111-1111-4111-8111-111111111111");
+    expect(profile.verified).toBe(false);
+  });
+
+  it("does not create a facility during professional signup", async () => {
+    const store = memoryStore();
+    let provisioned = 0;
+    store.provisionFacilityUser = async () => {
+      provisioned += 1;
+      return null;
+    };
+
+    const result = await completeEmailSignup(
+      {
+        email: "pro@example.com",
+        password: "secret1",
+        name: "Tinashe Moyo",
+        role: "professional",
+      },
+      signupDeps(store),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(provisioned).toBe(0);
+    expect(store.rows[0]?.role).toBe("professional");
+    expect(store.rows[0]?.facilityId).toBeUndefined();
   });
 });

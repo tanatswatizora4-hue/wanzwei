@@ -1,6 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+
+import { updateOwnProfileAction } from "@/app/(app)/settings/actions";
 import { PageHeader } from "@/components/app/topbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -9,8 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ProfileAvatarUploader } from "@/components/app/profile-avatar-uploader";
 import { cn } from "@/lib/cn";
-import type { User, Verification } from "@/lib/types";
+import type { Facility, User, Verification } from "@/lib/types";
 import { VerificationCredentialsForm } from "@/components/app/professional/verification-credentials-form";
+import { FacilityTypeSchema } from "@/lib/validation/auth";
 
 type SettingsSection =
   | "profile"
@@ -27,31 +32,61 @@ const NAV: { id: SettingsSection; label: string }[] = [
   { id: "billing", label: "Billing & invoices" },
 ];
 
+const FACILITY_TYPES = FacilityTypeSchema.options;
+
+const nativeSelectClassName = cn(
+  "flex h-9 w-full rounded-[var(--radius-sm)] border bg-white px-3 text-sm",
+  "border-[color:var(--color-border-default)] text-[color:var(--color-ink-900)]",
+  "shadow-[var(--shadow-xs)] transition-colors",
+  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--color-brand-100)] focus-visible:border-[color:var(--color-brand-500)]",
+);
+
 export function SettingsView({
   user,
+  facility = null,
   avatarUrl,
   avatarUploadEnabled,
   verification = null,
 }: {
   user: User;
+  facility?: Facility | null;
   avatarUrl?: string | null;
   avatarUploadEnabled: boolean;
   verification?: Verification | null;
 }) {
   const [section, setSection] = React.useState<SettingsSection>("profile");
+  const [saving, setSaving] = React.useState(false);
 
   const subtitle =
     user.role === "facility"
-      ? (user.facilityName ?? user.title ?? "Facility account")
+      ? (facility?.name ?? user.facilityName ?? user.title ?? "Facility account")
       : user.role === "admin"
         ? (user.title ?? "Administrator")
         : (user.profession ?? user.title ?? "Healthcare professional");
+
+  const handleSaveProfile = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    try {
+      const result = await updateOwnProfileAction(
+        new FormData(event.currentTarget),
+      );
+      if (result.ok) {
+        toast.success("Profile saved");
+      } else {
+        toast.error(result.error);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
         title="Settings"
-        description="Manage your account, security, billing and notification preferences."
+        description="Manage your account details and preferences."
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -122,32 +157,85 @@ export function SettingsView({
                   Profile information
                 </h2>
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-                  Update your personal details. This information is shown to
-                  facilities you apply to.
+                  {user.role === "facility"
+                    ? "Update your contact details and facility profile."
+                    : "Update your personal details. Profession and HPA credentials are managed through verification."}
                 </p>
                 <Separator className="my-4" />
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <Field label="Full name" defaultValue={user.name} />
-                  <Field label="Email" defaultValue={user.email} />
-                  <Field
-                    label={
-                      user.role === "facility" ? "Facility name" : "Profession"
-                    }
-                    defaultValue={
-                      user.role === "facility"
-                        ? (user.facilityName ?? "")
-                        : (user.profession ?? "")
-                    }
-                  />
-                  <Field
-                    label="Location"
-                    defaultValue={user.location ?? ""}
-                  />
-                </div>
-                <div className="mt-5 flex flex-wrap justify-end gap-2">
-                  <Button variant="ghost">Cancel</Button>
-                  <Button>Save changes</Button>
-                </div>
+                <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <Field
+                      label="Full name"
+                      name="name"
+                      defaultValue={user.name}
+                      required
+                    />
+                    <Field
+                      label="Email"
+                      name="email"
+                      defaultValue={user.email}
+                      readOnly
+                      disabled
+                    />
+                    {user.role === "professional" ? (
+                      <Field
+                        label="Profession"
+                        defaultValue={user.profession ?? ""}
+                        readOnly
+                        disabled
+                      />
+                    ) : null}
+                    {user.role === "facility" ? (
+                      <>
+                        <Field
+                          label="Organisation name"
+                          name="organisationName"
+                          defaultValue={facility?.name ?? ""}
+                          required
+                        />
+                        <Field
+                          label="Facility location"
+                          name="facilityLocation"
+                          defaultValue={facility?.location ?? ""}
+                          required
+                        />
+                        <div className="grid gap-1.5">
+                          <Label htmlFor="facilityType">Facility type</Label>
+                          <select
+                            id="facilityType"
+                            name="facilityType"
+                            required
+                            defaultValue={facility?.type ?? "Hospital"}
+                            className={nativeSelectClassName}
+                          >
+                            {FACILITY_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    ) : null}
+                    <Field
+                      label={
+                        user.role === "facility"
+                          ? "Your location"
+                          : "Location"
+                      }
+                      name="location"
+                      defaultValue={user.location ?? ""}
+                    />
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button type="submit" disabled={saving}>
+                      {saving ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : null}
+                      Save changes
+                    </Button>
+                  </div>
+                </form>
               </CardBody>
             </Card>
           ) : null}
@@ -158,7 +246,8 @@ export function SettingsView({
                 <CardBody className="pt-5">
                   <h2 className="text-[15px] font-semibold">Security</h2>
                   <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-                    Manage password and two-factor authentication.
+                    Password and two-factor authentication are not available in
+                    this MVP.
                   </p>
                   <Separator className="my-4" />
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -166,13 +255,18 @@ export function SettingsView({
                       label="Current password"
                       type="password"
                       placeholder="••••••••"
+                      disabled
                     />
                     <Field
                       label="New password"
                       type="password"
                       placeholder="••••••••"
+                      disabled
                     />
                   </div>
+                  <p className="mt-2 text-[12px] text-[color:var(--color-ink-400)]">
+                    Coming soon
+                  </p>
                   <div className="mt-4 flex flex-col gap-3 rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)] p-3.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="text-[13px] font-semibold">
@@ -182,8 +276,14 @@ export function SettingsView({
                         Add an extra layer of security to your account.
                       </p>
                     </div>
-                    <Button size="sm" variant="secondary" className="shrink-0">
-                      Enable 2FA
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="shrink-0"
+                      disabled
+                      title="Coming soon"
+                    >
+                      Coming soon
                     </Button>
                   </div>
                 </CardBody>
@@ -195,11 +295,16 @@ export function SettingsView({
                     Danger zone
                   </h2>
                   <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-                    Permanently delete your account and all associated data.
+                    Account deletion is not available in this MVP.
                   </p>
                   <div className="mt-3">
-                    <Button variant="danger" size="sm">
-                      Delete account
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled
+                      title="Coming soon"
+                    >
+                      Coming soon
                     </Button>
                   </div>
                 </CardBody>
@@ -252,12 +357,14 @@ function ComingSoonSection({ title, body }: { title: string; body: string }) {
 
 function Field({
   label,
+  name,
   ...props
-}: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+}: { label: string; name?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const id = name ?? props.id;
   return (
     <div className="grid gap-1.5">
-      <Label>{label}</Label>
-      <Input {...props} />
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} name={name} {...props} />
     </div>
   );
 }

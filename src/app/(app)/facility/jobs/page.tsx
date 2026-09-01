@@ -12,13 +12,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";import { timeAgoLong } from "@/lib/format";
+} from "@/components/ui/table";
+import { timeAgoLong } from "@/lib/format";
 import { requireRole } from "@/lib/auth/session";
 import { findFacilityForUserEmail } from "@/lib/repos/facilities";
 import { listJobsForFacility } from "@/lib/repos/jobs";
 
-export default async function FacilityJobsPage() {
+export default async function FacilityJobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>;
+}) {
   const user = await requireRole(["facility"]);
+  const { new: newParam } = await searchParams;
   const facility = await findFacilityForUserEmail(user.email);
   const jobs = facility ? await listJobsForFacility(facility.id, 100) : [];
 
@@ -39,6 +45,7 @@ export default async function FacilityJobsPage() {
             </Tabs>
             <FacilityNewJobDialog
               defaultLocation={facility?.location ?? "Harare"}
+              defaultOpen={newParam === "1"}
             />
           </>
         }

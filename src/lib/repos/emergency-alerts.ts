@@ -502,21 +502,27 @@ async function loadFacilityContact(
   };
 }
 
-export async function cancelEmergencyAlert(
+export async function cancelEmergencyAlertForFacility(
   alertId: string,
-): Promise<EmergencyAlert | null> {
-  if (!hasDbConfig()) return null;
+  facilityId: string,
+): Promise<boolean> {
+  if (!hasDbConfig()) return false;
   return withRepositoryLogging(
     "emergency-alerts",
-    "cancelEmergencyAlert",
+    "cancelEmergencyAlertForFacility",
     async () => {
       const db = getDb();
       const rows = await db
         .update(emergencyAlerts)
         .set({ status: "Cancelled" })
-        .where(eq(emergencyAlerts.id, alertId))
-        .returning();
-      if (!rows[0]) return null;
+        .where(
+          and(
+            eq(emergencyAlerts.id, alertId),
+            eq(emergencyAlerts.facilityId, facilityId),
+          ),
+        )
+        .returning({ id: emergencyAlerts.id });
+      if (!rows[0]) return false;
       await db
         .update(emergencyAlertRecipients)
         .set({ status: "Expired" })
@@ -526,10 +532,9 @@ export async function cancelEmergencyAlert(
             eq(emergencyAlertRecipients.status, "Pending"),
           ),
         );
-      const recipients = await loadRecipients([alertId]);
-      return toEmergencyAlert(rows[0], recipients.get(alertId));
+      return true;
     },
-    { alertId },
+    { alertId, facilityId },
   );
 }
 

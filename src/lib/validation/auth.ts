@@ -36,22 +36,61 @@ export type LoginInput = z.infer<typeof LoginSchema>;
 // provisioned out-of-band (service-role admin API or seed script).
 // ---------------------------------------------------------------------
 
-export const SignupSchema = z.object({
-  name: z.string().trim().min(1, "Name is required").max(120),
-  email: EmailSchema,
-  password: z
-    .string()
-    .min(6, "Password must be at least 6 characters")
-    .max(128, "Password is too long"),
-  role: z.preprocess(
-    (value) => (value === null || value === "" ? undefined : value),
-    z
-      .enum(["professional", "facility"], {
-        message: "Role must be 'professional' or 'facility'",
-      })
-      .default("professional"),
-  ),
-});
+export const FacilityTypeSchema = z.enum([
+  "Hospital",
+  "Clinic",
+  "Pharmacy",
+  "Laboratory",
+  "Radiology",
+]);
+
+export const SignupSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required").max(120),
+    email: EmailSchema,
+    password: z
+      .string()
+      .min(6, "Password must be at least 6 characters")
+      .max(128, "Password is too long"),
+    role: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      z
+        .enum(["professional", "facility"], {
+          message: "Role must be 'professional' or 'facility'",
+        })
+        .default("professional"),
+    ),
+    organisationName: z.string().trim().max(160).optional(),
+    location: z.string().trim().max(120).optional(),
+    facilityType: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      FacilityTypeSchema.optional(),
+    ),
+  })
+  .superRefine((value, ctx) => {
+    if (value.role !== "facility") return;
+    if (!value.organisationName?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["organisationName"],
+        message: "Organisation name is required",
+      });
+    }
+    if (!value.location?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["location"],
+        message: "Location is required",
+      });
+    }
+    if (!value.facilityType) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["facilityType"],
+        message: "Facility type is required",
+      });
+    }
+  });
 
 export type SignupInput = z.infer<typeof SignupSchema>;
 

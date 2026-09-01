@@ -19,6 +19,9 @@ describe("signup payload", () => {
       email: "pro@example.com",
       password: "secret1",
       role: "facility",
+      organisationName: undefined,
+      location: undefined,
+      facilityType: undefined,
     });
   });
 
@@ -60,8 +63,31 @@ describe("signup payload", () => {
       hasName: true,
       hasEmail: true,
       hasPassword: true,
+      hasOrganisationName: false,
+      hasLocation: false,
+      hasFacilityType: false,
       role: "professional",
     });
     expect(flags).not.toHaveProperty("password");
+  });
+
+  it("reads facility organisation fields when present", () => {
+    const formData = new FormData();
+    formData.set("name", "Chipo Ncube");
+    formData.set("email", "facility@example.com");
+    formData.set("password", "secret1");
+    formData.set("role", "facility");
+    formData.set("organisationName", "Cure Hospital");
+    formData.set("location", "Harare");
+    formData.set("facilityType", "Hospital");
+
+    const payload = readSignupPayload(formData);
+    expect(payload).toMatchObject({
+      organisationName: "Cure Hospital",
+      location: "Harare",
+      facilityType: "Hospital",
+      role: "facility",
+    });
+    expect(SignupSchema.parse(payload).role).toBe("facility");
   });
 });

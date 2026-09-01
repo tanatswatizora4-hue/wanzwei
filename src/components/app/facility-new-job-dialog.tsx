@@ -32,11 +32,13 @@ const EMPLOYMENT_TYPES = [
 
 export function FacilityNewJobDialog({
   defaultLocation,
+  defaultOpen = false,
 }: {
   defaultLocation: string;
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(defaultOpen);
   const [pending, setPending] = React.useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {

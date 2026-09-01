@@ -56,6 +56,43 @@ describe("auth validation", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("requires organisation name, location, and type for facility signup", () => {
+    expect(
+      SignupSchema.safeParse({
+        name: "Chipo Ncube",
+        email: "facility@example.com",
+        password: "secret1",
+        role: "facility",
+      }).success,
+    ).toBe(false);
+
+    const parsed = SignupSchema.parse({
+      name: "Chipo Ncube",
+      email: "facility@example.com",
+      password: "secret1",
+      role: "facility",
+      organisationName: "Cure Hospital",
+      location: "Harare",
+      facilityType: "Hospital",
+    });
+    expect(parsed).toMatchObject({
+      role: "facility",
+      organisationName: "Cure Hospital",
+      location: "Harare",
+      facilityType: "Hospital",
+    });
+  });
+
+  it("does not require facility fields for professional signup", () => {
+    const parsed = SignupSchema.parse({
+      name: "Tinashe Moyo",
+      email: "pro@example.com",
+      password: "secret1",
+      role: "professional",
+    });
+    expect(parsed.role).toBe("professional");
+  });
+
   it("allows only same-origin relative login redirects", () => {
     expect(
       LoginSchema.safeParse({

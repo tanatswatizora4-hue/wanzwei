@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { FacilityLogo } from "@/components/ui/avatar";
 import { requireRole } from "@/lib/auth/session";
 import { timeAgoLong } from "@/lib/format";
+import { professionalJobPath } from "@/lib/jobs/paths";
 import { listApplicationsForProfessional } from "@/lib/repos/applications";
 import {
   listFacilitiesByIds,
@@ -123,7 +124,11 @@ export default async function ProfessionalDashboardPage() {
                 ) : (
                   recommended.map(({ job, facility }) => (
                     <li key={job.id}>
-                      <JobRow job={job} facility={facility} />
+                      <JobRow
+                        job={job}
+                        facility={facility}
+                        href={professionalJobPath(job.id)}
+                      />
                     </li>
                   ))
                 )}

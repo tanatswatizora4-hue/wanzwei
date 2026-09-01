@@ -96,8 +96,8 @@ describe("completeLoginAfterAuth", () => {
     const store = memoryStore();
     const result = await completeLoginAfterAuth(
       authUser({
-        app_metadata: { role: "facility" },
-        user_metadata: { full_name: "Chipo Ncube", role: "admin" },
+        app_metadata: { role: "professional" },
+        user_metadata: { full_name: "Tinashe Moyo", role: "admin" },
       }),
       store,
     );
@@ -105,22 +105,39 @@ describe("completeLoginAfterAuth", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.repaired).toBe(true);
-    expect(result.role).toBe("facility");
+    expect(result.role).toBe("professional");
     expect(result.profile).toMatchObject({
       id: AUTH_ID,
       email: "pro@example.com",
-      role: "facility",
-      name: "Chipo Ncube",
+      role: "professional",
+      name: "Tinashe Moyo",
       verified: false,
     });
     expect(store.created).toEqual([
       expect.objectContaining({
         id: AUTH_ID,
-        role: "facility",
-        name: "Chipo Ncube",
+        role: "professional",
+        name: "Tinashe Moyo",
         verified: false,
       }),
     ]);
+  });
+
+  it("does not create an unlinked facility profile on login without organisation details", async () => {
+    const store = memoryStore();
+    const result = await completeLoginAfterAuth(
+      authUser({
+        app_metadata: { role: "facility" },
+        user_metadata: { full_name: "Chipo Ncube" },
+      }),
+      store,
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.code).toBe("profile_unavailable");
+    expect(store.created).toHaveLength(0);
+    expect(store.rows).toHaveLength(0);
   });
 
   it("rejects a missing or invalid app_metadata role without creating a profile", async () => {

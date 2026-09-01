@@ -274,6 +274,59 @@ export async function saveJob(
   }, { userId: savedJob.userId, jobId: savedJob.jobId });
 }
 
+export async function getJobWithFacilityForProfessional(
+  jobId: string,
+  professionalId: string,
+): Promise<JobWithFacilityAndUserState | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "jobs",
+    "getJobWithFacilityForProfessional",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({ job: jobs, facility: facilities })
+        .from(jobs)
+        .innerJoin(facilities, eq(facilities.id, jobs.facilityId))
+        .where(eq(jobs.id, jobId))
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+
+      const savedRows = await db
+        .select({ jobId: savedJobs.jobId })
+        .from(savedJobs)
+        .where(
+          and(
+            eq(savedJobs.userId, professionalId),
+            eq(savedJobs.jobId, jobId),
+          ),
+        )
+        .limit(1);
+      const appliedRows = await db
+        .select({ jobId: applications.jobId })
+        .from(applications)
+        .where(
+          and(
+            eq(applications.professionalId, professionalId),
+            eq(applications.jobId, jobId),
+          ),
+        )
+        .limit(1);
+
+      return {
+        job: {
+          ...toJob(row.job),
+          saved: savedRows.length > 0,
+          applied: appliedRows.length > 0,
+        },
+        facility: toFacility(row.facility),
+      };
+    },
+    { jobId, professionalId },
+  );
+}
+
 export async function unsaveJob(userId: string, jobId: string): Promise<boolean> {
   if (!hasDbConfig()) return false;
   return withRepositoryLogging("jobs", "unsaveJob", async () => {
