@@ -3,6 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 
+import { dashboardPathForRole } from "@/lib/auth/role-paths";
 import { findUserByEmail } from "@/lib/repos/users";
 import { getServerSupabase } from "@/lib/supabase/server";
 import type { Role, User } from "@/lib/types";
@@ -10,6 +11,8 @@ import {
   PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE,
   isVerifiedProfessional,
 } from "@/lib/auth/professional-verification";
+
+export { dashboardPathForRole };
 
 const ROLES: readonly Role[] = ["professional", "facility", "admin"];
 
@@ -74,18 +77,6 @@ export async function getCurrentUserWithRole(
 export async function signOut(): Promise<void> {
   const supabase = await getServerSupabase();
   await supabase.auth.signOut();
-}
-
-export function dashboardPathForRole(role: Role): string {
-  switch (role) {
-    case "admin":
-      return "/admin/dashboard";
-    case "facility":
-      return "/facility/dashboard";
-    case "professional":
-    default:
-      return "/professional/dashboard";
-  }
 }
 
 // ---------------------------------------------------------------------

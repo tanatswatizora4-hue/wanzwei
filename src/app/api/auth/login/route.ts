@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { isEmailNotConfirmedError } from "@/lib/auth/auth-errors";
 import { completeLoginAfterAuth } from "@/lib/auth/complete-login";
 import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
-import { dashboardPathForRole } from "@/lib/auth/session";
+import { authorizedPostAuthPath } from "@/lib/auth/role-paths";
+import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
 import {
   addRateLimitHeaders,
   checkRateLimit,
@@ -32,9 +33,8 @@ async function handlePOST(req: Request) {
     rateLimitKeyFromRequest(req, typeof rawEmail === "string" ? rawEmail : ""),
   );
   if (!rateLimit.success) {
-    logger.warn("auth.login_failed", {
+    logAuthWarn("auth.password.login_failed", {
       reason: "rate_limited",
-      email: typeof rawEmail === "string" ? rawEmail : undefined,
     });
     if (wantsJson(req)) {
       return rateLimitJsonResponse(rateLimit);
@@ -60,9 +60,8 @@ async function handlePOST(req: Request) {
   });
 
   if (!parsed.success) {
-    logger.warn("auth.login_failed", {
+    logAuthWarn("auth.password.login_failed", {
       reason: "validation_failed",
-      email: typeof rawEmail === "string" ? rawEmail : undefined,
     });
     if (wantsJson(req)) {
       return validationErrorResponse(parsed.error);
@@ -89,14 +88,13 @@ async function handlePOST(req: Request) {
       supabaseMessage === "fetch failed" ||
       /ENOTFOUND|ECONNREFUSED|ETIMEDOUT|network/i.test(supabaseMessage);
     const unconfirmed = isEmailNotConfirmedError(error);
-    logger.warn("auth.login_failed", {
+    logAuthWarn("auth.password.login_failed", {
       reason: isNetworkFailure
         ? "supabase_unreachable"
         : unconfirmed
           ? "email_not_confirmed"
           : "invalid_credentials",
-      email,
-      supabaseError: supabaseMessage || undefined,
+      supabase_error_code: error?.code,
     });
     const url = new URL("/login", req.url);
     url.searchParams.set(
@@ -127,11 +125,10 @@ async function handlePOST(req: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
   if (!login.ok) {
-    logger.warn("auth.login_failed", {
+    logAuthWarn("auth.password.login_failed", {
       reason: login.logReason,
-      email,
       userId: data.user.id,
-      detail: login.logDetail,
+      code: login.code,
     });
     await supabase.auth.signOut();
     const url = new URL("/login", req.url);
@@ -143,7 +140,12 @@ async function handlePOST(req: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const redirectTo = nextPath ?? dashboardPathForRole(login.role);
+  const redirectTo = authorizedPostAuthPath(nextPath, login.role);
+  logAuthEvent("auth.password.login_success", {
+    userId: data.user.id,
+    role: login.role,
+    destination: redirectTo,
+  });
   return NextResponse.redirect(new URL(redirectTo, req.url), { status: 303 });
 }
 

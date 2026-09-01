@@ -7,14 +7,11 @@ import { displayNameFromAuthUser } from "@/lib/auth/display-name";
 import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
 import type { AppUserStore } from "@/lib/auth/provision-app-user";
 import { hasDbConfig } from "@/lib/db/client";
-import { createLogger } from "@/lib/observability/logger";
 import { createUser, findUserByEmail } from "@/lib/repos/users";
 import type { Role } from "@/lib/types";
 
 export { displayNameFromAuthUser };
 export { createSessionPersistAppRole as createOAuthPersistAppRole };
-
-const logger = createLogger("auth");
 
 const defaultStore: AppUserStore = {
   hasDbConfig,
@@ -33,10 +30,13 @@ export type OAuthProvisionDeps = {
  * Returning users keep their existing profile role and sync the JWT to it.
  */
 export async function ensureOAuthUserProvisioned(
-  authUser: SupabaseAuthUser,
+  authUser: Pick<
+    SupabaseAuthUser,
+    "id" | "email" | "app_metadata" | "user_metadata"
+  >,
   deps: OAuthProvisionDeps,
-): Promise<Role> {
-  const result = await completeLoginAfterAuth(
+) {
+  return completeLoginAfterAuth(
     authUser,
     deps.store ?? defaultStore,
     {
@@ -44,16 +44,4 @@ export async function ensureOAuthUserProvisioned(
       persistAppRole: deps.persistAppRole,
     },
   );
-  if (!result.ok) {
-    logger.warn("auth.oauth_provision_failed", {
-      userId: authUser.id,
-      reason: result.logReason,
-      detail: result.logDetail,
-      code: result.code,
-    });
-    throw new Error(
-      result.logDetail ?? `OAuth provisioning failed (${result.logReason})`,
-    );
-  }
-  return result.role;
 }

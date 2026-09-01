@@ -6,22 +6,18 @@ import {
 } from "@/lib/auth/signup-payload";
 import { resendVerificationEmail } from "@/lib/auth/email";
 import { completeEmailSignup } from "@/lib/auth/provision-app-user";
+import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
 import {
   addRateLimitHeaders,
   checkRateLimit,
   rateLimitJsonResponse,
   rateLimitKeyFromRequest,
 } from "@/lib/rate-limit";
-import {
-  createLogger,
-  withRouteLogging,
-} from "@/lib/observability/logger";
+import { withRouteLogging } from "@/lib/observability/logger";
 import { SignupSchema } from "@/lib/validation/auth";
 import { validationErrorResponse } from "@/lib/validation/errors";
 
 export const runtime = "nodejs";
-
-const logger = createLogger("auth");
 
 /**
  * Sign up flow:
@@ -47,10 +43,9 @@ async function handlePOST(req: Request) {
     rateLimitKeyFromRequest(req, payload.email ?? ""),
   );
   if (!rateLimit.success) {
-    logger.warn("auth.signup_failed", {
+    logAuthWarn("auth.signup.started", {
       reason: "rate_limited",
       ...fields,
-      email: payload.email,
     });
     if (wantsJson(req)) {
       return rateLimitJsonResponse(rateLimit);
@@ -71,11 +66,9 @@ async function handlePOST(req: Request) {
         parsed.error.issues.map((issue) => String(issue.path[0] ?? "unknown")),
       ),
     ];
-    logger.warn("auth.signup_failed", {
+    logAuthWarn("auth.signup.started", {
       reason: "validation_failed",
-      ...fields,
       invalidFields,
-      email: payload.email,
     });
     if (wantsJson(req)) {
       return validationErrorResponse(parsed.error);
@@ -91,11 +84,7 @@ async function handlePOST(req: Request) {
   const { name, email, password, role, organisationName, location, facilityType } =
     parsed.data;
 
-  logger.info("auth.signup_payload", {
-    ...fields,
-    invalidFields: [] as string[],
-    email,
-  });
+  logAuthEvent("auth.signup.started", { role });
 
   const provisioned = await completeEmailSignup({
     email,
@@ -113,12 +102,9 @@ async function handlePOST(req: Request) {
   });
 
   if (!provisioned.ok) {
-    logger.warn("auth.signup_failed", {
+    logAuthWarn("auth.signup.started", {
       reason: provisioned.code,
-      ...fields,
-      email,
       role,
-      error: provisioned.message,
     });
 
     if (wantsJson(req)) {
@@ -140,16 +126,15 @@ async function handlePOST(req: Request) {
   if (!provisioned.emailConfirmed) {
     const confirmation = await resendVerificationEmail(email, req.url);
     if (!confirmation.ok) {
-      logger.warn("auth.signup_confirmation_send_failed", {
-        email,
+      logAuthWarn("auth.signup.created", {
         role,
         recovered: provisioned.recovered,
+        confirmation_send_failed: true,
       });
     }
   }
 
-  logger.info("auth.signup_ok", {
-    email,
+  logAuthEvent("auth.signup.created", {
     role,
     recovered: provisioned.recovered,
     emailConfirmed: provisioned.emailConfirmed,

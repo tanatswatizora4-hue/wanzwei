@@ -16,6 +16,7 @@ export function GoogleSignInButton({ next, className }: GoogleSignInButtonProps)
   return (
     <Link
       href={href}
+      prefetch={false}
       className={cn(
         "flex h-10 w-full items-center justify-center gap-2 rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white text-[14px] font-medium text-[color:var(--color-ink-700)] shadow-[var(--shadow-xs)] transition-colors hover:bg-[color:var(--color-surface-muted)]",
         className,

@@ -94,14 +94,14 @@ describe("ensureOAuthUserProvisioned", () => {
   it("creates a professional profile with verified=false on first Google login", async () => {
     const store = memoryStore();
     const persisted: Role[] = [];
-    const role = await ensureOAuthUserProvisioned(googleUser(), {
+    const result = await ensureOAuthUserProvisioned(googleUser(), {
       store,
       persistAppRole: async (_userId, nextRole) => {
         persisted.push(nextRole);
       },
     });
 
-    expect(role).toBe("professional");
+    expect(result).toMatchObject({ ok: true, role: "professional" });
     expect(persisted).toEqual(["professional"]);
     expect(store.rows[0]).toMatchObject({
       id: AUTH_ID,
@@ -114,7 +114,7 @@ describe("ensureOAuthUserProvisioned", () => {
     const existing = makeUser({ role: "facility", name: "Clinic Lead" });
     const store = memoryStore([existing]);
     let persistCalls = 0;
-    const role = await ensureOAuthUserProvisioned(
+    const result = await ensureOAuthUserProvisioned(
       googleUser({ app_metadata: { role: "facility" } }),
       {
         store,
@@ -124,7 +124,7 @@ describe("ensureOAuthUserProvisioned", () => {
       },
     );
 
-    expect(role).toBe("facility");
+    expect(result).toMatchObject({ ok: true, role: "facility" });
     expect(persistCalls).toBe(0);
     expect(store.created).toHaveLength(0);
     expect(store.rows[0]).toEqual(existing);
@@ -133,7 +133,7 @@ describe("ensureOAuthUserProvisioned", () => {
   it("reuses the existing profile after email confirmation instead of creating another", async () => {
     const existing = makeUser({ verified: false });
     const store = memoryStore([existing]);
-    const role = await ensureOAuthUserProvisioned(
+    const result = await ensureOAuthUserProvisioned(
       googleUser({ app_metadata: { role: "professional" } }),
       {
         store,
@@ -143,7 +143,7 @@ describe("ensureOAuthUserProvisioned", () => {
       },
     );
 
-    expect(role).toBe("professional");
+    expect(result).toMatchObject({ ok: true, role: "professional" });
     expect(store.created).toHaveLength(0);
     expect(store.rows).toHaveLength(1);
     expect(store.rows[0]?.verified).toBe(false);
@@ -153,7 +153,7 @@ describe("ensureOAuthUserProvisioned", () => {
     const existing = makeUser({ role: "facility" });
     const store = memoryStore([existing]);
     const persisted: Role[] = [];
-    const role = await ensureOAuthUserProvisioned(
+    const result = await ensureOAuthUserProvisioned(
       googleUser({
         app_metadata: { role: "professional" },
         user_metadata: { role: "admin" },
@@ -166,14 +166,14 @@ describe("ensureOAuthUserProvisioned", () => {
       },
     );
 
-    expect(role).toBe("facility");
+    expect(result).toMatchObject({ ok: true, role: "facility" });
     expect(persisted).toEqual(["facility"]);
     expect(store.rows[0]).toEqual(existing);
   });
 
   it("cannot become admin through user_metadata", async () => {
     const store = memoryStore();
-    const role = await ensureOAuthUserProvisioned(
+    const result = await ensureOAuthUserProvisioned(
       googleUser({
         app_metadata: {},
         user_metadata: { role: "admin", full_name: "Attacker" },
@@ -184,11 +184,11 @@ describe("ensureOAuthUserProvisioned", () => {
       },
     );
 
-    expect(role).toBe("professional");
+    expect(result).toMatchObject({ ok: true, role: "professional" });
     expect(store.rows[0]?.role).toBe("professional");
   });
 
-  it("does not throw an unhandled error when profile lookup fails", async () => {
+  it("classifies profile lookup failure without throwing", async () => {
     const store = memoryStore();
     store.findUserByEmail = async () => {
       throw new Error(
@@ -196,11 +196,31 @@ describe("ensureOAuthUserProvisioned", () => {
       );
     };
 
-    await expect(
-      ensureOAuthUserProvisioned(googleUser(), {
-        store,
-        persistAppRole: async () => undefined,
-      }),
-    ).rejects.toThrow(/\[redacted-url\]|OAuth provisioning failed/i);
+    const result = await ensureOAuthUserProvisioned(googleUser(), {
+      store,
+      persistAppRole: async () => undefined,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("profile_unavailable");
+      expect(result.logReason).toBe("profile_lookup_failed");
+      expect(result.logDetail).toMatch(/\[redacted-url\]/);
+    }
+  });
+
+  it("classifies UUID/email collision without leaking internals as success", async () => {
+    const store = memoryStore([
+      makeUser({ id: "22222222-2222-4222-8222-222222222222" }),
+    ]);
+    const result = await ensureOAuthUserProvisioned(googleUser(), {
+      store,
+      persistAppRole: async () => undefined,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("profile_unavailable");
+      expect(result.logReason).toBe("email_taken");
+    }
   });
 });

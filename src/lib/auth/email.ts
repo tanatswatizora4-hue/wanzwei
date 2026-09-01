@@ -1,5 +1,6 @@
 import "server-only";
 
+import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
 import { createLogger } from "@/lib/observability/logger";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -8,22 +9,26 @@ const logger = createLogger("auth-email");
 export const SUPABASE_AUTH_EMAIL_SETUP = [
   "Supabase Auth owns email verification and password reset token generation.",
   "Configure Authentication > URL Configuration with the production site URL.",
-  "Allow redirect URLs for /login, /auth/callback, and /reset-password if used as a direct redirect.",
-  "Customize Supabase email templates in the dashboard if branded auth emails are required.",
+  "Allow redirect URLs for /auth/confirm, /auth/callback, /login, /signup, and /reset-password.",
+  "Do not use {{ .ConfirmationURL }} in Confirm signup / Reset password templates; that GET verifies immediately.",
+  "Use {{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup (or type=recovery).",
 ] as const;
 
 export function emailVerificationRedirectUrl(requestUrl: string): string {
-  return new URL("/auth/callback", requestUrl).toString();
+  return new URL("/auth/confirm", requestUrl).toString();
 }
 
 export function passwordResetRedirectUrl(requestUrl: string): string {
-  return buildAuthCallbackUrl(requestUrl, "/reset-password");
+  const confirm = new URL("/auth/confirm", requestUrl);
+  confirm.searchParams.set("next", "/reset-password");
+  return confirm.toString();
 }
 
 export async function requestPasswordResetEmail(
   email: string,
   requestUrl: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  logAuthEvent("auth.recovery.started");
   const supabase = await getServerSupabase();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: passwordResetRedirectUrl(requestUrl),
@@ -33,6 +38,9 @@ export async function requestPasswordResetEmail(
     logger.warn("password_reset_request_failed", {
       email,
       supabaseError: error.message,
+    });
+    logAuthWarn("auth.recovery.failed", {
+      supabase_error_code: error.code,
     });
     return { ok: false, error: error.message };
   }
@@ -64,10 +72,4 @@ export async function resendVerificationEmail(
 
   logger.info("verification_resent", { email });
   return { ok: true };
-}
-
-function buildAuthCallbackUrl(requestUrl: string, nextPath: string): string {
-  const callback = new URL("/auth/callback", requestUrl);
-  callback.searchParams.set("next", nextPath);
-  return callback.toString();
 }

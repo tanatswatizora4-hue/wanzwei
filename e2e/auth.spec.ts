@@ -62,4 +62,26 @@ test.describe("auth workflows", () => {
     expect(submitted).toContain("password=ValidPass123%21");
     expect(submitted).toContain("next=%2Fprofessional%2Fjobs");
   });
+
+  test("confirmation landing GET does not auto-submit verification", async ({
+    page,
+  }) => {
+    const token = "a".repeat(40);
+    const posts: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "POST") posts.push(request.url());
+    });
+
+    await page.goto(`/auth/confirm?token_hash=${token}&type=signup`, {
+      waitUntil: "domcontentloaded",
+    });
+
+    await expect(
+      page.getByRole("heading", { name: "Confirm your email" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Confirm email" }),
+    ).toBeVisible();
+    expect(posts).toEqual([]);
+  });
 });

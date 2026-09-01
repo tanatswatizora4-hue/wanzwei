@@ -18,7 +18,8 @@ type LimitName =
   | "passwordReset"
   | "verificationEmail"
   | "upload"
-  | "emergencyAlert";
+  | "emergencyAlert"
+  | "emailConfirmation";
 
 export type RateLimitResult = {
   success: boolean;
@@ -39,6 +40,7 @@ const LIMITS: Record<LimitName, LimitConfig> = {
   },
   upload: { prefix: "uploads", limit: 20, window: "1 h" },
   emergencyAlert: { prefix: "emergency-alert", limit: 5, window: "15 m" },
+  emailConfirmation: { prefix: "email-confirmation", limit: 10, window: "10 m" },
 };
 
 let redis: Redis | null | undefined;

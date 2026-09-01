@@ -30,12 +30,12 @@ describe("auth helpers", () => {
     expect(dashboardPathForRole("admin")).toBe("/admin/dashboard");
   });
 
-  it("builds auth callback redirect URLs", () => {
+  it("builds auth confirm redirect URLs", () => {
     expect(emailVerificationRedirectUrl("https://app.example.com/signup")).toBe(
-      "https://app.example.com/auth/callback",
+      "https://app.example.com/auth/confirm",
     );
     expect(passwordResetRedirectUrl("https://app.example.com/login")).toBe(
-      "https://app.example.com/auth/callback?next=%2Freset-password",
+      "https://app.example.com/auth/confirm?next=%2Freset-password",
     );
   });
 });

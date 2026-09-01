@@ -3,6 +3,13 @@ import "server-only";
 import { createHash } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 
+import { getRequestLogContext } from "@/lib/observability/request-context";
+import {
+  applyRequestIdHeader,
+  requestIdFromRequest,
+  runWithRequestLog,
+} from "@/lib/observability/request-context";
+
 type LogLevel = "debug" | "info" | "warn" | "error";
 type LogContext = Record<string, unknown>;
 
@@ -14,7 +21,7 @@ const LEVELS: Record<LogLevel, number> = {
 };
 
 const SECRET_KEY_PATTERN =
-  /(password|secret|token|cookie|authorization|apikey|api_key|service[_-]?role|dsn)/i;
+  /(password|secret|token|token_hash|cookie|authorization|apikey|api_key|service[_-]?role|dsn|otp|verifier|pkce|refresh_token|access_token|recovery)/i;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function createLogger(component: string) {
@@ -69,16 +76,24 @@ export async function withRouteLogging<T>(
   req: Request,
   handler: () => Promise<T>,
 ): Promise<T> {
-  try {
-    return await handler();
-  } catch (error) {
-    logException("route-handler", "route.exception", error, {
-      route,
-      method: req.method,
-      path: safePath(req.url),
-    });
-    throw error;
-  }
+  const requestId = requestIdFromRequest(req);
+  return runWithRequestLog({ requestId, route }, async () => {
+    try {
+      const result = await handler();
+      if (result instanceof Response) {
+        applyRequestIdHeader(result, requestId);
+      }
+      return result;
+    } catch (error) {
+      logException("route-handler", "route.exception", error, {
+        route,
+        method: req.method,
+        path: safePath(req.url),
+        request_id: requestId,
+      });
+      throw error;
+    }
+  });
 }
 
 export async function withRepositoryLogging<T>(
@@ -107,11 +122,14 @@ function writeLog(
 ) {
   if (!shouldLog(level)) return;
 
+  const request = getRequestLogContext();
   const payload = {
     timestamp: new Date().toISOString(),
     level,
     component,
     event,
+    ...(request?.requestId ? { request_id: request.requestId } : {}),
+    ...(request?.route ? { route: request.route } : {}),
     ...(sanitizeContext(context) as Record<string, unknown>),
   };
 
@@ -151,6 +169,13 @@ function sanitizeContext(value: unknown): unknown {
       const normalizedKey = key.toLowerCase();
       if (normalizedKey === "email" || normalizedKey.endsWith("email")) {
         return [key, typeof nestedValue === "string" ? redactEmail(nestedValue) : "[redacted]"];
+      }
+      if (
+        (normalizedKey === "code" || normalizedKey.endsWith("_code")) &&
+        typeof nestedValue === "string" &&
+        nestedValue.length > 24
+      ) {
+        return [key, "[redacted]"];
       }
       return [key, sanitizeContext(nestedValue)];
     }),
