@@ -28,11 +28,17 @@ const defaultStore: AdminDecisionStore = {
   },
 };
 
+export type AdminManualDecisionStatus = Extract<
+  VerificationStatus,
+  "Verified" | "Rejected" | "Under Review"
+>;
+
 export async function applyAdminVerificationDecision(
   admin: User,
   verificationId: string,
-  status: Extract<VerificationStatus, "Verified" | "Rejected">,
+  status: AdminManualDecisionStatus,
   store: AdminDecisionStore = defaultStore,
+  options?: { reason?: string },
 ): Promise<AdminDecisionResult | null> {
   if (!store.hasDbConfig()) return null;
 
@@ -51,6 +57,9 @@ export async function applyAdminVerificationDecision(
           current.id,
         );
         userVerified = otherVerified > 0;
+        if (!userVerified) {
+          await tx.setUserVerified(current.userId, false);
+        }
       }
       return {
         verification: toVerification({
@@ -99,7 +108,7 @@ export async function applyAdminVerificationDecision(
       toStatus: status,
       method: "admin",
       matchRegistryId: saved.matchedRegistryId,
-      reason: `Admin ${status}`,
+      reason: options?.reason?.trim() || `Admin ${status}`,
     });
 
     return {

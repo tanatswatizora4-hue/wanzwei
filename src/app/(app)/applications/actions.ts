@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
 import { hasDbConfig } from "@/lib/db/client";
+import { canTransitionApplicationStatus } from "@/lib/applications/transitions";
 import {
   applicationBelongsToFacility,
+  getApplicationById,
   updateApplicationStatus,
 } from "@/lib/repos/applications";
 import { findFacilityForUserEmail } from "@/lib/repos/facilities";
@@ -43,6 +45,16 @@ export async function updateApplicationStatusAction(
     }
   }
 
+  const current = await getApplicationById(parsed.data.id);
+  if (!current) {
+    return actionError("Application not found.");
+  }
+  if (!canTransitionApplicationStatus(current.status, parsed.data.status)) {
+    return actionError(
+      `Cannot change status from ${current.status} to ${parsed.data.status}.`,
+    );
+  }
+
   const updated = await updateApplicationStatus(
     parsed.data.id,
     parsed.data.status,
@@ -54,5 +66,6 @@ export async function updateApplicationStatusAction(
   revalidatePath("/facility/applications");
   revalidatePath("/admin/applications");
   revalidatePath("/professional/applications");
+  revalidatePath("/facility/jobs");
   return actionOk();
 }

@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import { Bell, HelpCircle, Search, ChevronDown, Plus } from "lucide-react";
 import {
   DropdownMenu,
@@ -118,16 +117,7 @@ export function Topbar({
             >
               <Bell className="h-4 w-4" />
             </IconButtonLink>
-          ) : (
-            <IconButton
-              aria-label="Notifications"
-              onClick={() =>
-                toast.info("Notifications coming soon for this role.")
-              }
-            >
-              <Bell className="h-4 w-4" />
-            </IconButton>
-          )}
+          ) : null}
         </div>
 
         {/* Profile chip */}
@@ -176,24 +166,6 @@ export function Topbar({
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link href={settingsHref}>Settings</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() =>
-                toast.info("Billing is coming soon.", {
-                  description: "We'll let you know when it's ready.",
-                })
-              }
-            >
-              Billing
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() =>
-                toast.info("Invite team is coming soon.", {
-                  description: "Team seats roll out next release.",
-                })
-              }
-            >
-              Invite team
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <form action="/api/auth/logout" method="post">

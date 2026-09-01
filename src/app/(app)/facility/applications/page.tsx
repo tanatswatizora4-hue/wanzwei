@@ -15,11 +15,10 @@ export default async function FacilityApplicationsPage() {
     id: application.id,
     name: professional?.name ?? "Candidate",
     role: job.title,
+    jobId: job.id,
     profession: professional?.profession ?? "Professional",
-    experience: "—",
     location: professional?.location ?? job.location,
-    rating: 4.5,
-    cpd: professional?.cpdCredits ?? 0,
+    verified: professional?.verified === true,
     status: application.status,
     applied: timeAgoLong(application.appliedAt),
   }));

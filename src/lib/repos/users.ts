@@ -1,13 +1,13 @@
 import "server-only";
 
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
 
 import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, users } from "@/lib/db/schema";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type { DbUser, NewDbUser } from "@/lib/db/schema";
-import type { User } from "@/lib/types";
+import type { User, Role } from "@/lib/types";
 
 export function toUser(row: DbUser): User {
   return {
@@ -65,14 +65,28 @@ export type AdminUserRow = {
   joinedAt: string;
 };
 
-export async function listUsersForAdmin(limit = 100): Promise<AdminUserRow[]> {
+export async function listUsersForAdmin(
+  limit = 100,
+  filters?: { q?: string; role?: Role },
+): Promise<AdminUserRow[]> {
   if (!hasDbConfig()) return [];
   return withRepositoryLogging("users", "listUsersForAdmin", async () => {
     const db = getDb();
+    const clauses = [];
+    if (filters?.role) {
+      clauses.push(eq(users.role, filters.role));
+    }
+    if (filters?.q?.trim()) {
+      const pattern = `%${filters.q.trim().replace(/[%_\\]/g, " ")}%`;
+      clauses.push(
+        or(ilike(users.name, pattern), ilike(users.email, pattern))!,
+      );
+    }
     const rows = await db
       .select({ user: users, facility: facilities })
       .from(users)
       .leftJoin(facilities, eq(facilities.id, users.facilityId))
+      .where(clauses.length > 0 ? and(...clauses) : undefined)
       .orderBy(asc(users.name))
       .limit(limit);
     return rows.map((row) => ({
@@ -80,7 +94,7 @@ export async function listUsersForAdmin(limit = 100): Promise<AdminUserRow[]> {
       facilityName: row.facility?.name ?? null,
       joinedAt: row.user.createdAt.toISOString(),
     }));
-  }, { limit });
+  }, { limit, q: filters?.q, role: filters?.role });
 }
 
 export async function findUserById(id: string): Promise<User | null> {

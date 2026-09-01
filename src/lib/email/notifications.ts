@@ -6,8 +6,9 @@ import {
   emergencyAlertResponseTemplate,
   emergencyAlertTemplate,
   interviewInvitationTemplate,
+  verificationDecisionTemplate,
 } from "@/lib/email/templates";
-import type { ApplicationStatus, Urgency } from "@/lib/types";
+import type { ApplicationStatus, Urgency, VerificationStatus } from "@/lib/types";
 
 type EmailRecipient = string | string[];
 
@@ -49,6 +50,15 @@ export async function sendEmergencyAlertEmail(input: {
   notes?: string;
 }) {
   const content = emergencyAlertTemplate(input);
+  return sendEmail({ to: input.to, ...content });
+}
+
+export async function sendVerificationDecisionEmail(input: {
+  to: EmailRecipient;
+  professionalName: string;
+  status: Extract<VerificationStatus, "Verified" | "Rejected" | "Under Review">;
+}) {
+  const content = verificationDecisionTemplate(input);
   return sendEmail({ to: input.to, ...content });
 }
 

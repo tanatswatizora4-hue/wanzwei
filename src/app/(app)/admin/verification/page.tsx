@@ -1,16 +1,10 @@
-import {
-  ShieldCheck,
-  FileText,
-  AlertCircle,
-  Check,
-  Filter,
-} from "lucide-react";
+import Link from "next/link";
+import { ShieldCheck, FileText, AlertCircle, Check } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Badge, StatusBadge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Table,
   TableBody,
@@ -20,13 +14,33 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { timeAgoLong } from "@/lib/format";
+import { adminVerificationPath } from "@/lib/jobs/paths";
 import { listVerifications } from "@/lib/repos/verifications";
 import { requireRole } from "@/lib/auth/session";
 import { AdminVerificationRowActions } from "@/components/app/admin/verification/verification-row-actions";
+import type { VerificationStatus } from "@/lib/types";
 
-export default async function AdminVerificationPage() {
+const STATUSES: Array<{ value: "" | VerificationStatus; label: string }> = [
+  { value: "", label: "All" },
+  { value: "Pending", label: "Pending" },
+  { value: "Under Review", label: "Under Review" },
+  { value: "Verified", label: "Verified" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+export default async function AdminVerificationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
   await requireRole(["admin"]);
-  const verifications = await listVerifications(100);
+  const { status: statusParam } = await searchParams;
+  const statusFilter = STATUSES.find((s) => s.value === statusParam)?.value || "";
+  const [filtered, all] = await Promise.all([
+    listVerifications(200, statusFilter || undefined),
+    statusFilter ? listVerifications(200) : Promise.resolve(null),
+  ]);
+  const countsSource = all ?? filtered;
 
   return (
     <div className="flex flex-col gap-6">
@@ -34,28 +48,30 @@ export default async function AdminVerificationPage() {
         title="Verification queue"
         description="Review credential submissions and approve verified professionals."
         actions={
-          <>
-            <Tabs defaultValue="pending">
-              <TabsList>
-                <TabsTrigger value="pending">Pending</TabsTrigger>
-                <TabsTrigger value="review">Under Review</TabsTrigger>
-                <TabsTrigger value="verified">Verified</TabsTrigger>
-                <TabsTrigger value="rejected">Rejected</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <Button variant="secondary" size="sm" disabled title="Filters coming soon">
-              <Filter className="h-3.5 w-3.5" /> Filters
-            </Button>
-          </>
+          <div className="flex flex-wrap gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white p-0.5 text-[12.5px]">
+            {STATUSES.map((s) => (
+              <Link
+                key={s.label}
+                href={s.value ? `/admin/verification?status=${encodeURIComponent(s.value)}` : "/admin/verification"}
+                className={`rounded-[6px] px-2.5 py-1 font-medium ${
+                  statusFilter === s.value
+                    ? "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]"
+                    : "text-[color:var(--color-ink-500)] hover:text-[color:var(--color-ink-800)]"
+                }`}
+              >
+                {s.label}
+              </Link>
+            ))}
+          </div>
         }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         {[
-          { label: "Pending", value: verifications.filter((v) => v.status === "Pending").length, tone: "amber" as const, icon: <ShieldCheck className="h-4 w-4" /> },
-          { label: "Under Review", value: verifications.filter((v) => v.status === "Under Review").length, tone: "info" as const, icon: <FileText className="h-4 w-4" /> },
-          { label: "Verified", value: verifications.filter((v) => v.status === "Verified").length, tone: "success" as const, icon: <Check className="h-4 w-4" /> },
-          { label: "Flags raised", value: verifications.filter((v) => v.flags && v.flags.length > 0).length, tone: "danger" as const, icon: <AlertCircle className="h-4 w-4" /> },
+          { label: "Pending", value: countsSource.filter((v) => v.status === "Pending").length, tone: "amber" as const, icon: <ShieldCheck className="h-4 w-4" /> },
+          { label: "Under Review", value: countsSource.filter((v) => v.status === "Under Review").length, tone: "info" as const, icon: <FileText className="h-4 w-4" /> },
+          { label: "Verified", value: countsSource.filter((v) => v.status === "Verified").length, tone: "success" as const, icon: <Check className="h-4 w-4" /> },
+          { label: "Rejected", value: countsSource.filter((v) => v.status === "Rejected").length, tone: "danger" as const, icon: <AlertCircle className="h-4 w-4" /> },
         ].map((s) => (
           <Card key={s.label}>
             <CardBody className="pt-5 flex items-start gap-3">
@@ -79,50 +95,53 @@ export default async function AdminVerificationPage() {
       </div>
 
       <Card>
+        {filtered.length === 0 ? (
+          <EmptyState
+            icon={<ShieldCheck className="h-4 w-4" />}
+            title="No verification cases"
+            description="Submitted practitioner verifications will appear here."
+          />
+        ) : (
         <CardBody className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Applicant</TableHead>
+                <TableHead>Practitioner</TableHead>
                 <TableHead>Profession</TableHead>
-                <TableHead>Documents</TableHead>
-                <TableHead>Flags</TableHead>
+                <TableHead>Registering body</TableHead>
+                <TableHead>Registration no.</TableHead>
+                <TableHead>Match</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {verifications.map((v) => (
+              {filtered.map((v) => (
                 <TableRow key={v.id}>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <Avatar name={v.name} size={32} />
                       <div>
-                        <p className="font-semibold text-[color:var(--color-ink-900)]">
+                        <Link
+                          href={adminVerificationPath(v.id)}
+                          className="font-semibold text-[color:var(--color-ink-900)] hover:text-[color:var(--color-brand-700)]"
+                        >
                           {v.name}
-                        </p>
-                        <p className="text-[11px] text-[color:var(--color-ink-400)]">
-                          ID: {v.userId}
-                        </p>
+                        </Link>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>{v.profession}</TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1 text-[12.5px] text-[color:var(--color-ink-500)]">
-                      <FileText className="h-3 w-3" /> {v.documentCount} files
-                    </span>
+                  <TableCell>{v.registeringBody ?? "—"}</TableCell>
+                  <TableCell className="font-mono text-[12px]">
+                    {v.registrationNumber ?? "—"}
                   </TableCell>
                   <TableCell>
-                    {v.flags && v.flags.length > 0 ? (
-                      <Badge tone="danger" withDot>
-                        {v.flags[0]}
-                      </Badge>
+                    {v.matchOutcome ? (
+                      <Badge tone="slate">{v.matchOutcome.replaceAll("_", " ")}</Badge>
                     ) : (
-                      <span className="text-[12.5px] text-[color:var(--color-ink-400)]">
-                        —
-                      </span>
+                      "—"
                     )}
                   </TableCell>
                   <TableCell className="text-[12.5px] text-[color:var(--color-ink-500)]">
@@ -142,6 +161,7 @@ export default async function AdminVerificationPage() {
             </TableBody>
           </Table>
         </CardBody>
+        )}
       </Card>
     </div>
   );

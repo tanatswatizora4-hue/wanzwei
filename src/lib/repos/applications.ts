@@ -187,6 +187,131 @@ export async function listApplicationsForFacility(
   );
 }
 
+export async function getApplicationById(
+  id: string,
+): Promise<Application | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging("applications", "getApplicationById", async () => {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.id, id))
+      .limit(1);
+    return rows[0] ? toApplication(rows[0]) : null;
+  }, { id });
+}
+
+export async function getApplicationForProfessional(
+  applicationId: string,
+  professionalId: string,
+): Promise<ApplicationWithJob | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "applications",
+    "getApplicationForProfessional",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          application: applications,
+          job: jobs,
+          facility: facilities,
+        })
+        .from(applications)
+        .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .innerJoin(facilities, eq(facilities.id, jobs.facilityId))
+        .where(
+          and(
+            eq(applications.id, applicationId),
+            eq(applications.professionalId, professionalId),
+          ),
+        )
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        application: toApplication(row.application),
+        job: toJob(row.job),
+        facility: toFacility(row.facility),
+      };
+    },
+    { applicationId, professionalId },
+  );
+}
+
+export async function getApplicationForFacility(
+  applicationId: string,
+  facilityId: string,
+): Promise<ApplicationWithJob | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "applications",
+    "getApplicationForFacility",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          application: applications,
+          job: jobs,
+          facility: facilities,
+          professional: users,
+        })
+        .from(applications)
+        .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .innerJoin(facilities, eq(facilities.id, jobs.facilityId))
+        .innerJoin(users, eq(users.id, applications.professionalId))
+        .where(
+          and(eq(applications.id, applicationId), eq(jobs.facilityId, facilityId)),
+        )
+        .limit(1);
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        application: toApplication(row.application),
+        job: toJob(row.job),
+        facility: toFacility(row.facility),
+        professional: toUser(row.professional),
+      };
+    },
+    { applicationId, facilityId },
+  );
+}
+
+export async function listApplicationsForJob(
+  jobId: string,
+  facilityId: string,
+): Promise<ApplicationWithJob[]> {
+  if (!hasDbConfig()) return [];
+  return withRepositoryLogging(
+    "applications",
+    "listApplicationsForJob",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          application: applications,
+          job: jobs,
+          facility: facilities,
+          professional: users,
+        })
+        .from(applications)
+        .innerJoin(jobs, eq(jobs.id, applications.jobId))
+        .innerJoin(facilities, eq(facilities.id, jobs.facilityId))
+        .innerJoin(users, eq(users.id, applications.professionalId))
+        .where(and(eq(applications.jobId, jobId), eq(jobs.facilityId, facilityId)))
+        .orderBy(desc(applications.appliedAt));
+      return rows.map((r) => ({
+        application: toApplication(r.application),
+        job: toJob(r.job),
+        facility: toFacility(r.facility),
+        professional: toUser(r.professional),
+      }));
+    },
+    { jobId, facilityId },
+  );
+}
+
 export async function applicationBelongsToFacility(
   applicationId: string,
   facilityId: string,

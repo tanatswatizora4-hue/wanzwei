@@ -3,7 +3,7 @@ import "server-only";
 import { desc, eq } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
-import { verificationDocuments, verifications } from "@/lib/db/schema";
+import { verificationDocuments, verificationEvents, verifications, users } from "@/lib/db/schema";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type {
   DbVerification,
@@ -11,7 +11,7 @@ import type {
   NewDbVerification,
   NewDbVerificationDocument,
 } from "@/lib/db/schema";
-import type { Verification, VerificationMatchOutcome } from "@/lib/types";
+import type { Verification, VerificationMatchOutcome, VerificationStatus } from "@/lib/types";
 
 const MATCH_OUTCOMES: readonly VerificationMatchOutcome[] = [
   "matched",
@@ -49,17 +49,21 @@ export function toVerification(row: DbVerification): Verification {
   };
 }
 
-export async function listVerifications(limit = 50): Promise<Verification[]> {
+export async function listVerifications(
+  limit = 50,
+  status?: VerificationStatus,
+): Promise<Verification[]> {
   if (!hasDbConfig()) return [];
   return withRepositoryLogging("verifications", "listVerifications", async () => {
     const db = getDb();
     const rows = await db
       .select()
       .from(verifications)
+      .where(status ? eq(verifications.status, status) : undefined)
       .orderBy(desc(verifications.submittedAt))
       .limit(limit);
     return rows.map(toVerification);
-  }, { limit });
+  }, { limit, status });
 }
 
 export async function getVerification(id: string): Promise<Verification | null> {
@@ -100,6 +104,56 @@ export async function updateVerificationStatus(
       .returning();
     return rows[0] ? toVerification(rows[0]) : null;
   }, { id, status });
+}
+
+export type VerificationEventRow = {
+  id: string;
+  fromStatus: string | null;
+  toStatus: string;
+  method: string;
+  reason: string | null;
+  createdAt: string;
+  actorUserId: string | null;
+  actorName: string | null;
+};
+
+export async function listVerificationEvents(
+  verificationId: string,
+): Promise<VerificationEventRow[]> {
+  if (!hasDbConfig()) return [];
+  return withRepositoryLogging(
+    "verifications",
+    "listVerificationEvents",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          id: verificationEvents.id,
+          fromStatus: verificationEvents.fromStatus,
+          toStatus: verificationEvents.toStatus,
+          method: verificationEvents.method,
+          reason: verificationEvents.reason,
+          createdAt: verificationEvents.createdAt,
+          actorUserId: verificationEvents.actorUserId,
+          actorName: users.name,
+        })
+        .from(verificationEvents)
+        .leftJoin(users, eq(users.id, verificationEvents.actorUserId))
+        .where(eq(verificationEvents.verificationId, verificationId))
+        .orderBy(desc(verificationEvents.createdAt));
+      return rows.map((row) => ({
+        id: row.id,
+        fromStatus: row.fromStatus,
+        toStatus: row.toStatus,
+        method: row.method,
+        reason: row.reason,
+        createdAt: row.createdAt.toISOString(),
+        actorUserId: row.actorUserId,
+        actorName: row.actorName ?? null,
+      }));
+    },
+    { verificationId },
+  );
 }
 
 export async function listVerificationDocuments(

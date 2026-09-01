@@ -42,6 +42,40 @@ function mapRow(row: {
   };
 }
 
+export async function getRegistryByIdForAdmin(id: string): Promise<{
+  id: string;
+  registeringBody: string;
+  fullName: string;
+  registrationNumber: string;
+  qualification: string;
+  expiryDate: string;
+  derivedStatus: string;
+} | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "practitioner-registry",
+    "getRegistryByIdForAdmin",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          id: practitionerRegistry.id,
+          registeringBody: practitionerRegistry.registeringBody,
+          fullName: practitionerRegistry.fullName,
+          registrationNumber: practitionerRegistry.registrationNumber,
+          qualification: practitionerRegistry.qualification,
+          expiryDate: practitionerRegistry.expiryDate,
+          derivedStatus: practitionerRegistry.derivedStatus,
+        })
+        .from(practitionerRegistry)
+        .where(eq(practitionerRegistry.id, id))
+        .limit(1);
+      return rows[0] ?? null;
+    },
+    { id },
+  );
+}
+
 export async function findRegistryByRegistration(
   registeringBody: string,
   registrationNumber: string,

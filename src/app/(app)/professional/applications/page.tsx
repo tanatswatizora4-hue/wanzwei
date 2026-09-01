@@ -1,7 +1,10 @@
+import Link from "next/link";
+import { FileText } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { FacilityLogo } from "@/components/ui/avatar";
 import {
   Table,
@@ -11,8 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { timeAgoLong } from "@/lib/format";
+import { professionalApplicationPath } from "@/lib/jobs/paths";
 import { requireRole } from "@/lib/auth/session";
 import { listApplicationsForProfessional } from "@/lib/repos/applications";
 
@@ -25,18 +28,21 @@ export default async function ApplicationsPage() {
       <PageHeader
         title="My Applications"
         description="Track the status of every role you've applied to."
-        actions={
-          <Tabs defaultValue="all">
-            <TabsList>
-              <TabsTrigger value="all">All ({apps.length})</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="archived">Archived</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        }
       />
 
       <Card>
+        {apps.length === 0 ? (
+          <EmptyState
+            icon={<FileText className="h-4 w-4" />}
+            title="No applications yet"
+            description="When you apply for a role, it will appear here so you can track status."
+            action={
+              <Button size="sm" asChild>
+                <Link href="/professional/jobs">Browse jobs</Link>
+              </Button>
+            }
+          />
+        ) : (
         <CardBody className="p-0">
           <Table>
             <TableHeader>
@@ -81,8 +87,8 @@ export default async function ApplicationsPage() {
                       <StatusBadge status={a.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        View
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={professionalApplicationPath(a.id)}>View</Link>
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -91,6 +97,7 @@ export default async function ApplicationsPage() {
             </TableBody>
           </Table>
         </CardBody>
+        )}
       </Card>
     </div>
   );

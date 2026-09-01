@@ -684,4 +684,46 @@ describe("applyAdminVerificationDecision", () => {
     const current = pickCurrentCase(store.cases);
     expect(current?.id).toBe("case-new");
   });
+
+  it("UNDER REVIEW clears users.verified when returning the only Verified case", async () => {
+    const store = memoryStore({
+      seedCases: [
+        {
+          id: "case-1",
+          userId: USER.id,
+          name: USER.name,
+          profession: "Pharmacist",
+          status: "Verified",
+          registeringBody: "HPA",
+          registrationNumber: "P01-6420-2026",
+          matchOutcome: "matched",
+          matchedRegistryId: "reg-1",
+          documentCount: 0,
+          submittedAt: new Date("2026-08-01T00:00:00.000Z"),
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+          flags: [],
+        },
+      ],
+      verifiedUserIds: [USER.id],
+    });
+
+    const result = await applyAdminVerificationDecision(
+      ADMIN,
+      "case-1",
+      "Under Review",
+      store,
+      { reason: "Need extra documents" },
+    );
+    expect(result?.verification.status).toBe("Under Review");
+    expect(result?.userVerified).toBe(false);
+    expect(store.verified.has(USER.id)).toBe(false);
+    expect(store.events).toEqual([
+      expect.objectContaining({
+        method: "admin",
+        fromStatus: "Verified",
+        toStatus: "Under Review",
+        reason: "Need extra documents",
+      }),
+    ]);
+  });
 });

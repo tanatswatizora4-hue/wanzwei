@@ -82,6 +82,10 @@ export type AdminDashboardStats = {
   facilitiesCount: number;
   totalApplications: number;
   pendingVerifications: number;
+  underReviewVerifications: number;
+  unverifiedProfessionalsCount: number;
+  verifiedFacilitiesCount: number;
+  unverifiedFacilitiesCount: number;
   activeEmergencyAlerts: number;
   marketplaceListings: number;
   cpdCourses: number;
@@ -675,6 +679,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       facilitiesCount: 0,
       totalApplications: 0,
       pendingVerifications: 0,
+      underReviewVerifications: 0,
+      unverifiedProfessionalsCount: 0,
+      verifiedFacilitiesCount: 0,
+      unverifiedFacilitiesCount: 0,
       activeEmergencyAlerts: 0,
       marketplaceListings: 0,
       cpdCourses: 0,
@@ -702,6 +710,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       verifiedPros,
       openJobs,
       hiresMtd,
+      underReviewCount,
+      unverifiedPros,
+      verifiedFacilities,
+      unverifiedFacilities,
     ] = await Promise.all([
       db.select({ createdAt: users.createdAt }).from(users),
       db
@@ -754,6 +766,22 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
             gte(applications.updatedAt, monthStart),
           ),
         ),
+      db
+        .select({ count: count() })
+        .from(verifications)
+        .where(eq(verifications.status, "Under Review")),
+      db
+        .select({ count: count() })
+        .from(users)
+        .where(and(eq(users.role, "professional"), eq(users.verified, false))),
+      db
+        .select({ count: count() })
+        .from(facilities)
+        .where(eq(facilities.verified, true)),
+      db
+        .select({ count: count() })
+        .from(facilities)
+        .where(eq(facilities.verified, false)),
     ]);
 
     const growthChart = await getMonthlyGrowth(8);
@@ -788,6 +816,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       facilitiesCount: Number(facilityCount[0]?.count ?? 0),
       totalApplications: Number(applicationsTotal[0]?.count ?? 0),
       pendingVerifications: Number(pendingVerifications[0]?.count ?? 0),
+      underReviewVerifications: Number(underReviewCount[0]?.count ?? 0),
+      unverifiedProfessionalsCount: Number(unverifiedPros[0]?.count ?? 0),
+      verifiedFacilitiesCount: Number(verifiedFacilities[0]?.count ?? 0),
+      unverifiedFacilitiesCount: Number(unverifiedFacilities[0]?.count ?? 0),
       activeEmergencyAlerts: Number(activeAlerts[0]?.count ?? 0),
       marketplaceListings: Number(listingCount[0]?.count ?? 0),
       cpdCourses: Number(courseCount[0]?.count ?? 0),

@@ -1,25 +1,14 @@
 import {
   FileText,
   Download,
-  EyeOff,
-  Search,
-  Filter,
-  MoreHorizontal,
   FileBadge,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { EmptyState } from "@/components/ui/empty-state";
 import { format } from "date-fns";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -71,17 +60,12 @@ export default async function DocumentsPage() {
         title="Documents"
         description="Your verified credentials, certificates and references."
         actions={
-          <>
-            <Button variant="secondary" size="sm" disabled title="Filters coming soon">
-              <Filter className="h-3.5 w-3.5" /> Filters
-            </Button>
-            <ProfessionalDocumentsUploadButton enabled={uploadsEnabled} />
-          </>
+          <ProfessionalDocumentsUploadButton enabled={uploadsEnabled} />
         }
       />
 
       <Card>
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-y divide-[color:var(--color-border-default)] sm:divide-y-0 sm:divide-x">
+        <div className="grid grid-cols-3 divide-x divide-[color:var(--color-border-default)]">
           <StatInline
             icon={<FileBadge className="h-3.5 w-3.5" />}
             label="Total documents"
@@ -101,44 +85,17 @@ export default async function DocumentsPage() {
             label="Pending review"
             value={pending}
           />
-          <StatInline
-            icon={
-              <span className="size-2 rounded-full bg-[color:var(--color-brand-500)] inline-block" />
-            }
-            label="Facility shares"
-            value={0}
-          />
         </div>
       </Card>
 
       <Card>
-        <div className="flex items-center gap-3 border-b border-[color:var(--color-border-default)] px-4 py-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[color:var(--color-ink-400)]" />
-            <Input placeholder="Search documents" className="pl-9 h-8" />
-          </div>
-          <Select defaultValue="all">
-            <SelectTrigger className="h-8 w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="pdf">PDF</SelectItem>
-              <SelectItem value="image">Image</SelectItem>
-              <SelectItem value="file">Other</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select defaultValue="all-status">
-            <SelectTrigger className="h-8 w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all-status">Any status</SelectItem>
-              <SelectItem value="verified">Verified</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {documents.length === 0 ? (
+          <EmptyState
+            icon={<FileBadge className="h-4 w-4" />}
+            title="No documents yet"
+            description="Upload licences and credentials so facilities and administrators can review them."
+          />
+        ) : (
         <CardBody className="p-0">
           <Table>
             <TableHeader>
@@ -212,27 +169,11 @@ export default async function DocumentsPage() {
                           <Download className="h-3.5 w-3.5" />
                         </a>
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="iconSm"
-                        aria-label="Hide"
-                        className="hidden md:inline-flex"
-                      >
-                        <EyeOff className="h-3.5 w-3.5" />
-                      </Button>
                       <ProfessionalDocumentsDeleteButton
                         documentId={d.id}
                         enabled={uploadsEnabled}
-                        className="hidden md:inline-flex text-[color:var(--color-ink-500)] hover:text-[color:var(--color-danger-700)] hover:bg-rose-50"
+                        className="text-[color:var(--color-ink-500)] hover:text-[color:var(--color-danger-700)] hover:bg-rose-50"
                       />
-                      <Button
-                        variant="ghost"
-                        size="iconSm"
-                        aria-label="More"
-                        className="md:hidden"
-                      >
-                        <MoreHorizontal className="h-3.5 w-3.5" />
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -241,6 +182,7 @@ export default async function DocumentsPage() {
             </TableBody>
           </Table>
         </CardBody>
+        )}
       </Card>
     </div>
   );

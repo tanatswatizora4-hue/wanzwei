@@ -7,20 +7,15 @@ import {
   LayoutDashboard,
   Briefcase,
   FileText,
-  GraduationCap,
-  Store,
   ShieldCheck,
   Settings,
   Users,
   Bell,
-  MessageSquare,
-  CalendarClock,
-  FileBadge,
   Bookmark,
   LogOut,
   Stethoscope,
   Building2,
-  Workflow,
+  FileBadge,
   Siren,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -72,24 +67,7 @@ function professionalNav(): NavSection[] {
       ],
     },
     {
-      heading: "Messages",
-      items: [
-        {
-          label: "Messages",
-          href: "/professional/messages",
-          icon: <MessageSquare className="h-4 w-4" />,
-          badge: "3",
-        },
-        {
-          label: "Notifications",
-          href: "/professional/notifications",
-          icon: <Bell className="h-4 w-4" />,
-          badge: "5",
-        },
-      ],
-    },
-    {
-      heading: "Profile",
+      heading: "Account",
       items: [
         {
           label: "My Profile",
@@ -97,30 +75,15 @@ function professionalNav(): NavSection[] {
           icon: <Stethoscope className="h-4 w-4" />,
         },
         {
-          label: "CPD",
-          href: "/professional/cpd",
-          icon: <GraduationCap className="h-4 w-4" />,
-        },
-        {
-          label: "Marketplace",
-          href: "/professional/marketplace",
-          icon: <Store className="h-4 w-4" />,
-        },
-        {
           label: "Documents",
           href: "/professional/documents",
           icon: <FileBadge className="h-4 w-4" />,
         },
         {
-          label: "Availability",
-          href: "/professional/availability",
-          icon: <CalendarClock className="h-4 w-4" />,
+          label: "Notifications",
+          href: "/professional/notifications",
+          icon: <Bell className="h-4 w-4" />,
         },
-      ],
-    },
-    {
-      heading: "Settings",
-      items: [
         {
           label: "Settings",
           href: "/professional/settings",
@@ -155,43 +118,11 @@ function facilityNav(): NavSection[] {
           label: "Applicants",
           href: "/facility/applications",
           icon: <Users className="h-4 w-4" />,
-          badge: "12",
         },
         {
           label: "Emergency",
           href: "/facility/emergency",
           icon: <Siren className="h-4 w-4" />,
-          badge: "PRO",
-        },
-        {
-          label: "Talent Pool",
-          href: "/facility/talent",
-          icon: <Stethoscope className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      heading: "Messages",
-      items: [
-        {
-          label: "Messages",
-          href: "/facility/messages",
-          icon: <MessageSquare className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      heading: "Resources",
-      items: [
-        {
-          label: "Marketplace",
-          href: "/facility/marketplace",
-          icon: <Store className="h-4 w-4" />,
-        },
-        {
-          label: "CPD",
-          href: "/facility/cpd",
-          icon: <GraduationCap className="h-4 w-4" />,
         },
       ],
     },
@@ -232,12 +163,6 @@ function adminNav(): NavSection[] {
           label: "Verification",
           href: "/admin/verification",
           icon: <ShieldCheck className="h-4 w-4" />,
-          badge: "3",
-        },
-        {
-          label: "Matching",
-          href: "/admin/matching",
-          icon: <Workflow className="h-4 w-4" />,
         },
         {
           label: "Jobs",
@@ -249,20 +174,10 @@ function adminNav(): NavSection[] {
           href: "/admin/applications",
           icon: <FileText className="h-4 w-4" />,
         },
-      ],
-    },
-    {
-      heading: "Marketplace",
-      items: [
         {
-          label: "Marketplace",
-          href: "/admin/marketplace",
-          icon: <Store className="h-4 w-4" />,
-        },
-        {
-          label: "CPD",
-          href: "/admin/cpd",
-          icon: <GraduationCap className="h-4 w-4" />,
+          label: "Emergency",
+          href: "/admin/emergency",
+          icon: <Siren className="h-4 w-4" />,
         },
       ],
     },
@@ -273,6 +188,11 @@ function adminNav(): NavSection[] {
           label: "Users",
           href: "/admin/users",
           icon: <Users className="h-4 w-4" />,
+        },
+        {
+          label: "Facilities",
+          href: "/admin/facilities",
+          icon: <Building2 className="h-4 w-4" />,
         },
       ],
     },

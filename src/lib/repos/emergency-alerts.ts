@@ -168,6 +168,32 @@ export async function getEmergencyAlertsForFacility(
   );
 }
 
+export async function listEmergencyAlertsForAdmin(
+  limit = 100,
+): Promise<(EmergencyAlert & { facilityName: string })[]> {
+  if (!hasDbConfig()) return [];
+  return withRepositoryLogging(
+    "emergency-alerts",
+    "listEmergencyAlertsForAdmin",
+    async () => {
+      await rollForwardAlertStatuses();
+      const db = getDb();
+      const rows = await db
+        .select({ alert: emergencyAlerts, facilityName: facilities.name })
+        .from(emergencyAlerts)
+        .innerJoin(facilities, eq(facilities.id, emergencyAlerts.facilityId))
+        .orderBy(desc(emergencyAlerts.createdAt))
+        .limit(limit);
+      const recipients = await loadRecipients(rows.map((row) => row.alert.id));
+      return rows.map((row) => ({
+        ...toEmergencyAlert(row.alert, recipients.get(row.alert.id)),
+        facilityName: row.facilityName,
+      }));
+    },
+    { limit },
+  );
+}
+
 export async function getEmergencyAlertsForProfessional(
   professionalId: string,
 ): Promise<EmergencyAlert[]> {

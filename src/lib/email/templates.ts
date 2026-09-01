@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { ApplicationStatus, Urgency } from "@/lib/types";
+import type { ApplicationStatus, Urgency, VerificationStatus } from "@/lib/types";
 
 export type EmailContent = {
   subject: string;
@@ -137,6 +137,48 @@ export function emergencyAlertResponseTemplate({
       response === "Accepted"
         ? "The alert is now marked filled and other pending recipients were expired."
         : "The alert remains available for other matched professionals until it is filled or expires.",
+    ],
+  });
+}
+
+export function verificationDecisionTemplate({
+  professionalName,
+  status,
+}: {
+  professionalName: string;
+  status: Extract<VerificationStatus, "Verified" | "Rejected" | "Under Review">;
+}): EmailContent {
+  if (status === "Verified") {
+    return renderEmail({
+      subject: "Your Wanzwei verification was approved",
+      preheader: "You can now apply for jobs and respond to emergency locum alerts.",
+      greeting: `Hi ${professionalName},`,
+      paragraphs: [
+        "Your professional verification has been approved.",
+        "You can now apply for open roles and respond to emergency locum requests on Wanzwei.",
+        "Sign in to review your profile and browse current opportunities.",
+      ],
+    });
+  }
+  if (status === "Rejected") {
+    return renderEmail({
+      subject: "Update on your Wanzwei verification",
+      preheader: "Your verification was not approved. You can review your details and resubmit.",
+      greeting: `Hi ${professionalName},`,
+      paragraphs: [
+        "Your professional verification was not approved at this time.",
+        "Please sign in to review your submitted details and documents, then update anything that is incomplete or incorrect before submitting again.",
+        "If you believe this decision was made in error, reply to this email with a brief description of the issue.",
+      ],
+    });
+  }
+  return renderEmail({
+    subject: "Your Wanzwei verification is under review",
+    preheader: "An administrator is reviewing your verification submission.",
+    greeting: `Hi ${professionalName},`,
+    paragraphs: [
+      "Your professional verification is currently under review.",
+      "We will email you when a decision is made. You do not need to take any action unless we contact you.",
     ],
   });
 }

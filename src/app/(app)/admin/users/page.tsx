@@ -1,17 +1,10 @@
-import { Search, MoreHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,13 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown";
 import { requireRole } from "@/lib/auth/session";
 import { listUsersForAdmin } from "@/lib/repos/users";
 import type { Role } from "@/lib/types";
@@ -50,56 +36,58 @@ function formatJoined(iso: string): string {
   });
 }
 
-export default async function AdminUsersPage() {
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; role?: string }>;
+}) {
   await requireRole(["admin"]);
-  const rows = await listUsersForAdmin(200);
+  const params = await searchParams;
+  const q = first(params.q)?.trim() || undefined;
+  const roleRaw = first(params.role);
+  const role =
+    roleRaw === "professional" || roleRaw === "facility" || roleRaw === "admin"
+      ? roleRaw
+      : undefined;
+  const rows = await listUsersForAdmin(200, { q, role });
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Users"
-        description="Manage all platform accounts, roles and permissions."
-        actions={
-          <Button size="sm" disabled title="Invite user coming soon">
-            Invite user
-          </Button>
-        }
+        description="Oversight of platform accounts. Roles cannot be changed here."
       />
 
       <Card>
         <CardBody className="pt-5">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+          <form method="get" className="grid grid-cols-1 gap-3 sm:grid-cols-4">
             <div className="relative sm:col-span-2">
               <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[color:var(--color-ink-400)]" />
               <Input
+                name="q"
+                defaultValue={q ?? ""}
                 placeholder="Search users by name or email"
                 className="pl-9"
-                disabled
-                title="Search coming soon"
               />
             </div>
-            <Select defaultValue="all" disabled>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All roles</SelectItem>
-                <SelectItem value="pro">Professional</SelectItem>
-                <SelectItem value="fac">Facility</SelectItem>
-                <SelectItem value="adm">Admin</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select defaultValue="all-status" disabled>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-status">All statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <select
+              name="role"
+              defaultValue={role ?? ""}
+              className="h-10 rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white px-3 text-[13px]"
+            >
+              <option value="">All roles</option>
+              <option value="professional">Professional</option>
+              <option value="facility">Facility</option>
+              <option value="admin">Admin</option>
+            </select>
+            <Button type="submit" size="sm">
+              Search
+            </Button>
+          </form>
         </CardBody>
       </Card>
 
@@ -112,14 +100,13 @@ export default async function AdminUsersPage() {
                 <TableHead>Role</TableHead>
                 <TableHead>Facility</TableHead>
                 <TableHead>Joined</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Verified</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-[13px] text-[color:var(--color-ink-500)]">
+                  <TableCell colSpan={5} className="py-8 text-center text-[13px] text-[color:var(--color-ink-500)]">
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -147,7 +134,7 @@ export default async function AdminUsersPage() {
                         ? (facilityName ?? "—")
                         : user.role === "admin"
                           ? "Wanzwei"
-                          : "Independent"}
+                          : "—"}
                     </TableCell>
                     <TableCell className="text-[12.5px] text-[color:var(--color-ink-500)]">
                       {formatJoined(joinedAt)}
@@ -157,26 +144,8 @@ export default async function AdminUsersPage() {
                         tone={user.verified ? "success" : "amber"}
                         withDot
                       >
-                        {user.verified ? "Active" : "Pending"}
+                        {user.verified ? "Verified" : "Not verified"}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="iconSm" disabled>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem disabled>View profile</DropdownMenuItem>
-                          <DropdownMenuItem disabled>Send message</DropdownMenuItem>
-                          <DropdownMenuItem disabled>Change role</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem danger disabled>
-                            Suspend account
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))

@@ -56,7 +56,12 @@ export function FacilityJobMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
-          <Link href="/facility/applications">
+          <Link href={`/facility/jobs/${jobId}`}>
+            <Eye className="h-3.5 w-3.5" /> Inspect job
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/facility/applications`}>
             <Eye className="h-3.5 w-3.5" /> View applicants
           </Link>
         </DropdownMenuItem>

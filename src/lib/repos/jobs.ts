@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, jobs, savedJobs, users, applications } from "@/lib/db/schema";
@@ -12,7 +12,33 @@ import type {
   NewDbSavedJob,
 } from "@/lib/db/schema";
 import type { Facility, Job } from "@/lib/types";
+import {
+  likeContainsPattern,
+  type JobSearchFilters,
+} from "@/lib/jobs/search";
 import { toFacility } from "./facilities";
+
+function openJobSearchWhere(filters?: JobSearchFilters) {
+  const clauses = [eq(jobs.status, "Open")];
+  if (filters?.type) {
+    clauses.push(eq(jobs.type, filters.type));
+  }
+  if (filters?.location) {
+    clauses.push(ilike(jobs.location, likeContainsPattern(filters.location)));
+  }
+  if (filters?.q) {
+    const pattern = likeContainsPattern(filters.q);
+    clauses.push(
+      or(
+        ilike(jobs.title, pattern),
+        ilike(jobs.description, pattern),
+        ilike(jobs.location, pattern),
+        ilike(facilities.name, pattern),
+      )!,
+    );
+  }
+  return and(...clauses);
+}
 
 /**
  * Convert a Drizzle row into the UI `Job` shape so the existing components
@@ -76,6 +102,7 @@ export async function listOpenJobsWithFacility(
 export async function listOpenJobsWithFacilityForProfessional(
   professionalId: string,
   limit: number,
+  filters?: JobSearchFilters,
 ): Promise<JobWithFacilityAndUserState[]> {
   if (!hasDbConfig()) return [];
   return withRepositoryLogging(
@@ -87,7 +114,7 @@ export async function listOpenJobsWithFacilityForProfessional(
         .select({ job: jobs, facility: facilities })
         .from(jobs)
         .innerJoin(facilities, eq(facilities.id, jobs.facilityId))
-        .where(eq(jobs.status, "Open"))
+        .where(openJobSearchWhere(filters))
         .orderBy(desc(jobs.postedAt))
         .limit(limit);
 
@@ -125,8 +152,24 @@ export async function listOpenJobsWithFacilityForProfessional(
         facility: toFacility(r.facility),
       }));
     },
-    { professionalId, limit },
+    { professionalId, limit, q: filters?.q, location: filters?.location, type: filters?.type },
   );
+}
+
+export async function getJobForFacility(
+  jobId: string,
+  facilityId: string,
+): Promise<Job | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging("jobs", "getJobForFacility", async () => {
+    const db = getDb();
+    const rows = await db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.id, jobId), eq(jobs.facilityId, facilityId)))
+      .limit(1);
+    return rows[0] ? toJob(rows[0]) : null;
+  }, { jobId, facilityId });
 }
 
 export async function incrementJobApplicantsCount(

@@ -8,13 +8,10 @@ import {
   XCircle,
   AlertTriangle,
   DollarSign,
-  Sparkles,
-  Crown,
-  ArrowRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
-import { Badge, StatusBadge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { requireRole } from "@/lib/auth/session";
@@ -24,16 +21,10 @@ import { timeAgoLong } from "@/lib/format";
 import { EmergencyAlertForm } from "./emergency-form";
 import { cancelAlertAction } from "./actions";
 
-const ALERTS_INCLUDED = 5;
-
 export default async function FacilityEmergencyPage() {
   const user = await requireRole(["facility"]);
   const facility = await findFacilityForUserEmail(user.email);
   const alerts = facility ? await getEmergencyAlertsForFacility(facility.id) : [];
-
-  const used = alerts.length;
-  const remaining = Math.max(0, ALERTS_INCLUDED - used);
-  const usedPct = Math.min(100, Math.round((used / ALERTS_INCLUDED) * 100));
 
   const stats = {
     total: alerts.length,
@@ -56,16 +47,8 @@ export default async function FacilityEmergencyPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Emergency Locum Alerts"
-        meta={
-          <Badge tone="brand">
-            <Crown className="h-3 w-3" />
-            Premium feature
-          </Badge>
-        }
-        description={`Push an urgent shift to verified ${facility?.location ?? "local"} professionals in under 60 seconds.`}
+        description={`Notify verified ${facility?.location ?? "local"} professionals about an urgent shift.`}
       />
-
-      <PricingBanner used={used} remaining={remaining} usedPct={usedPct} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MiniStat
@@ -122,92 +105,6 @@ export default async function FacilityEmergencyPage() {
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function PricingBanner({
-  used,
-  remaining,
-  usedPct,
-}: {
-  used: number;
-  remaining: number;
-  usedPct: number;
-}) {
-  return (
-    <div className="relative overflow-hidden rounded-[var(--radius-lg)] border border-[color:var(--color-border-default)] bg-white">
-      <div
-        className="absolute inset-0 -z-10"
-        style={{
-          background:
-            "linear-gradient(110deg, rgba(111,94,240,0.10) 0%, rgba(244,114,182,0.08) 55%, transparent 100%)",
-        }}
-      />
-      <div className="grid grid-cols-1 gap-4 px-5 py-4 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:items-center md:gap-x-4">
-        {/* Left: logo + copy */}
-        <div className="flex items-center gap-3 min-w-0 md:justify-self-start">
-          <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] text-white shadow-[0_6px_16px_-6px_rgba(99,102,241,0.55)]"
-            style={{
-              background:
-                "linear-gradient(135deg, #ff8aae 0%, #b274ff 60%, #6366f1 100%)",
-            }}
-          >
-            <Siren className="h-4.5 w-4.5" />
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <p className="font-display text-[14.5px] font-semibold tracking-tight">
-                Emergency Alerts
-              </p>
-              <Badge tone="warn" className="shrink-0">
-                <Sparkles className="h-3 w-3" /> Premium
-              </Badge>
-            </div>
-            <p className="text-[11.5px] text-[color:var(--color-ink-500)]">
-              <span className="num font-semibold text-[color:var(--color-ink-700)] tabular-nums">
-                $25
-              </span>{" "}
-              / alert · 5 free on Pro · unlimited on Scale
-            </p>
-          </div>
-        </div>
-
-        {/* Center: remaining — visually anchored to middle column */}
-        <div className="flex flex-col items-center justify-center text-center md:justify-self-center md:px-2">
-          <p className="font-display num text-[28px] font-bold tracking-tight tabular-nums leading-none text-[color:var(--color-ink-900)]">
-            {remaining}
-          </p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[color:var(--color-ink-400)] font-semibold">
-            alerts left
-          </p>
-        </div>
-
-        {/* Right: allowance + upgrade */}
-        <div className="flex flex-wrap items-center justify-center gap-3 min-w-0 md:justify-self-end md:justify-end">
-          <div className="hidden sm:block min-w-0">
-            <p className="text-[10.5px] uppercase tracking-wider text-[color:var(--color-ink-400)] font-semibold whitespace-nowrap">
-              Allowance
-            </p>
-            <div className="mt-1 flex items-center gap-2">
-              <div className="h-1.5 w-28 max-w-[min(100%,9rem)] overflow-hidden rounded-full bg-[color:var(--color-ink-900)]/[0.06]">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all"
-                  style={{ width: `${usedPct}%` }}
-                />
-              </div>
-              <span className="font-display num text-[12px] font-semibold tabular-nums whitespace-nowrap">
-                {used} / {used + remaining}
-              </span>
-            </div>
-          </div>
-          <Button variant="secondary" size="sm" className="shrink-0">
-            Upgrade
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
@@ -375,9 +272,6 @@ function AlertListItem({
                   : ""}
               </p>
             </div>
-            <Button variant="ghost" size="sm" className="ml-auto">
-              Message
-            </Button>
           </div>
         ) : null}
 

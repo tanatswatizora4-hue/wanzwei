@@ -1,46 +1,69 @@
 import Link from "next/link";
 import {
   MapPin,
-  Filter,
   Users,
   Clock3,
+  Briefcase,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { ProfessionalJobsSearchStrip } from "@/components/app/professional-jobs-search-strip";
 import { ApplyJobButton } from "@/components/app/apply-job-button";
 import { SaveJobButton } from "@/components/app/save-job-button";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FacilityLogo } from "@/components/ui/avatar";
 import { Card, CardBody } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { timeAgoLong } from "@/lib/format";
 import { professionalJobPath } from "@/lib/jobs/paths";
+import { parseJobSearchParams } from "@/lib/jobs/search";
 import { listOpenJobsWithFacilityForProfessional } from "@/lib/repos/jobs";
 import { requireRole } from "@/lib/auth/session";
 
-export default async function JobsPage() {
+export default async function JobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; type?: string; location?: string }>;
+}) {
   const user = await requireRole(["professional"]);
-  const items = await listOpenJobsWithFacilityForProfessional(user.id, 200);
+  const params = await searchParams;
+  const filters = parseJobSearchParams(params);
+  const items = await listOpenJobsWithFacilityForProfessional(
+    user.id,
+    200,
+    filters,
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Browse Jobs"
         description="Find your next role across Zimbabwe's leading hospitals, clinics and pharmacies."
-        actions={
-          <>
-            <Button variant="secondary" size="sm" disabled title="Filters coming soon">
-              <Filter className="h-3.5 w-3.5" /> Filters
-            </Button>
-          </>
-        }
       />
 
       <Card>
         <CardBody className="pt-5 pb-5">
-          <ProfessionalJobsSearchStrip />
+          <ProfessionalJobsSearchStrip filters={filters} />
         </CardBody>
       </Card>
+      {items.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon={<Briefcase className="h-4 w-4" />}
+            title="No open jobs match these filters"
+            description="Try a different keyword, type, or location — or clear search and browse all open roles."
+            action={
+              filters.q || filters.location || filters.type ? (
+                <Link
+                  href="/professional/jobs"
+                  className="text-[13px] font-medium text-[color:var(--color-brand-600)] hover:underline"
+                >
+                  Clear search
+                </Link>
+              ) : undefined
+            }
+          />
+        </Card>
+      ) : (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {items.map(({ job, facility: f }) => {
           return (
@@ -48,7 +71,6 @@ export default async function JobsPage() {
               key={job.id}
               className="card card-hover group relative flex flex-col overflow-hidden"
             >
-              {/* Row 1 — header: logo + title + save */}
               <header className="flex items-start gap-3 px-5 pt-4 pb-3.5">
                 <FacilityLogo
                   initials={f.initials}
@@ -74,7 +96,6 @@ export default async function JobsPage() {
                 />
               </header>
 
-              {/* Row 2 — meta strip with vertical dividers */}
               <div className="mx-5 flex items-center gap-3 rounded-[10px] border border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/70 px-3 py-2 text-[12px]">
                 <span className="inline-flex items-center gap-1.5 text-[color:var(--color-ink-700)]">
                   <MapPin className="h-3.5 w-3.5 text-[color:var(--color-ink-400)]" />
@@ -85,15 +106,12 @@ export default async function JobsPage() {
                   {job.type}
                 </Badge>
                 {job.salary ? (
-                  <>
-                    <span className="ml-auto inline-flex items-center gap-1 font-display num text-[12.5px] font-semibold text-[color:var(--color-ink-900)] tabular-nums">
-                      {job.salary}
-                    </span>
-                  </>
+                  <span className="ml-auto inline-flex items-center gap-1 font-display num text-[12.5px] font-semibold text-[color:var(--color-ink-900)] tabular-nums">
+                    {job.salary}
+                  </span>
                 ) : null}
               </div>
 
-              {/* Row 3 — description + tags */}
               <div className="px-5 pt-3.5 pb-4 flex-1">
                 <p className="line-clamp-2 text-[13px] leading-relaxed text-[color:var(--color-ink-500)]">
                   {job.description}
@@ -109,7 +127,6 @@ export default async function JobsPage() {
                 ) : null}
               </div>
 
-              {/* Row 4 — footer: meta on left, apply on right */}
               <footer className="flex items-center justify-between gap-3 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/50 px-5 py-2.5">
                 <div className="flex items-center gap-3 text-[11.5px] text-[color:var(--color-ink-500)]">
                   <span className="inline-flex items-center gap-1">
@@ -136,6 +153,7 @@ export default async function JobsPage() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

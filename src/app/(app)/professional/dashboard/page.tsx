@@ -14,7 +14,7 @@ import { StatusBadge } from "@/components/ui/badge";
 import { FacilityLogo } from "@/components/ui/avatar";
 import { requireRole } from "@/lib/auth/session";
 import { timeAgoLong } from "@/lib/format";
-import { professionalJobPath } from "@/lib/jobs/paths";
+import { professionalApplicationPath, professionalJobPath } from "@/lib/jobs/paths";
 import { listApplicationsForProfessional } from "@/lib/repos/applications";
 import {
   listFacilitiesByIds,
@@ -144,7 +144,10 @@ export default async function ProfessionalDashboardPage() {
             </div>
           </Card>
 
-          <ProfileCompletionBanner href="/professional/profile" />
+          <ProfileCompletionBanner
+            href="/professional/profile"
+            complete={Boolean(user.location && user.verified)}
+          />
 
           <Card>
             <CardHeader>
@@ -196,10 +199,11 @@ export default async function ProfessionalDashboardPage() {
             <div className="px-2 pb-2">
               <ul className="flex flex-col">
                 {applications.map(({ application: a, job, facility }) => (
-                  <li
-                    key={a.id}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] hover:bg-[color:var(--color-ink-900)]/[0.025]"
-                  >
+                  <li key={a.id}>
+                    <Link
+                      href={professionalApplicationPath(a.id)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] hover:bg-[color:var(--color-ink-900)]/[0.025]"
+                    >
                     <FacilityLogo
                       initials={facility.initials}
                       gradient={facility.logoColor}
@@ -219,6 +223,7 @@ export default async function ProfessionalDashboardPage() {
                         {timeAgoLong(a.appliedAt)}
                       </span>
                     </div>
+                    </Link>
                   </li>
                 ))}
                 {applications.length === 0 ? (
@@ -233,12 +238,6 @@ export default async function ProfessionalDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Upcoming Interviews</CardTitle>
-              <Link
-                href="#"
-                className="text-[12.5px] font-medium text-[color:var(--color-brand-600)] hover:underline"
-              >
-                View all →
-              </Link>
             </CardHeader>
             <div className="px-2 pb-3">
               {interviews.length === 0 ? (

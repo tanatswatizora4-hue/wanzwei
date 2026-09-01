@@ -1,0 +1,129 @@
+import { readFileSync } from "node:fs";
+
+import { describe, expect, it } from "vitest";
+
+import { isVerifiedProfessional } from "@/lib/auth/professional-verification";
+import { canFacilityAccessApplication } from "@/lib/applications/ownership";
+
+const CUT = [
+  "Messages",
+  "Availability",
+  "Talent Pool",
+  "Talent pool",
+  "Matching",
+  "Matching workflow",
+  "Marketplace",
+  "CPD",
+  "Invite",
+  "Billing",
+  "AI: Find best candidate match",
+  "Invite a teammate",
+];
+
+describe("MVP navigation and security invariants", () => {
+  it("primary navigation no longer exposes cut fake modules", () => {
+    const sidebar = readFileSync("src/components/app/sidebar.tsx", "utf8");
+    const palette = readFileSync("src/components/app/command-palette.tsx", "utf8");
+    const topbar = readFileSync("src/components/app/topbar.tsx", "utf8");
+    for (const label of CUT) {
+      expect(sidebar, label).not.toContain(`label: "${label}"`);
+      expect(palette, label).not.toContain(`label: "${label}"`);
+    }
+    expect(sidebar).toContain('label: "Browse Jobs"');
+    expect(sidebar).toContain('label: "My Applications"');
+    expect(sidebar).toContain('label: "Documents"');
+    expect(sidebar).toContain('label: "Applicants"');
+    expect(sidebar).toContain('label: "Emergency"');
+    expect(sidebar).toContain('label: "Verification"');
+    expect(sidebar).toContain('label: "Facilities"');
+    expect(sidebar).toContain('href: "/admin/emergency"');
+    expect(topbar).not.toContain("Billing");
+    expect(topbar).not.toContain("Invite team");
+  });
+
+  it("does not hardcode fake notification or applicant badges in the sidebar", () => {
+    const source = readFileSync("src/components/app/sidebar.tsx", "utf8");
+    expect(source).not.toMatch(/badge:\s*"3"/);
+    expect(source).not.toMatch(/badge:\s*"5"/);
+    expect(source).not.toMatch(/badge:\s*"12"/);
+    expect(source).not.toMatch(/badge:\s*"PRO"/);
+  });
+
+  it("FACILITY_A_CAN_CLOSE_FACILITY_B_JOB=false", () => {
+    const source = readFileSync("src/lib/repos/jobs.ts", "utf8");
+    const start = source.indexOf("export async function closeJobForFacility");
+    const end = source.indexOf("export async function getSavedJobsForUser");
+    const slice = source.slice(start, end);
+    expect(slice).toContain("eq(jobs.facilityId, facilityId)");
+    expect(slice).toContain("eq(jobs.id, jobId)");
+  });
+
+  it("FACILITY_A_CAN_CHANGE_APPLICATION_FOR_FACILITY_B=false", () => {
+    const source = readFileSync("src/app/(app)/applications/actions.ts", "utf8");
+    expect(source).toContain("applicationBelongsToFacility");
+    expect(source).toContain('requireRole(["facility", "admin"])');
+    expect(source).toContain("canTransitionApplicationStatus");
+    expect(
+      canFacilityAccessApplication({
+        actor: { role: "facility", facilityId: "fac-a" },
+        jobFacilityId: "fac-b",
+      }),
+    ).toBe(false);
+  });
+
+  it("UNVERIFIED_PROFESSIONAL_CAN_ACCEPT_EMERGENCY=false", () => {
+    expect(
+      isVerifiedProfessional({ role: "professional", verified: false }),
+    ).toBe(false);
+    const source = readFileSync(
+      "src/app/(app)/professional/dashboard/actions.ts",
+      "utf8",
+    );
+    expect(source).toContain("requireVerifiedProfessional");
+  });
+
+  it("NON_ADMIN_CAN_ACCESS_ADMIN_VERIFICATION_DETAIL=false", () => {
+    const source = readFileSync(
+      "src/app/(app)/admin/verification/[id]/page.tsx",
+      "utf8",
+    );
+    expect(source).toContain('requireRole(["admin"])');
+    expect(source.indexOf("requireRole")).toBeLessThan(source.indexOf("getVerification"));
+  });
+
+  it("NON_ADMIN_CAN_MANUALLY_VERIFY=false", () => {
+    const source = readFileSync(
+      "src/app/api/admin/verifications/[verificationId]/decision/route.ts",
+      "utf8",
+    );
+    expect(source).toContain('requireRole(["admin"])');
+    expect(source).toContain("applyAdminVerificationDecision");
+    expect(source.indexOf("requireRole")).toBeLessThan(
+      source.indexOf("applyAdminVerificationDecision"),
+    );
+  });
+
+  it("CLIENT_CAN_READ_PRACTITIONER_REGISTRY=false", () => {
+    const migration = readFileSync(
+      "supabase/migrations/0006_practitioner_registry.sql",
+      "utf8",
+    );
+    expect(migration).toContain(
+      "alter table public.practitioner_registry enable row level security",
+    );
+    expect(migration).toContain("Intentionally no policies");
+    const repo = readFileSync("src/lib/repos/practitioner-registry.ts", "utf8");
+    expect(repo).toContain('import "server-only"');
+    expect(repo).toContain("getRegistryByIdForAdmin");
+  });
+
+  it("professional application detail is owned and not-found for others", () => {
+    const source = readFileSync(
+      "src/app/(app)/professional/applications/[id]/page.tsx",
+      "utf8",
+    );
+    expect(source).toContain('requireRole(["professional"])');
+    expect(source).toContain("getApplicationForProfessional");
+    expect(source).toContain("notFound()");
+  });
+});

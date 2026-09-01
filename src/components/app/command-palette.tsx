@@ -6,20 +6,16 @@ import {
   LayoutDashboard,
   Briefcase,
   FileText,
-  GraduationCap,
-  Store,
   ShieldCheck,
   Settings,
   Users,
   Bookmark,
-  MessageSquare,
   Search,
-  Sparkles,
-  Workflow,
   Stethoscope,
-  CalendarClock,
   FileBadge,
   Siren,
+  Building2,
+  Bell,
 } from "lucide-react";
 import { Command } from "cmdk";
 import {
@@ -88,29 +84,9 @@ function commands(role: Role): Cmd[] {
       },
       {
         group: "Navigate",
-        label: "Messages",
-        href: "/professional/messages",
-        icon: <MessageSquare className="h-3.5 w-3.5" />,
-      },
-      {
-        group: "Navigate",
         label: "My profile",
         href: "/professional/profile",
         icon: <Stethoscope className="h-3.5 w-3.5" />,
-      },
-      {
-        group: "Navigate",
-        label: "CPD",
-        href: "/professional/cpd",
-        icon: <GraduationCap className="h-3.5 w-3.5" />,
-        shortcut: "G C",
-      },
-      {
-        group: "Navigate",
-        label: "Marketplace",
-        href: "/professional/marketplace",
-        icon: <Store className="h-3.5 w-3.5" />,
-        shortcut: "G M",
       },
       {
         group: "Navigate",
@@ -120,9 +96,9 @@ function commands(role: Role): Cmd[] {
       },
       {
         group: "Navigate",
-        label: "Availability",
-        href: "/professional/availability",
-        icon: <CalendarClock className="h-3.5 w-3.5" />,
+        label: "Notifications",
+        href: "/professional/notifications",
+        icon: <Bell className="h-3.5 w-3.5" />,
       },
     ];
   }
@@ -153,21 +129,9 @@ function commands(role: Role): Cmd[] {
       },
       {
         group: "Navigate",
-        label: "Talent pool",
-        href: "/facility/talent",
-        icon: <Stethoscope className="h-3.5 w-3.5" />,
-      },
-      {
-        group: "Navigate",
-        label: "Marketplace",
-        href: "/facility/marketplace",
-        icon: <Store className="h-3.5 w-3.5" />,
-      },
-      {
-        group: "Navigate",
-        label: "CPD",
-        href: "/facility/cpd",
-        icon: <GraduationCap className="h-3.5 w-3.5" />,
+        label: "Facility profile",
+        href: "/facility/profile",
+        icon: <Building2 className="h-3.5 w-3.5" />,
       },
     ];
   }
@@ -180,13 +144,6 @@ function commands(role: Role): Cmd[] {
       href: "/admin/verification",
       icon: <ShieldCheck className="h-3.5 w-3.5" />,
       shortcut: "G V",
-    },
-    {
-      group: "Navigate",
-      label: "Matching workflow",
-      href: "/admin/matching",
-      icon: <Workflow className="h-3.5 w-3.5" />,
-      shortcut: "G M",
     },
     {
       group: "Navigate",
@@ -206,21 +163,20 @@ function commands(role: Role): Cmd[] {
       href: "/admin/users",
       icon: <Users className="h-3.5 w-3.5" />,
     },
+    {
+      group: "Navigate",
+      label: "Facilities",
+      href: "/admin/facilities",
+      icon: <Building2 className="h-3.5 w-3.5" />,
+    },
+    {
+      group: "Navigate",
+      label: "Emergency alerts",
+      href: "/admin/emergency",
+      icon: <Siren className="h-3.5 w-3.5" />,
+    },
   ];
 }
-
-const ACTIONS: Cmd[] = [
-  {
-    group: "Actions",
-    label: "AI: Find best candidate match",
-    icon: <Sparkles className="h-3.5 w-3.5" />,
-  },
-  {
-    group: "Actions",
-    label: "Invite a teammate",
-    icon: <Users className="h-3.5 w-3.5" />,
-  },
-];
 
 export function CommandPalette({ role }: { role: Role }) {
   const [open, setOpen] = React.useState(false);
@@ -237,7 +193,7 @@ export function CommandPalette({ role }: { role: Role }) {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const cmds = React.useMemo(() => [...commands(role), ...ACTIONS], [role]);
+  const cmds = React.useMemo(() => commands(role), [role]);
 
   const grouped = React.useMemo(() => {
     const acc: Record<string, Cmd[]> = {};

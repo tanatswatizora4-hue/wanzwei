@@ -14,7 +14,7 @@ import { StatCard } from "@/components/app/stat-card";
 import { FacilityVerifiedBadge } from "@/components/app/facility-verified-badge";
 import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FacilityLogo, Avatar } from "@/components/ui/avatar";
+import { FacilityLogo } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -292,22 +292,9 @@ export default async function FacilityDashboardPage() {
                     <Badge tone="slate">{job.type}</Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-1.5">
-                        {["AB", "CD", "EF"].map((i, ix) => (
-                          <Avatar
-                            key={ix}
-                            name={i}
-                            size={20}
-                            className="ring-2 ring-white"
-                            gradient="bg-gradient-to-br from-slate-400 to-slate-600"
-                          />
-                        ))}
-                      </div>
-                      <span className="text-[12.5px] tabular-nums">
-                        {job.applicants}
-                      </span>
-                    </div>
+                    <span className="text-[12.5px] tabular-nums">
+                      {job.applicants}
+                    </span>
                   </TableCell>
                   <TableCell className="text-[12.5px] text-[color:var(--color-ink-500)]">
                     {timeAgoLong(job.postedAt)}
@@ -316,8 +303,8 @@ export default async function FacilityDashboardPage() {
                     <StatusBadge status={job.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Manage
+                    <Button variant="ghost" size="sm" asChild>
+                      <Link href={`/facility/jobs/${job.id}`}>Manage</Link>
                     </Button>
                   </TableCell>
                 </TableRow>

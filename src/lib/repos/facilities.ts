@@ -1,6 +1,6 @@
 import "server-only";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, users } from "@/lib/db/schema";
@@ -74,6 +74,49 @@ export async function listFacilitiesByIds(ids: string[]): Promise<Facility[]> {
       .where(inArray(facilities.id, ids));
     return rows.map(toFacility);
   }, { count: ids.length });
+}
+
+export async function listFacilitiesForAdmin(limit = 100): Promise<
+  {
+    facility: Facility;
+    contactName: string | null;
+    contactEmail: string | null;
+  }[]
+> {
+  if (!hasDbConfig()) return [];
+  return withRepositoryLogging("facilities", "listFacilitiesForAdmin", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({
+        facility: facilities,
+        contactName: users.name,
+        contactEmail: users.email,
+      })
+      .from(facilities)
+      .leftJoin(
+        users,
+        and(eq(users.facilityId, facilities.id), eq(users.role, "facility")),
+      )
+      .orderBy(desc(facilities.openRoles))
+      .limit(limit);
+
+    const seen = new Set<string>();
+    const result: {
+      facility: Facility;
+      contactName: string | null;
+      contactEmail: string | null;
+    }[] = [];
+    for (const row of rows) {
+      if (seen.has(row.facility.id)) continue;
+      seen.add(row.facility.id);
+      result.push({
+        facility: toFacility(row.facility),
+        contactName: row.contactName ?? null,
+        contactEmail: row.contactEmail ?? null,
+      });
+    }
+    return result;
+  }, { limit });
 }
 
 export async function getFacility(id: string): Promise<Facility | null> {

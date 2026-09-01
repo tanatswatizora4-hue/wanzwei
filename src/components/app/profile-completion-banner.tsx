@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 
 const STORAGE_KEY = "wanzwei:profile-banner-dismissed";
 
-export function ProfileCompletionBanner({ href }: { href: string }) {
+export function ProfileCompletionBanner({
+  href,
+  complete,
+}: {
+  href: string;
+  complete?: boolean;
+}) {
   const [dismissed, setDismissed] = React.useState(() => {
     if (typeof sessionStorage === "undefined") return false;
     try {
@@ -17,7 +23,7 @@ export function ProfileCompletionBanner({ href }: { href: string }) {
     }
   });
 
-  if (dismissed) return null;
+  if (complete || dismissed) return null;
 
   const onDismiss = () => {
     try {
@@ -42,9 +48,10 @@ export function ProfileCompletionBanner({ href }: { href: string }) {
           <Rocket className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[14px] font-semibold">Stand out to employers</p>
+          <p className="text-[14px] font-semibold">Complete your profile</p>
           <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-            Complete your profile and get 3.2× more job matches.
+            Add your location and submit HPA verification so facilities can
+            review a complete application.
           </p>
         </div>
         <Button size="sm" asChild>

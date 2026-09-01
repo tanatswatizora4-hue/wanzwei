@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { updateApplicationStatusAction } from "@/app/(app)/applications/actions";
 import type { ApplicationStatus } from "@/lib/types";
+import { nextApplicationStatuses } from "@/lib/applications/transitions";
 import {
   Select,
   SelectContent,
@@ -12,16 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const STATUSES: ApplicationStatus[] = [
-  "Under Review",
-  "Screening",
-  "Shortlisted",
-  "Interview",
-  "Offer",
-  "Hired",
-  "Rejected",
-];
 
 export function ApplicationStatusSelect({
   applicationId,
@@ -32,6 +23,7 @@ export function ApplicationStatusSelect({
 }) {
   const [current, setCurrent] = React.useState(value);
   const [pending, setPending] = React.useState(false);
+  const options = nextApplicationStatuses(current);
 
   const onChange = async (next: string) => {
     const status = next as ApplicationStatus;
@@ -63,7 +55,7 @@ export function ApplicationStatusSelect({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {STATUSES.map((status) => (
+          {options.map((status) => (
             <SelectItem key={status} value={status}>
               {status}
             </SelectItem>

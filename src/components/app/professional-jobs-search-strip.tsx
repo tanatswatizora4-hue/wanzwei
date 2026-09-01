@@ -2,31 +2,32 @@
 
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import type { JobSearchFilters } from "@/lib/jobs/search";
 
-/** Shared typography + segmented layout for Browse Jobs search row. */
-const SEGMENT_TRIGGER = cn(
-  "h-10 min-h-10 w-full rounded-none border-0 bg-transparent shadow-none transition-none",
-  "px-4 text-[13px] leading-none font-normal text-[color:var(--color-ink-900)]",
-  "justify-between gap-2",
-  "focus:ring-[3px] focus:ring-inset focus:ring-[color:var(--color-brand-100)] focus:outline-none",
-  "focus:border-0 [&>span:first-of-type]:min-w-0 [&>span:first-of-type]:flex-1 [&>span:first-of-type]:truncate [&>span:first-of-type]:text-left",
-);
+const TYPES = [
+  "",
+  "Full-time",
+  "Part-time",
+  "Locum",
+  "Contract",
+  "Permanent",
+] as const;
 
-export function ProfessionalJobsSearchStrip() {
+export function ProfessionalJobsSearchStrip({
+  filters,
+}: {
+  filters: JobSearchFilters;
+}) {
   return (
-    <div
+    <form
+      method="get"
+      action="/professional/jobs"
       className={cn(
         "flex flex-col divide-y divide-[color:var(--color-border-default)] overflow-hidden rounded-[var(--radius-md)]",
         "border border-[color:var(--color-border-default)] bg-white shadow-[var(--shadow-xs)]",
-        "sm:flex-row sm:divide-x sm:divide-y-0 sm:divide-[color:var(--color-border-default)]",
+        "sm:flex-row sm:divide-x sm:divide-y-0",
       )}
       role="search"
       aria-label="Search jobs"
@@ -38,10 +39,11 @@ export function ProfessionalJobsSearchStrip() {
         />
         <Input
           type="search"
-          name="jobs-q"
+          name="q"
+          defaultValue={filters.q ?? ""}
           autoComplete="off"
           spellCheck={false}
-          placeholder="Search roles, skills, facilities…"
+          placeholder="Search title, facility, or location"
           className={cn(
             "h-10 min-h-10 rounded-none border-0 px-3.5 pl-9 shadow-none ring-0",
             "text-[13px] text-[color:var(--color-ink-900)] placeholder:text-[color:var(--color-ink-300)]",
@@ -49,38 +51,37 @@ export function ProfessionalJobsSearchStrip() {
           )}
         />
       </div>
-
-      <Select defaultValue="all-types">
-        <SelectTrigger
-          aria-label="Job type"
-          className={cn(SEGMENT_TRIGGER, "sm:flex-none sm:w-[152px]")}
-        >
-          <SelectValue placeholder="Type" />
-        </SelectTrigger>
-        <SelectContent align="start" position="popper">
-          <SelectItem value="all-types">All types</SelectItem>
-          <SelectItem value="full-time">Full-time</SelectItem>
-          <SelectItem value="part-time">Part-time</SelectItem>
-          <SelectItem value="locum">Locum</SelectItem>
-          <SelectItem value="contract">Contract</SelectItem>
-          <SelectItem value="permanent">Permanent</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Select defaultValue="all-locations">
-        <SelectTrigger
-          aria-label="Location"
-          className={cn(SEGMENT_TRIGGER, "sm:flex-none sm:w-[152px]")}
-        >
-          <SelectValue placeholder="Location" />
-        </SelectTrigger>
-        <SelectContent align="start" position="popper">
-          <SelectItem value="all-locations">All locations</SelectItem>
-          <SelectItem value="harare">Harare</SelectItem>
-          <SelectItem value="bulawayo">Bulawayo</SelectItem>
-          <SelectItem value="mutare">Mutare</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
+      <label className="sr-only" htmlFor="job-type">
+        Job type
+      </label>
+      <select
+        id="job-type"
+        name="type"
+        defaultValue={filters.type ?? ""}
+        className="h-10 min-h-10 w-full bg-transparent px-4 text-[13px] text-[color:var(--color-ink-900)] outline-none sm:w-[152px]"
+      >
+        <option value="">All types</option>
+        {TYPES.filter(Boolean).map((type) => (
+          <option key={type} value={type}>
+            {type}
+          </option>
+        ))}
+      </select>
+      <label className="sr-only" htmlFor="job-location">
+        Location
+      </label>
+      <input
+        id="job-location"
+        name="location"
+        defaultValue={filters.location ?? ""}
+        placeholder="Location"
+        className="h-10 min-h-10 w-full bg-transparent px-4 text-[13px] text-[color:var(--color-ink-900)] outline-none placeholder:text-[color:var(--color-ink-300)] sm:w-[152px]"
+      />
+      <div className="flex items-center p-1.5 sm:w-auto">
+        <Button type="submit" size="sm" className="w-full sm:w-auto">
+          Search
+        </Button>
+      </div>
+    </form>
   );
 }
