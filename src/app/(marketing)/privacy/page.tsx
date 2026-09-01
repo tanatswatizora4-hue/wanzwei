@@ -51,7 +51,7 @@ export default function PrivacyPage() {
             Why we process it
           </h2>
           <p className="mt-2">
-            We process this information to create and secure accounts, match
+            We process this information to create and secure accounts, connect
             professionals with facilities, run verification and hiring
             workflows, communicate about your use of the service, prevent
             abuse, and comply with legal obligations that apply to the
@@ -108,10 +108,10 @@ export default function PrivacyPage() {
 
       <p className="mt-8 text-[13px]">
         <Link
-          href="/signup"
+          href="/"
           className="font-medium text-[color:var(--color-brand-600)] hover:underline"
         >
-          Back to sign up
+          Back to home
         </Link>
       </p>
     </div>

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  Star,
   Eye,
   Pencil,
   ArrowRight,
@@ -78,13 +77,9 @@ export default async function FacilityDashboardPage() {
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
                   {facility ? `${facility.type} · ${facility.location}` : "Link your facility profile"}
                 </p>
-                <div className="mt-1 flex items-center gap-3 text-[12px] text-[color:var(--color-ink-500)]">
-                  <span className="inline-flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    {facility?.rating ?? "—"} rating
-                  </span>
-                  <span>{facility?.openRoles ?? 0} open roles</span>
-                </div>
+                <p className="mt-1 text-[12px] text-[color:var(--color-ink-500)]">
+                  {facility?.openRoles ?? 0} open roles
+                </p>
               </div>
             </div>
           </div>
@@ -110,7 +105,7 @@ export default async function FacilityDashboardPage() {
         />
         <StatCard
           accent="amber"
-          label="Interviews scheduled"
+          label="In interview"
           value={stats?.interviewsScheduled.value ?? 0}
           delta={stats?.interviewsScheduled.delta}
           deltaLabel={stats?.interviewsScheduled.deltaLabel}

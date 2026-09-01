@@ -5,6 +5,7 @@ import { GoogleSignInButton } from "@/components/app/auth/google-sign-in-button"
 import { ResendConfirmationForm } from "@/components/app/auth/resend-confirmation-form";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { GOOGLE_SIGNIN_PUBLIC } from "@/lib/auth/google-signin-public";
 
 export const metadata = {
   title: "Sign in — Wanzwei",
@@ -49,9 +50,12 @@ export default async function LoginPage({
       </div>
 
       <div className="mt-7 flex flex-col gap-3.5">
-        <GoogleSignInButton next={next} />
-
-        <AuthDivider />
+        {GOOGLE_SIGNIN_PUBLIC ? (
+          <>
+            <GoogleSignInButton next={next} />
+            <AuthDivider />
+          </>
+        ) : null}
 
         {error === "unconfirmed" ? (
           <div className="rounded-[var(--radius-sm)] bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">

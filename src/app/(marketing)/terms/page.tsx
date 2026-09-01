@@ -123,10 +123,10 @@ export default function TermsPage() {
 
       <p className="mt-8 text-[13px]">
         <Link
-          href="/signup"
+          href="/"
           className="font-medium text-[color:var(--color-brand-600)] hover:underline"
         >
-          Back to sign up
+          Back to home
         </Link>
       </p>
     </div>

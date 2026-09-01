@@ -446,7 +446,6 @@ export async function getFacilityDashboardStats(
 
       const [
         applicationDates,
-        interviewDates,
         hiresThisMonth,
         activeAlerts,
         openJobDates,
@@ -456,13 +455,6 @@ export async function getFacilityDashboardStats(
           .from(applications)
           .innerJoin(jobs, eq(jobs.id, applications.jobId))
           .where(eq(jobs.facilityId, facilityId)),
-        db
-          .select({ date: interviews.date })
-          .from(interviews)
-          .innerJoin(jobs, eq(jobs.id, interviews.jobId))
-          .where(
-            and(eq(jobs.facilityId, facilityId), gte(interviews.date, now)),
-          ),
         db
           .select({ count: count() })
           .from(applications)
@@ -555,8 +547,8 @@ export async function getFacilityDashboardStats(
           applicationDates.map((row) => row.appliedAt),
         ),
         interviewsScheduled: withTrend(
-          interviewDates.length,
-          interviewDates.map((row) => row.date),
+          statusCounts.Interview,
+          [],
         ),
         hiresThisMonth: withTrend(
           Number(hiresThisMonth[0]?.count ?? 0),

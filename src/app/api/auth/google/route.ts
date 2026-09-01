@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { GOOGLE_SIGNIN_PUBLIC } from "@/lib/auth/google-signin-public";
 import { createLogger, withRouteLogging } from "@/lib/observability/logger";
 import { getServerSupabase } from "@/lib/supabase/server";
 
@@ -12,6 +13,10 @@ export async function GET(req: Request) {
 }
 
 async function handleGET(req: Request) {
+  if (!GOOGLE_SIGNIN_PUBLIC) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
   const requestUrl = new URL(req.url);
   const origin = requestUrl.origin;
   const next = requestUrl.searchParams.get("next");

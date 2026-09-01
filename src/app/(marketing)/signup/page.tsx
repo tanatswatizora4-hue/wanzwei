@@ -6,6 +6,7 @@ import { SignupRolePicker } from "@/components/app/auth/signup-role-picker";
 import { ResendConfirmationForm } from "@/components/app/auth/resend-confirmation-form";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
+import { GOOGLE_SIGNIN_PUBLIC } from "@/lib/auth/google-signin-public";
 
 export const metadata = {
   title: "Create your account — Wanzwei",
@@ -37,9 +38,12 @@ export default async function SignupPage({
       </div>
 
       <div className="mt-7 flex flex-col gap-3.5">
-        <GoogleSignInButton />
-
-        <AuthDivider />
+        {GOOGLE_SIGNIN_PUBLIC ? (
+          <>
+            <GoogleSignInButton />
+            <AuthDivider />
+          </>
+        ) : null}
 
         {error === "incomplete_signup" ? (
           <div className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { StatCard } from "@/components/app/stat-card";
 import { JobRow } from "@/components/app/job-row";
 import { EmergencyAlertsPanel } from "@/components/app/emergency-alerts";
@@ -21,7 +21,6 @@ import {
   listTopHiringFacilities,
 } from "@/lib/repos/facilities";
 import { getActiveAlertsForProfessionalEmail } from "@/lib/repos/emergency-alerts";
-import { listInterviewsForProfessional } from "@/lib/repos/interviews";
 import { listOpenJobsWithFacilityForProfessional } from "@/lib/repos/jobs";
 import { getProfessionalDashboardStats } from "@/lib/repos/dashboard-stats";
 
@@ -33,14 +32,12 @@ export default async function ProfessionalDashboardPage() {
     recommended,
     applications,
     topFacilities,
-    interviews,
     emergencyAlerts,
   ] = await Promise.all([
     getProfessionalDashboardStats(user.id),
     listOpenJobsWithFacilityForProfessional(user.id, 5),
     listApplicationsForProfessional(user.email, 4),
     listTopHiringFacilities(5),
-    listInterviewsForProfessional(user.email, 4),
     getActiveAlertsForProfessionalEmail(user.email),
   ]);
 
@@ -70,7 +67,7 @@ export default async function ProfessionalDashboardPage() {
         verified={user.verified === true}
       />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard
           accent="violet"
           label="Applications"
@@ -78,14 +75,6 @@ export default async function ProfessionalDashboardPage() {
           delta={stats.applications.delta}
           deltaLabel={stats.applications.deltaLabel}
           trend={stats.applications.trend}
-        />
-        <StatCard
-          accent="emerald"
-          label="Interviews"
-          value={stats.interviews.value}
-          delta={stats.interviews.delta}
-          deltaLabel={stats.interviews.deltaLabel}
-          trend={stats.interviews.trend}
         />
         <StatCard
           accent="amber"
@@ -96,10 +85,9 @@ export default async function ProfessionalDashboardPage() {
           trend={stats.savedJobs.trend}
         />
         <StatCard
-          accent="sky"
-          label="CPD Credits"
-          value={stats.cpdCredits.value}
-          deltaLabel={stats.cpdCredits.deltaLabel}
+          accent="emerald"
+          label="Active locum alerts"
+          value={stats.activeEmergencyAlerts}
         />
       </div>
 
@@ -235,60 +223,6 @@ export default async function ProfessionalDashboardPage() {
             </div>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Interviews</CardTitle>
-            </CardHeader>
-            <div className="px-2 pb-3">
-              {interviews.length === 0 ? (
-                <div className="px-3 py-4 text-[13px] text-[color:var(--color-ink-500)]">
-                  No interviews scheduled.
-                </div>
-              ) : (
-                <ul className="flex flex-col">
-                  {interviews.map(({ interview: i, job, facility }) => {
-                    const d = new Date(i.date);
-                    const month = d
-                      .toLocaleString("en", { month: "short" })
-                      .toUpperCase();
-                    const day = d.getDate();
-                    const time = d.toLocaleTimeString("en", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
-                    });
-                    return (
-                      <li
-                        key={i.id}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-md)] hover:bg-[color:var(--color-ink-900)]/[0.025]"
-                      >
-                        <div className="flex h-11 w-11 flex-col items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]">
-                          <span className="text-[10px] font-medium leading-none">
-                            {month}
-                          </span>
-                          <span className="text-[14px] font-semibold leading-none mt-0.5">
-                            {day}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px] font-semibold">
-                            {job.title} Interview
-                          </p>
-                          <p className="truncate text-[11.5px] text-[color:var(--color-ink-500)]">
-                            {facility.name}
-                          </p>
-                        </div>
-                        <div className="text-[11.5px] text-[color:var(--color-ink-500)] flex items-center gap-1">
-                          <CalendarClock className="h-3 w-3" />
-                          {time}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          </Card>
         </div>
       </div>
     </div>

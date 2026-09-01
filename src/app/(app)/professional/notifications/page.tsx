@@ -29,7 +29,7 @@ export default async function NotificationsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Notifications"
-        description="In-app alerts for matches and activity. Important updates currently also arrive by email."
+        description="In-app alerts for applications, verification, and locum activity."
       />
 
       <Card>
@@ -37,7 +37,7 @@ export default async function NotificationsPage() {
           <EmptyState
             icon={<Bell className="h-4 w-4" />}
             title="No notifications yet"
-            description="Application status changes and verification decisions are sent by email. In-app alerts will appear here when they are generated."
+            description="Watch My Applications and your verification status in the product. Alerts appear here when they are generated."
           />
         ) : (
           <ul className="divide-y divide-[color:var(--color-border-default)]">

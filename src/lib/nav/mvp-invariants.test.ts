@@ -147,6 +147,38 @@ describe("MVP navigation and security invariants", () => {
     expect(migration).toContain("drop policy if exists hpa_premises_read_all");
   });
 
+  it("public marketing homepage does not advertise cut or demo features", () => {
+    const source = readFileSync("src/app/(marketing)/page.tsx", "utf8");
+    expect(source).not.toContain("Marketplace");
+    expect(source).not.toContain("CPD");
+    expect(source).not.toContain("10,000+");
+    expect(source).not.toContain("10k+");
+    expect(source).not.toContain("SOC 2");
+    expect(source).not.toContain("href=\"#\"");
+    expect(source).not.toContain("Upcoming Interviews");
+    expect(source).toContain("Join as Professional");
+    expect(source).toContain("/privacy");
+    expect(source).toContain("/terms");
+  });
+
+  it("public login does not offer Google until redirect URI is verified", () => {
+    const login = readFileSync("src/app/(marketing)/login/page.tsx", "utf8");
+    const signup = readFileSync("src/app/(marketing)/signup/page.tsx", "utf8");
+    const route = readFileSync("src/app/api/auth/google/route.ts", "utf8");
+    expect(login).toContain("GOOGLE_SIGNIN_PUBLIC");
+    expect(signup).toContain("GOOGLE_SIGNIN_PUBLIC");
+    expect(route).toContain("if (!GOOGLE_SIGNIN_PUBLIC)");
+  });
+
+  it("facility dashboard does not display a rating", () => {
+    const source = readFileSync(
+      "src/app/(app)/facility/dashboard/page.tsx",
+      "utf8",
+    );
+    expect(source).not.toContain("rating");
+    expect(source).not.toContain("Star");
+  });
+
   it("post-MVP demo routes are hidden", () => {
     const files = [
       "src/app/(app)/professional/messages/page.tsx",
