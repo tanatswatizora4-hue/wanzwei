@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, FacilityLogo } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { requireRole } from "@/lib/auth/session";
+import { mvpSurfaceUnavailable } from "@/lib/nav/mvp-unavailable";
 import { listFacilities } from "@/lib/repos/facilities";
 import type { Facility } from "@/lib/types";
 
@@ -115,7 +115,7 @@ const COLUMNS: { stage: Stage; tone: string; cards: Card[] }[] = [
 ];
 
 export default async function AdminMatchingPage() {
-  await requireRole(["admin"]);
+  mvpSurfaceUnavailable();
   const facilities = await listFacilities(10);
   return (
     <div className="flex flex-col gap-6">

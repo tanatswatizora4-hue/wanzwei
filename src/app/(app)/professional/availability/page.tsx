@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { requireRole } from "@/lib/auth/session";
+import { mvpSurfaceUnavailable } from "@/lib/nav/mvp-unavailable";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -16,7 +16,7 @@ const SLOTS: { day: number; start: string; end: string; tone: "emerald" | "amber
 ];
 
 export default async function AvailabilityPage() {
-  await requireRole(["professional"]);
+  mvpSurfaceUnavailable();
   return (
     <div className="flex flex-col gap-6">
       <PageHeader

@@ -25,8 +25,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Wanzwei — Healthcare Workforce Platform",
   description:
-    "Wanzwei connects healthcare professionals with verified facilities. Locum, contract, and permanent opportunities, CPD tracking, and a healthcare marketplace.",
-  metadataBase: new URL("https://wanzwei.com"),
+    "Wanzwei connects healthcare professionals with verified facilities for locum, contract, and permanent opportunities.",
+  metadataBase: new URL("https://wanzwei.vercel.app"),
   icons: {
     icon: "/favicon.svg",
   },

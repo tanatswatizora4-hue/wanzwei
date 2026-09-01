@@ -5,9 +5,9 @@ import { Logo } from "./logo";
 
 
 const features = [
-  "10,000+ verified healthcare professionals",
-  "ZW-wide network of clinics, hospitals & pharmacies",
-  "CPD-tracked, credential-verified, fast to hire",
+  "Verified professional credentials",
+  "Facility jobs, applications, and locum alerts",
+  "Admin review for hiring and verification",
 ];
 
 export function AuthSplit({ children }: { children: React.ReactNode }) {
@@ -74,15 +74,15 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="relative flex items-center justify-between text-[12px] text-white/55">
-          <p>© {new Date().getFullYear()} Wanzwei Health Inc.</p>
+          <p>© {new Date().getFullYear()} Wanzwei</p>
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:text-white">
               Back to site
             </Link>
-            <Link href="#" className="hover:text-white">
+            <Link href="/privacy" className="hover:text-white">
               Privacy
             </Link>
-            <Link href="#" className="hover:text-white">
+            <Link href="/terms" className="hover:text-white">
               Terms
             </Link>
           </div>

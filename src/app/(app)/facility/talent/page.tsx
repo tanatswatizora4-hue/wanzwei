@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { requireRole } from "@/lib/auth/session";
+import { mvpSurfaceUnavailable } from "@/lib/nav/mvp-unavailable";
 
 const TALENT = [
   {
@@ -73,7 +73,7 @@ const TALENT = [
 ];
 
 export default async function FacilityTalentPage() {
-  await requireRole(["facility"]);
+  mvpSurfaceUnavailable();
   return (
     <div className="flex flex-col gap-6">
       <PageHeader

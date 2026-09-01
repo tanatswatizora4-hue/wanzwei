@@ -8,7 +8,7 @@ const logger = createLogger("auth-email");
 export const SUPABASE_AUTH_EMAIL_SETUP = [
   "Supabase Auth owns email verification and password reset token generation.",
   "Configure Authentication > URL Configuration with the production site URL.",
-  "Allow redirect URLs for /login, /auth/callback, and any future password update page.",
+  "Allow redirect URLs for /login, /auth/callback, and /reset-password if used as a direct redirect.",
   "Customize Supabase email templates in the dashboard if branded auth emails are required.",
 ] as const;
 
@@ -17,7 +17,7 @@ export function emailVerificationRedirectUrl(requestUrl: string): string {
 }
 
 export function passwordResetRedirectUrl(requestUrl: string): string {
-  return buildAuthCallbackUrl(requestUrl, "/login?reset-password=1");
+  return buildAuthCallbackUrl(requestUrl, "/reset-password");
 }
 
 export async function requestPasswordResetEmail(

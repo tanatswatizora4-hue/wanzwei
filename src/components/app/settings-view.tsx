@@ -17,19 +17,11 @@ import type { Facility, User, Verification } from "@/lib/types";
 import { VerificationCredentialsForm } from "@/components/app/professional/verification-credentials-form";
 import { FacilityTypeSchema } from "@/lib/validation/auth";
 
-type SettingsSection =
-  | "profile"
-  | "security"
-  | "notifications"
-  | "integrations"
-  | "billing";
+type SettingsSection = "profile" | "security";
 
 const NAV: { id: SettingsSection; label: string }[] = [
   { id: "profile", label: "Profile" },
   { id: "security", label: "Security" },
-  { id: "notifications", label: "Notifications" },
-  { id: "integrations", label: "Integrations" },
-  { id: "billing", label: "Billing & invoices" },
 ];
 
 const FACILITY_TYPES = FacilityTypeSchema.options;
@@ -246,46 +238,10 @@ export function SettingsView({
                 <CardBody className="pt-5">
                   <h2 className="text-[15px] font-semibold">Security</h2>
                   <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-                    Password and two-factor authentication are not available in
+                    To change your password, use Forgot password from the
+                    sign-in page. Two-factor authentication is not part of
                     this MVP.
                   </p>
-                  <Separator className="my-4" />
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <Field
-                      label="Current password"
-                      type="password"
-                      placeholder="••••••••"
-                      disabled
-                    />
-                    <Field
-                      label="New password"
-                      type="password"
-                      placeholder="••••••••"
-                      disabled
-                    />
-                  </div>
-                  <p className="mt-2 text-[12px] text-[color:var(--color-ink-400)]">
-                    Coming soon
-                  </p>
-                  <div className="mt-4 flex flex-col gap-3 rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)] p-3.5 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold">
-                        Two-factor authentication
-                      </p>
-                      <p className="text-[12px] text-[color:var(--color-ink-500)]">
-                        Add an extra layer of security to your account.
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="shrink-0"
-                      disabled
-                      title="Coming soon"
-                    >
-                      Coming soon
-                    </Button>
-                  </div>
                 </CardBody>
               </Card>
 
@@ -297,61 +253,13 @@ export function SettingsView({
                   <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
                     Account deletion is not available in this MVP.
                   </p>
-                  <div className="mt-3">
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      disabled
-                      title="Coming soon"
-                    >
-                      Coming soon
-                    </Button>
-                  </div>
                 </CardBody>
               </Card>
             </>
           ) : null}
-
-          {section === "notifications" ? (
-            <ComingSoonSection
-              title="Notifications"
-              body="Soon you’ll be able to tune email alerts, shifts, messages, and reminders from one place."
-            />
-          ) : null}
-
-          {section === "integrations" ? (
-            <ComingSoonSection
-              title="Integrations"
-              body="Calendar sync, SSO, HR systems (and more) will appear here."
-            />
-          ) : null}
-
-          {section === "billing" ? (
-            <ComingSoonSection
-              title="Billing & invoices"
-              body="Payment methods and invoice history will be available soon."
-            />
-          ) : null}
         </div>
       </div>
     </div>
-  );
-}
-
-function ComingSoonSection({ title, body }: { title: string; body: string }) {
-  return (
-    <Card>
-      <CardBody className="pt-5">
-        <h2 className="text-[15px] font-semibold">{title}</h2>
-        <p className="mt-1 text-[12.5px] text-[color:var(--color-ink-500)]">
-          {body}
-        </p>
-        <Separator className="my-4" />
-        <p className="rounded-[var(--radius-md)] border border-dashed border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)] px-4 py-6 text-center text-[13px] text-[color:var(--color-ink-500)]">
-          This section is coming soon.
-        </p>
-      </CardBody>
-    </Card>
   );
 }
 

@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { parseCallbackSessionParams, postAuthNextPath } from "@/lib/auth/callback-params";
+import {
+  loginErrorForAuthApiFailure,
+  loginErrorForCallbackAuthError,
+  parseCallbackAuthError,
+  parseCallbackSessionParams,
+  postAuthNextPath,
+} from "@/lib/auth/callback-params";
 import { ensureOAuthUserProvisioned, createOAuthPersistAppRole } from "@/lib/auth/oauth-provision";
 import { dashboardPathForRole } from "@/lib/auth/session";
 import { logException, withRouteLogging } from "@/lib/observability/logger";
@@ -15,6 +21,14 @@ export async function GET(req: Request) {
 async function handleGET(req: Request) {
   const url = new URL(req.url);
   const next = url.searchParams.get("next");
+  const callbackError = parseCallbackAuthError(url);
+  const mappedError = loginErrorForCallbackAuthError(callbackError);
+  if (mappedError) {
+    return NextResponse.redirect(
+      new URL(`/login?error=${mappedError}`, req.url),
+    );
+  }
+
   const sessionParams = parseCallbackSessionParams(url);
 
   if (sessionParams.kind === "none") {
@@ -31,7 +45,10 @@ async function handleGET(req: Request) {
       : await supabase.auth.exchangeCodeForSession(sessionParams.code);
 
   if (sessionResult.error || !sessionResult.data.user) {
-    return NextResponse.redirect(new URL("/login?error=auth_callback", req.url));
+    const loginError = loginErrorForAuthApiFailure(sessionResult.error?.code);
+    return NextResponse.redirect(
+      new URL(`/login?error=${loginError}`, req.url),
+    );
   }
 
   let role;

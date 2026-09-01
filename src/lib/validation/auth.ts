@@ -109,3 +109,20 @@ export type PasswordResetRequestInput = z.infer<
 export type VerificationEmailRequestInput = z.infer<
   typeof VerificationEmailRequestSchema
 >;
+
+export const CompletePasswordResetSchema = z
+  .object({
+    password: z
+      .string()
+      .min(6, "Password must be at least 6 characters")
+      .max(128, "Password is too long"),
+    confirmPassword: z.string().min(1, "Confirm your new password"),
+  })
+  .refine((value) => value.password === value.confirmPassword, {
+    message: "New password and confirmation must match.",
+    path: ["confirmPassword"],
+  });
+
+export type CompletePasswordResetInput = z.infer<
+  typeof CompletePasswordResetSchema
+>;

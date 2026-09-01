@@ -18,9 +18,9 @@ describe("auth email redirect URLs", () => {
     expect(url).not.toContain("access_token");
   });
 
-  it("keeps password reset on the callback with a login next path", () => {
+  it("keeps password reset on the callback with a reset-password next path", () => {
     expect(passwordResetRedirectUrl("http://localhost:3000/forgot-password")).toBe(
-      "http://localhost:3000/auth/callback?next=%2Flogin%3Freset-password%3D1",
+      "http://localhost:3000/auth/callback?next=%2Freset-password",
     );
   });
 });

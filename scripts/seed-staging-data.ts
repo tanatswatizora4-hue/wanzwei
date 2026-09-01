@@ -8,6 +8,11 @@ import { createClient } from "@supabase/supabase-js";
 import postgres from "postgres";
 
 import type { Role } from "../src/lib/types";
+import {
+  assertDangerousScriptAllowed,
+  assertNotProductionUnlessAllowed,
+  requireScriptEnv,
+} from "../src/lib/ops/script-guards";
 
 const FACILITIES = [
   {
@@ -36,55 +41,59 @@ const FACILITIES = [
   },
 ] as const;
 
-const APP_USERS: {
+type SeedAppUser = {
   id: string;
   email: string;
   role: Role;
   name: string;
   facilityId: string | null;
   profession: string | null;
-}[] = [
-  {
-    id: "5882ff01-392a-46b1-ab1c-97d55d9af598",
-    email: "erys@wanzwei.com",
-    role: "admin",
-    name: "Erys",
-    facilityId: null,
-    profession: null,
-  },
-  {
-    id: "e079dfc5-34cf-4dc2-978d-0bc238600a54",
-    email: "tanatswatizora4@gmail.com",
-    role: "facility",
-    name: "Tanatswa Facility",
-    facilityId: "3ee72fba-a763-4d5d-aa19-324829a9d13c",
-    profession: null,
-  },
-  {
-    id: "f106a844-ca27-4566-b857-f76081985fe3",
-    email: "ttizora@gmail.com",
-    role: "facility",
-    name: "Tinashe Tizora",
-    facilityId: "6ec626d4-c2dc-44ca-bcd1-a627fb2ad011",
-    profession: null,
-  },
-  {
-    id: "aee70f88-fe32-4d7b-9b47-f735684cd3e7",
-    email: "tizora4@gmail.com",
-    role: "facility",
-    name: "Taku",
-    facilityId: "3d3c8143-a334-4efa-bee2-8971ed9f17b5",
-    profession: null,
-  },
-  {
-    id: "ffc05453-7bf4-4b8c-a242-b443a6d90896",
-    email: "fobants@gmail.com",
-    role: "professional",
-    name: "Tana Tizo",
-    facilityId: null,
-    profession: "Registered Nurse",
-  },
-];
+};
+
+function loadSeedUsers(): SeedAppUser[] {
+  return [
+    {
+      id: "5882ff01-392a-46b1-ab1c-97d55d9af598",
+      email: requireScriptEnv("WANZWEI_SEED_ADMIN_EMAIL"),
+      role: "admin",
+      name: "Seed Admin",
+      facilityId: null,
+      profession: null,
+    },
+    {
+      id: "e079dfc5-34cf-4dc2-978d-0bc238600a54",
+      email: requireScriptEnv("WANZWEI_SEED_FACILITY_A_EMAIL"),
+      role: "facility",
+      name: "Seed Facility A",
+      facilityId: "3ee72fba-a763-4d5d-aa19-324829a9d13c",
+      profession: null,
+    },
+    {
+      id: "f106a844-ca27-4566-b857-f76081985fe3",
+      email: requireScriptEnv("WANZWEI_SEED_FACILITY_B_EMAIL"),
+      role: "facility",
+      name: "Seed Facility B",
+      facilityId: "6ec626d4-c2dc-44ca-bcd1-a627fb2ad011",
+      profession: null,
+    },
+    {
+      id: "aee70f88-fe32-4d7b-9b47-f735684cd3e7",
+      email: requireScriptEnv("WANZWEI_SEED_FACILITY_C_EMAIL"),
+      role: "facility",
+      name: "Seed Facility C",
+      facilityId: "3d3c8143-a334-4efa-bee2-8971ed9f17b5",
+      profession: null,
+    },
+    {
+      id: "ffc05453-7bf4-4b8c-a242-b443a6d90896",
+      email: requireScriptEnv("WANZWEI_SEED_PROFESSIONAL_EMAIL"),
+      role: "professional",
+      name: "Seed Professional",
+      facilityId: null,
+      profession: "Registered Nurse",
+    },
+  ];
+}
 
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
@@ -120,7 +129,10 @@ async function setAuthRole(
   }
 }
 
-async function seedDatabase(sql: postgres.Sql): Promise<void> {
+async function seedDatabase(
+  sql: postgres.Sql,
+  seedUsers: SeedAppUser[],
+): Promise<void> {
   for (const f of FACILITIES) {
     await sql`
       INSERT INTO public.facilities (id, name, type, location, verified, initials)
@@ -136,7 +148,7 @@ async function seedDatabase(sql: postgres.Sql): Promise<void> {
   }
   console.log(`  ✓ ${FACILITIES.length} facilities`);
 
-  for (const u of APP_USERS) {
+  for (const u of seedUsers) {
     await sql`
       INSERT INTO public.users (id, email, role, name, facility_id, profession, verified)
       VALUES (
@@ -158,7 +170,7 @@ async function seedDatabase(sql: postgres.Sql): Promise<void> {
         updated_at = now()
     `;
   }
-  console.log(`  ✓ ${APP_USERS.length} users`);
+  console.log(`  ✓ ${seedUsers.length} users`);
 
   await sql`DELETE FROM public.jobs`;
 
@@ -326,9 +338,12 @@ async function verify(
 ): Promise<void> {
   console.log("\n=== Verification ===");
 
+  const adminEmail = requireScriptEnv("WANZWEI_SEED_ADMIN_EMAIL");
+  const adminPassword = requireScriptEnv("WANZWEI_SEED_ADMIN_PASSWORD");
+
   const adminRow = await sql<
     { id: string; email: string; role: string }[]
-  >`SELECT id, email, role::text FROM public.users WHERE email = 'erys@wanzwei.com'`;
+  >`SELECT id, email, role::text FROM public.users WHERE email = ${adminEmail}`;
 
   const facilityRow = await sql<
     { email: string; facility_id: string | null }[]
@@ -362,8 +377,8 @@ async function verify(
 
   const { data: loginData, error: loginError } =
     await anon.auth.signInWithPassword({
-      email: "erys@wanzwei.com",
-      password: "12346",
+      email: adminEmail,
+      password: adminPassword,
     });
 
   const authMeta = loginData.user
@@ -432,6 +447,9 @@ async function verify(
 }
 
 async function main(): Promise<void> {
+  assertDangerousScriptAllowed("db:seed");
+  assertNotProductionUnlessAllowed("db:seed");
+  const seedUsers = loadSeedUsers();
   const admin = getAdminSupabase();
   const sql = postgres(requireEnv("SUPABASE_DB_URL"), {
     prepare: false,
@@ -440,13 +458,13 @@ async function main(): Promise<void> {
 
   try {
     console.log("Setting app_metadata.role via service role…");
-    for (const u of APP_USERS) {
+    for (const u of seedUsers) {
       await setAuthRole(admin, u.id, u.role);
       console.log(`  ✓ ${u.email} → ${u.role}`);
     }
 
     console.log("\nSeeding database…");
-    await seedDatabase(sql);
+    await seedDatabase(sql, seedUsers);
 
     await verify(sql, admin);
     console.log("\nSeed complete — all checks passed.");

@@ -117,6 +117,15 @@ describe("MVP navigation and security invariants", () => {
     expect(repo).toContain("getRegistryByIdForAdmin");
   });
 
+  it("shows used-or-expired verification guidance without claiming success", () => {
+    const source = readFileSync("src/app/(marketing)/login/page.tsx", "utf8");
+    expect(source).toContain('error === "link_used_or_expired"');
+    expect(source).toContain(
+      "This verification link has already been used or has expired. If you",
+    );
+    expect(source).not.toContain("confirmation definitely succeeded");
+  });
+
   it("professional application detail is owned and not-found for others", () => {
     const source = readFileSync(
       "src/app/(app)/professional/applications/[id]/page.tsx",
@@ -125,5 +134,35 @@ describe("MVP navigation and security invariants", () => {
     expect(source).toContain('requireRole(["professional"])');
     expect(source).toContain("getApplicationForProfessional");
     expect(source).toContain("notFound()");
+  });
+
+  it("CLIENT_CAN_READ_LEGACY_HPA_TABLES=false", () => {
+    const migration = readFileSync(
+      "supabase/migrations/0008_lock_legacy_hpa_tables.sql",
+      "utf8",
+    );
+    expect(migration).toContain(
+      "drop policy if exists hpa_practitioners_read_all",
+    );
+    expect(migration).toContain("drop policy if exists hpa_premises_read_all");
+  });
+
+  it("post-MVP demo routes are hidden", () => {
+    const files = [
+      "src/app/(app)/professional/messages/page.tsx",
+      "src/app/(app)/facility/messages/page.tsx",
+      "src/app/(app)/professional/availability/page.tsx",
+      "src/app/(app)/facility/talent/page.tsx",
+      "src/app/(app)/admin/matching/page.tsx",
+      "src/app/(app)/professional/marketplace/page.tsx",
+      "src/app/(app)/facility/marketplace/page.tsx",
+      "src/app/(app)/admin/marketplace/page.tsx",
+      "src/app/(app)/professional/cpd/page.tsx",
+      "src/app/(app)/facility/cpd/page.tsx",
+      "src/app/(app)/admin/cpd/page.tsx",
+    ];
+    for (const file of files) {
+      expect(readFileSync(file, "utf8"), file).toContain("mvpSurfaceUnavailable");
+    }
   });
 });

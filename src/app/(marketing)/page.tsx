@@ -689,7 +689,7 @@ function MarketingFooter() {
       </div>
       <div className="border-t border-[color:var(--color-border-default)]">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-[11.5px] text-[color:var(--color-ink-400)]">
-          <p>© {new Date().getFullYear()} Wanzwei Health Inc. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Wanzwei. All rights reserved.</p>
           <p>Made with care in Harare.</p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { LoginSchema, SignupSchema } from "./auth";
+import { LoginSchema, SignupSchema, CompletePasswordResetSchema } from "./auth";
 
 describe("auth validation", () => {
   it("trims signup fields and defaults to professional role", () => {
@@ -113,6 +113,27 @@ describe("auth validation", () => {
         email: "pro@example.com",
         password: "demo",
         next: "https://evil.example/path",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("requires matching new and confirm passwords", () => {
+    expect(
+      CompletePasswordResetSchema.safeParse({
+        password: "secret1",
+        confirmPassword: "secret1",
+      }).success,
+    ).toBe(true);
+    expect(
+      CompletePasswordResetSchema.safeParse({
+        password: "secret1",
+        confirmPassword: "other12",
+      }).success,
+    ).toBe(false);
+    expect(
+      CompletePasswordResetSchema.safeParse({
+        password: "123",
+        confirmPassword: "123",
       }).success,
     ).toBe(false);
   });

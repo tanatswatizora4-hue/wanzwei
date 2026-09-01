@@ -6,7 +6,6 @@ import {
   ArrowRight,
   Plus,
   Siren,
-  Zap,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,7 +74,6 @@ export default async function FacilityDashboardPage() {
                     {facility?.name ?? "Facility profile pending"}
                   </h2>
                   <FacilityVerifiedBadge verified={facility?.verified === true} />
-                  <Badge tone="brand">Pro plan</Badge>
                 </div>
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
                   {facility ? `${facility.type} · ${facility.location}` : "Link your facility profile"}
@@ -155,13 +153,10 @@ export default async function FacilityDashboardPage() {
               <p className="font-display text-[15.5px] font-semibold tracking-tight">
                 Need someone urgently?
               </p>
-              <Badge tone="warn">
-                <Zap className="h-3 w-3" /> Premium
-              </Badge>
             </div>
             <p className="mt-1 text-[12.5px] text-[color:var(--color-ink-500)]">
-              Push an Emergency Locum Alert to verified, available
-              professionals — most shifts fill in under 30 minutes.
+              Send an Emergency Locum Alert to verified professionals who match
+              the role and location.
             </p>
           </div>
           <Button size="sm" className="shrink-0">

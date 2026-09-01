@@ -11,7 +11,7 @@
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
-    "db:push": "drizzle-kit push",
+    "db:push": "tsx --env-file=.env.local scripts/db-push.ts",
     "db:studio": "drizzle-kit studio",
     "db:check": "drizzle-kit check",
     "db:ping": "tsx --env-file=.env.local scripts/check-db-connection.ts",

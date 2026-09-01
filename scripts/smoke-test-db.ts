@@ -9,11 +9,16 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import * as schema from "../src/lib/db/schema";
+import {
+  assertDangerousScriptAllowed,
+  assertNotProductionUnlessAllowed,
+  requireScriptEnv,
+} from "../src/lib/ops/script-guards";
 
 const SEED_EMAILS = {
-  admin: "erys@wanzwei.com",
-  facility: "tanatswatizora4@gmail.com",
-  professional: "fobants@gmail.com",
+  admin: requireScriptEnv("WANZWEI_SMOKE_ADMIN_EMAIL"),
+  facility: requireScriptEnv("WANZWEI_SMOKE_FACILITY_EMAIL"),
+  professional: requireScriptEnv("WANZWEI_SMOKE_PROFESSIONAL_EMAIL"),
 } as const;
 
 function requireEnv(name: string): string {
@@ -32,6 +37,8 @@ function fail(message: string): never {
 }
 
 async function main(): Promise<void> {
+  assertDangerousScriptAllowed("smoke:test");
+  assertNotProductionUnlessAllowed("smoke:test");
   const sql = postgres(requireEnv("SUPABASE_DB_URL"), {
     prepare: false,
     max: 1,

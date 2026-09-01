@@ -5,11 +5,15 @@
  * (and in Supabase), not in the client bundle.
  *
  * Usage:
+ *   WANZWEI_ALLOW_DESTRUCTIVE=I_UNDERSTAND \
+ *   WANZWEI_BOOTSTRAP_ADMIN_EMAIL=... \
+ *   WANZWEI_BOOTSTRAP_ADMIN_PASSWORD=... \
  *   npm run auth:bootstrap
  *
  * Requires .env.local with NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.
  * Uses SUPABASE_DB_URL when set (Drizzle); otherwise upserts via the service-role
- * REST API. The public.users table must exist — run `npm run db:push` first.
+ * REST API. The public.users table must exist — run guarded `npm run db:push` first.
+ * Identities come from environment variables. There is no default password.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -19,10 +23,15 @@ import postgres from "postgres";
 
 import { users } from "../src/lib/db/schema";
 import type { Role } from "../src/lib/types";
+import {
+  assertDangerousScriptAllowed,
+  assertNotProductionUnlessAllowed,
+  requireScriptEnv,
+} from "../src/lib/ops/script-guards";
 
-const DEMO_EMAIL = "erys@wanzwei.com";
-const DEMO_PASSWORD = "12346";
-const DEMO_NAME = "Erys";
+const DEMO_EMAIL = requireScriptEnv("WANZWEI_BOOTSTRAP_ADMIN_EMAIL");
+const DEMO_PASSWORD = requireScriptEnv("WANZWEI_BOOTSTRAP_ADMIN_PASSWORD");
+const DEMO_NAME = process.env.WANZWEI_BOOTSTRAP_ADMIN_NAME?.trim() || "Seed Admin";
 const DEMO_ROLE: Role = "admin";
 
 function requireEnv(name: string): string {
@@ -281,6 +290,8 @@ async function ensureAppProfile(
 }
 
 async function main(): Promise<void> {
+  assertDangerousScriptAllowed("auth:bootstrap");
+  assertNotProductionUnlessAllowed("auth:bootstrap");
   const admin = getAdminSupabase();
   const authUserId = await ensureAuthUser(admin);
   await ensureAppProfile(admin, authUserId);

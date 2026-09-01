@@ -6,8 +6,8 @@ Deploy Wanzwei to Vercel for a small private beta. This guide covers environment
 
 - Supabase project with migrations `0001`–`0005` applied
 - Storage bucket `documents` created as **private** (Public bucket disabled)
-- Seed data: `npm run db:seed` (optional, for demo users)
-- Auth bootstrap: `npm run auth:bootstrap` (creates demo admin if needed)
+- Seed data: `npm run db:seed` (optional, staging only; requires `WANZWEI_ALLOW_DESTRUCTIVE=I_UNDERSTAND` and seed identity env vars)
+- Auth bootstrap: `npm run auth:bootstrap` (creates a demo admin from env identities; never run against production without `WANZWEI_ALLOW_PRODUCTION=I_UNDERSTAND`)
 
 ## 1. Vercel project setup
 
@@ -33,7 +33,9 @@ Set these for **Production** (and Preview if you want staging):
 | `UPSTASH_REDIS_REST_URL` | Shared rate limits (login, uploads, password reset) |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash REST token |
 | `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` | Error reporting |
-| `RESEND_API_KEY` | App transactional email (optional; Auth emails use Supabase) |
+| `RESEND_API_KEY` | App transactional email (optional; Auth emails use Supabase). Missing key skips send and does not roll back DB writes. |
+| `RESEND_FROM_EMAIL` | Optional From address. Defaults to `Wanzwei <onboarding@resend.dev>` |
+| `RESEND_REPLY_TO_EMAIL` | Optional Reply-To |
 
 ### Security note
 
@@ -54,6 +56,7 @@ https://your-app.vercel.app/login
 https://your-app.vercel.app/signup
 https://your-app.vercel.app/forgot-password
 https://your-app.vercel.app/auth/callback
+https://your-app.vercel.app/reset-password
 http://localhost:3000/login
 http://localhost:3000/auth/callback
 ```
@@ -94,15 +97,12 @@ After deploy, verify:
 4. Role redirects — professional cannot access `/admin/*`
 5. Document upload — professional profile uploads work (signed URLs only)
 
-## 6. Smoke test against production (optional)
+## 6. Smoke test against a non-production database (optional)
 
-Point `SUPABASE_DB_URL` in `.env.local` at the same project and run:
-
-```bash
-npm run smoke:test
-```
-
-This validates DB connectivity and core hiring flows; it does not test the deployed Vercel URL.
+`npm run smoke:test` writes and deletes test rows. It fails closed without
+`WANZWEI_ALLOW_DESTRUCTIVE=I_UNDERSTAND` and refuses the production project
+unless `WANZWEI_ALLOW_PRODUCTION=I_UNDERSTAND` is also set. Do not run it
+against production as part of a normal deploy.
 
 ## 7. Known non-blocking gaps
 

@@ -23,6 +23,10 @@ import {
   formatRegistryDryRunReport,
   type RegistryImportCounts,
 } from "../src/lib/registry/import-cli";
+import {
+  assertDangerousScriptAllowed,
+  assertNotProductionUnlessAllowed,
+} from "../src/lib/ops/script-guards";
 
 function loadDotEnvLocal(): void {
   const envPath = path.resolve(process.cwd(), ".env.local");
@@ -371,7 +375,11 @@ async function importRecords(
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const dryRun = argv.includes("--dry-run");
-  if (!dryRun) loadDotEnvLocal();
+  if (!dryRun) {
+    loadDotEnvLocal();
+    assertDangerousScriptAllowed("registry:import");
+    assertNotProductionUnlessAllowed("registry:import");
+  }
 
   const outcome = await executeRegistryImport(argv, {
     importRecords: dryRun ? undefined : importRecords,

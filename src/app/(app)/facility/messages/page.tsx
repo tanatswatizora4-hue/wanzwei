@@ -1,9 +1,9 @@
 import { MessagesView } from "@/components/app/messages-view";
-import { requireRole } from "@/lib/auth/session";
+import { mvpSurfaceUnavailable } from "@/lib/nav/mvp-unavailable";
 import { listFacilities } from "@/lib/repos/facilities";
 
 export default async function FacilityMessagesPage() {
-  await requireRole(["facility"]);
+  mvpSurfaceUnavailable();
   const facilities = await listFacilities(4);
   const threads = [
     {

@@ -35,7 +35,7 @@ describe("auth helpers", () => {
       "https://app.example.com/auth/callback",
     );
     expect(passwordResetRedirectUrl("https://app.example.com/login")).toBe(
-      "https://app.example.com/auth/callback?next=%2Flogin%3Freset-password%3D1",
+      "https://app.example.com/auth/callback?next=%2Freset-password",
     );
   });
 });

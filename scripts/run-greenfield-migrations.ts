@@ -8,6 +8,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
+import {
+  assertDangerousScriptAllowed,
+  assertNotProductionUnlessAllowed,
+} from "../src/lib/ops/script-guards";
 
 const ROOT = join(import.meta.dirname, "..");
 const MIGRATIONS_DIR = join(ROOT, "supabase", "migrations");
@@ -56,6 +60,13 @@ function readMigration(file: string): string {
 }
 
 async function main() {
+  assertDangerousScriptAllowed("run-greenfield-migrations");
+  assertNotProductionUnlessAllowed("run-greenfield-migrations");
+  if (process.env.WANZWEI_ALLOW_DROP_LEGACY?.trim() !== "I_UNDERSTAND") {
+    throw new Error(
+      "run-greenfield-migrations drops public tables. Set WANZWEI_ALLOW_DROP_LEGACY=I_UNDERSTAND to continue.",
+    );
+  }
   const sql = postgres(requireDbUrl(), { prepare: false, max: 1 });
 
   try {

@@ -17,6 +17,7 @@ type SearchParams = Promise<{
   "check-email"?: string;
   "reset-email"?: string;
   "verification-email"?: string;
+  "password-updated"?: string;
   verified?: string;
 }>;
 
@@ -32,6 +33,7 @@ export default async function LoginPage({
     "check-email": checkEmail,
     "reset-email": resetEmail,
     "verification-email": verificationEmail,
+    "password-updated": passwordUpdated,
     verified,
   } = await searchParams;
 
@@ -110,6 +112,17 @@ export default async function LoginPage({
             reset email and try again.
           </p>
         ) : null}
+        {error === "link_used_or_expired" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            This verification link has already been used or has expired. If you
+            already confirmed your email, sign in with your password.
+          </p>
+        ) : null}
+        {error === "rate_limited" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            Too many requests. Please try again later.
+          </p>
+        ) : null}
         {error === "invalid" ? (
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
             Invalid email or password.
@@ -140,6 +153,11 @@ export default async function LoginPage({
         {resetEmail === "1" ? (
           <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
             If an account exists, a password reset email is on the way.
+          </p>
+        ) : null}
+        {passwordUpdated === "1" ? (
+          <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
+            Your password was updated. Sign in with your new password.
           </p>
         ) : null}
         {verificationEmail === "1" ? (
