@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
 import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import { getDb, hasDbConfig } from "@/lib/db/client";
@@ -44,7 +44,12 @@ export async function findUserByEmail(email: string): Promise<User | null> {
     const rows = await db
       .select()
       .from(users)
-      .where(sql`lower(${users.email}) = ${normalized}`)
+      .where(
+        and(
+          sql`lower(${users.email}) = ${normalized}`,
+          isNull(users.deletedAt),
+        ),
+      )
       .limit(1);
     return rows[0] ? toUser(rows[0]) : null;
   }, { email: normalized });
@@ -54,7 +59,12 @@ export async function listUsers(limit = 100): Promise<User[]> {
   if (!hasDbConfig()) return [];
   return withRepositoryLogging("users", "listUsers", async () => {
     const db = getDb();
-    const rows = await db.select().from(users).orderBy(asc(users.name)).limit(limit);
+    const rows = await db
+      .select()
+      .from(users)
+      .where(isNull(users.deletedAt))
+      .orderBy(asc(users.name))
+      .limit(limit);
     return rows.map(toUser);
   }, { limit });
 }
@@ -72,7 +82,7 @@ export async function listUsersForAdmin(
   if (!hasDbConfig()) return [];
   return withRepositoryLogging("users", "listUsersForAdmin", async () => {
     const db = getDb();
-    const clauses = [];
+    const clauses = [isNull(users.deletedAt)];
     if (filters?.role) {
       clauses.push(eq(users.role, filters.role));
     }
@@ -86,7 +96,7 @@ export async function listUsersForAdmin(
       .select({ user: users, facility: facilities })
       .from(users)
       .leftJoin(facilities, eq(facilities.id, users.facilityId))
-      .where(clauses.length > 0 ? and(...clauses) : undefined)
+      .where(and(...clauses))
       .orderBy(asc(users.name))
       .limit(limit);
     return rows.map((row) => ({
@@ -153,5 +163,58 @@ export async function updateOwnUserProfile(
       .where(eq(users.id, userId))
       .returning();
     return rows[0] ? toUser(rows[0]) : null;
+  }, { id: userId });
+}
+
+export async function isClosedAccount(userId: string): Promise<boolean> {
+  if (!hasDbConfig()) return false;
+  return withRepositoryLogging("users", "isClosedAccount", async () => {
+    const db = getDb();
+    const rows = await db
+      .select({ deletedAt: users.deletedAt })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    return rows[0]?.deletedAt != null;
+  }, { id: userId });
+}
+
+export const DELETED_ACCOUNT_DISPLAY_NAME = "Deleted account";
+
+export function anonymizedAccountEmail(userId: string): string {
+  return `deleted+${userId.replace(/-/g, "")}@deleted.invalid`;
+}
+
+/**
+ * Soft-delete and anonymize the caller's profile row. Verification,
+ * application, and other audit/operational rows are left in place.
+ * Never accepts a different user id than the authenticated actor.
+ */
+export async function anonymizeOwnUserForDeletion(
+  userId: string,
+): Promise<boolean> {
+  if (!hasDbConfig()) return false;
+  return withRepositoryLogging("users", "anonymizeOwnUserForDeletion", async () => {
+    const db = getDb();
+    const now = new Date();
+    const rows = await db
+      .update(users)
+      .set({
+        email: anonymizedAccountEmail(userId),
+        name: DELETED_ACCOUNT_DISPLAY_NAME,
+        title: null,
+        location: null,
+        avatarUrl: null,
+        verified: false,
+        profession: null,
+        registeringBody: null,
+        registrationNumber: null,
+        facilityId: null,
+        deletedAt: now,
+        updatedAt: now,
+      })
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)))
+      .returning({ id: users.id });
+    return rows.length === 1;
   }, { id: userId });
 }

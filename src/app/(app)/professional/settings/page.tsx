@@ -1,4 +1,5 @@
 import { SettingsView } from "@/components/app/settings-view";
+import { currentAuthHasPassword } from "@/lib/auth/password-auth";
 import { requireRole } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/service";
 import { createSignedAvatarUrl } from "@/lib/supabase/private-storage";
@@ -6,6 +7,7 @@ import { findLatestVerificationForUser } from "@/lib/verification/submit";
 
 export default async function ProfessionalSettingsPage() {
   const user = await requireRole(["professional"]);
+  const hasPasswordAuth = await currentAuthHasPassword();
   const avatarUrl = await createSignedAvatarUrl(user.avatar);
   const verification = await findLatestVerificationForUser(user.id);
   return (
@@ -14,6 +16,7 @@ export default async function ProfessionalSettingsPage() {
       avatarUrl={avatarUrl}
       avatarUploadEnabled={isSupabaseConfigured()}
       verification={verification}
+      hasPasswordAuth={hasPasswordAuth}
     />
   );
 }

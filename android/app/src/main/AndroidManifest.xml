@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/appName"
+        android:manageSpaceActivity="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Wanzwei.Launcher">
+
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
+            android:alwaysRetainTaskState="true"
+            android:exported="true"
+            android:label="@string/appName"
+            android:launchMode="singleTask">
+
+            <meta-data
+                android:name="android.support.customtabs.trusted.DEFAULT_URL"
+                android:value="https://wanzwei.vercel.app/" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.STATUS_BAR_COLOR"
+                android:resource="@color/colorPrimary" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.NAVIGATION_BAR_COLOR"
+                android:resource="@color/colorPrimary" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_IMAGE_DRAWABLE"
+                android:resource="@drawable/splash" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.SPLASH_SCREEN_BACKGROUND_COLOR"
+                android:resource="@color/colorPrimary" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
+                android:value="${applicationId}.fileprovider" />
+            <meta-data
+                android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
+                android:value="customtabs" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Host-wide App Links. Covers /, auth callback, recovery, login, signup. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="wanzwei.vercel.app" />
+            </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="wanzwei.vercel.app" android:pathPrefix="/auth/confirm" />
+                <data android:scheme="https" android:host="wanzwei.vercel.app" android:pathPrefix="/auth/callback" />
+                <data android:scheme="https" android:host="wanzwei.vercel.app" android:pathPrefix="/reset-password" />
+                <data android:scheme="https" android:host="wanzwei.vercel.app" android:pathPrefix="/login" />
+                <data android:scheme="https" android:host="wanzwei.vercel.app" android:pathPrefix="/signup" />
+                <data android:scheme="https" android:host="wanzwei.vercel.app" android:pathPrefix="/forgot-password" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.FocusActivity"
+            android:exported="false" />
+
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.ManageDataLauncherActivity"
+            android:exported="false"
+            android:excludeFromRecents="true" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths" />
+        </provider>
+
+        <meta-data
+            android:name="asset_statements"
+            android:resource="@string/assetStatements" />
+
+        <service
+            android:name="com.google.androidbrowserhelper.trusted.DelegationService"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+    </application>
+</manifest>

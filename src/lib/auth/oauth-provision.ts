@@ -22,6 +22,7 @@ const defaultStore: AppUserStore = {
 export type OAuthProvisionDeps = {
   store?: AppUserStore;
   persistAppRole: (userId: string, role: Role) => Promise<void>;
+  isClosedAccount?: (userId: string) => Promise<boolean>;
 };
 
 /**
@@ -42,6 +43,7 @@ export async function ensureOAuthUserProvisioned(
     {
       missingRoleBehavior: "default_professional",
       persistAppRole: deps.persistAppRole,
+      isClosedAccount: deps.isClosedAccount,
     },
   );
 }

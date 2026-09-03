@@ -20,6 +20,7 @@ type SearchParams = Promise<{
   "verification-email"?: string;
   "password-updated"?: string;
   verified?: string;
+  account?: string;
 }>;
 
 export default async function LoginPage({
@@ -36,6 +37,7 @@ export default async function LoginPage({
     "verification-email": verificationEmail,
     "password-updated": passwordUpdated,
     verified,
+    account,
   } = await searchParams;
 
   return (
@@ -57,6 +59,12 @@ export default async function LoginPage({
           </>
         ) : null}
 
+        {account === "deleted" ? (
+          <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
+            Your Wanzwei account has been closed. You can create a new account
+            with the same email if you need to use the service again.
+          </p>
+        ) : null}
         {verified === "1" ? (
           <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
             Your email is confirmed. Sign in with your password to continue.
@@ -146,6 +154,11 @@ export default async function LoginPage({
           <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
             This account is not set up for sign-in. Contact support if you need
             help.
+          </p>
+        ) : null}
+        {error === "account_closed" ? (
+          <p className="rounded-[var(--radius-sm)] bg-rose-50 px-3 py-2 text-[12.5px] text-[color:var(--color-danger-700)]">
+            This account has been closed and cannot be used to sign in.
           </p>
         ) : null}
         {error === "db_not_configured" ? (

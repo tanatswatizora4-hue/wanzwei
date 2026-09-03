@@ -190,6 +190,7 @@ export const users = pgTable(
     location: text("location"),
     avatarUrl: text("avatar_url"),
     verified: boolean("verified").notNull().default(false),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
     profession: text("profession"),
     cpdCredits: numeric("cpd_credits", { precision: 6, scale: 2 }),
     cpdTarget: numeric("cpd_target", { precision: 6, scale: 2 }),
@@ -209,6 +210,7 @@ export const users = pgTable(
     uniqueIndex("users_email_uniq").on(t.email),
     index("users_facility_id_idx").on(t.facilityId),
     index("users_role_idx").on(t.role),
+    index("users_deleted_at_idx").on(t.deletedAt),
     index("users_registering_body_registration_number_idx").on(
       t.registeringBody,
       t.registrationNumber,

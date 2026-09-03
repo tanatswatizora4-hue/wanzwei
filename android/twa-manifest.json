@@ -1,0 +1,41 @@
+{
+  "packageId": "app.wanzwei.android",
+  "host": "wanzwei.vercel.app",
+  "name": "Wanzwei",
+  "launcherName": "Wanzwei",
+  "display": "standalone",
+  "themeColor": "#1B1463",
+  "themeColorDark": "#1B1463",
+  "navigationColor": "#1B1463",
+  "navigationColorDark": "#1B1463",
+  "backgroundColor": "#1B1463",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://wanzwei.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://wanzwei.vercel.app/icons/maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "upload"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-manual",
+  "webManifestUrl": "https://wanzwei.vercel.app/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "minSdkVersion": 26,
+  "orientation": "default",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": []
+}

@@ -88,9 +88,17 @@ export default function PrivacyPage() {
           <p className="mt-2">
             You can update profile fields the product allows you to edit. You
             cannot self-assign roles, verification status, or facility
-            ownership. To request access, correction, or deletion where the
-            product does not already provide it, contact the platform operator
-            through the Wanzwei application.
+            ownership. Signed-in users can close their own account from
+            Settings → Security. A public description of that process is at{" "}
+            <Link
+              href="/account-deletion"
+              className="font-medium text-[color:var(--color-brand-600)] hover:underline"
+            >
+              /account-deletion
+            </Link>
+            . To request access or correction where the product does not
+            already provide it, contact the platform operator through the
+            Wanzwei application.
           </p>
         </section>
         <section>

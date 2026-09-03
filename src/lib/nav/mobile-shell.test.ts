@@ -46,7 +46,10 @@ describe("mobile authenticated shell", () => {
     expect(dialog).toContain("max-h-[calc(100dvh-2rem)]");
     expect(root).toContain("overflow-x-hidden");
     expect(root).toContain("device-width");
+    expect(root).toContain('manifest: "/manifest.webmanifest"');
+    expect(root).toContain('themeColor: "#1B1463"');
     expect(root).not.toContain("appleWebApp");
-    expect(root).not.toContain("manifest:");
+    expect(root).not.toContain("ServiceWorkerRegister");
+    expect(root).not.toContain("service-worker-register");
   });
 });

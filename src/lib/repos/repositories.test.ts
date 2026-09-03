@@ -126,6 +126,7 @@ describe("repository mapping helpers", () => {
         facilityId: null,
         registeringBody: null,
         registrationNumber: null,
+        deletedAt: null,
         createdAt: now,
         updatedAt: now,
       }),

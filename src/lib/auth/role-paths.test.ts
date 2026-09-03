@@ -67,5 +67,8 @@ describe("authorizedPostAuthPath", () => {
     expect(loginErrorForProvisionFailure("profile_unavailable")).toBe(
       "profile_missing",
     );
+    expect(loginErrorForProvisionFailure("account_closed")).toBe(
+      "account_closed",
+    );
   });
 });

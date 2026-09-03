@@ -12,6 +12,7 @@ import { Input, Label } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ProfileAvatarUploader } from "@/components/app/profile-avatar-uploader";
+import { AccountDeletionForm } from "@/components/app/account-deletion-form";
 import { cn } from "@/lib/cn";
 import type { Facility, User, Verification } from "@/lib/types";
 import { VerificationCredentialsForm } from "@/components/app/professional/verification-credentials-form";
@@ -39,12 +40,14 @@ export function SettingsView({
   avatarUrl,
   avatarUploadEnabled,
   verification = null,
+  hasPasswordAuth,
 }: {
   user: User;
   facility?: Facility | null;
   avatarUrl?: string | null;
   avatarUploadEnabled: boolean;
   verification?: Verification | null;
+  hasPasswordAuth: boolean;
 }) {
   const [section, setSection] = React.useState<SettingsSection>("profile");
   const [saving, setSaving] = React.useState(false);
@@ -115,7 +118,7 @@ export function SettingsView({
                         type="button"
                         onClick={() => setSection(item.id)}
                         className={cn(
-                          "w-full rounded-[8px] px-2.5 py-1.5 text-left font-medium transition",
+                          "min-h-11 w-full rounded-[8px] px-2.5 py-2 text-left font-medium transition",
                           section === item.id
                             ? "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]"
                             : "text-[color:var(--color-ink-700)] hover:bg-[color:var(--color-ink-900)]/[0.04]",
@@ -248,11 +251,31 @@ export function SettingsView({
               <Card>
                 <CardBody className="pt-5">
                   <h2 className="text-[15px] font-semibold text-[color:var(--color-danger-700)]">
-                    Danger zone
+                    Delete account
                   </h2>
-                  <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-                    Account deletion is not available in this MVP.
+                  <p className="mt-1 text-[12.5px] text-[color:var(--color-ink-500)]">
+                    This closes your Wanzwei sign-in and anonymizes your profile.
+                    You will be signed out. Job applications, hiring records, and
+                    verification audit records are retained as operational records
+                    because no approved retention period has been set. Personal
+                    uploads that are not part of that audit trail are removed.
+                    Facility job listings are not deleted when a facility user
+                    closes their account.
                   </p>
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-[12.5px] text-[color:var(--color-ink-600)]">
+                    <li>You cannot use this form to delete someone else&apos;s account.</li>
+                    <li>A closed account cannot be restored from this screen.</li>
+                    <li>
+                      If you only need to change a password, use Forgot password
+                      instead.
+                    </li>
+                  </ul>
+                  <div className="mt-4">
+                    <AccountDeletionForm
+                      email={user.email}
+                      hasPasswordAuth={hasPasswordAuth}
+                    />
+                  </div>
                 </CardBody>
               </Card>
             </>

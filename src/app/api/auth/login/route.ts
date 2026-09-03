@@ -147,7 +147,11 @@ async function handlePOST(req: Request) {
     const url = new URL("/login", req.url);
     url.searchParams.set(
       "error",
-      login.code === "profile_unavailable" ? "profile_missing" : login.code,
+      login.code === "profile_unavailable"
+        ? "profile_missing"
+        : login.code === "account_closed"
+          ? "account_closed"
+          : login.code,
     );
     url.searchParams.set("email", email);
     return NextResponse.redirect(url, { status: 303 });

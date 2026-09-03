@@ -50,9 +50,10 @@ export function authorizedPostAuthPath(
 }
 
 export function loginErrorForProvisionFailure(
-  code: "no_role" | "db_not_configured" | "profile_unavailable",
-): "no_role" | "db_not_configured" | "profile_missing" {
+  code: "no_role" | "db_not_configured" | "profile_unavailable" | "account_closed",
+): "no_role" | "db_not_configured" | "profile_missing" | "account_closed" {
   if (code === "no_role") return "no_role";
   if (code === "db_not_configured") return "db_not_configured";
+  if (code === "account_closed") return "account_closed";
   return "profile_missing";
 }

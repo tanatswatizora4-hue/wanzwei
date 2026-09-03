@@ -27,6 +27,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
+  themeColor: "#1B1463",
 };
 
 export const metadata: Metadata = {
@@ -34,8 +35,13 @@ export const metadata: Metadata = {
   description:
     "Wanzwei connects healthcare professionals with verified facilities for locum, contract, and permanent opportunities.",
   metadataBase: new URL("https://wanzwei.vercel.app"),
+  manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
 };
 

@@ -12,13 +12,14 @@ import {
 import { readRoleFromAuth } from "@/lib/auth/session";
 import { hasDbConfig } from "@/lib/db/client";
 import { createLogger, safeErrorDetail } from "@/lib/observability/logger";
-import { createUser, findUserByEmail } from "@/lib/repos/users";
+import { createUser, findUserByEmail, isClosedAccount } from "@/lib/repos/users";
 import type { Role, User } from "@/lib/types";
 
 export type LoginAfterAuthFailureCode =
   | "no_role"
   | "db_not_configured"
-  | "profile_unavailable";
+  | "profile_unavailable"
+  | "account_closed";
 
 export type LoginAfterAuthResult =
   | { ok: true; role: Role; profile: User; repaired: boolean }
@@ -36,6 +37,7 @@ export type CompleteLoginOptions = {
    */
   missingRoleBehavior?: "reject" | "default_professional";
   persistAppRole?: (userId: string, role: Role) => Promise<void>;
+  isClosedAccount?: (userId: string) => Promise<boolean>;
 };
 
 const logger = createLogger("auth");
@@ -215,6 +217,19 @@ async function runCompleteLoginAfterAuth(
       "email_taken",
       "An account with that email already exists.",
     );
+  }
+
+  if (!existing) {
+    const closed = await (options.isClosedAccount ?? isClosedAccount)(
+      authUser.id,
+    );
+    if (closed) {
+      logger.warn("auth.complete_login_stage", {
+        stage: "account_closed",
+        userId: authUser.id,
+      });
+      return fail("account_closed", "account_closed");
+    }
   }
 
   if (existing && existing.id === authUser.id) {

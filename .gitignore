@@ -50,3 +50,13 @@ next-env.d.ts
 
 # Local one-off repair snapshots (may contain profile rows).
 .tmp/
+
+# Android TWA build outputs and signing material. Never commit keys.
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/keystore.properties
+android/*.jks
+android/*.keystore
+android/upload-keystore.jks

@@ -19,6 +19,7 @@ type LimitName =
   | "verificationEmail"
   | "upload"
   | "emergencyAlert"
+  | "accountDeletion"
   | "emailConfirmation";
 
 export type RateLimitResult = {
@@ -40,6 +41,7 @@ const LIMITS: Record<LimitName, LimitConfig> = {
   },
   upload: { prefix: "uploads", limit: 20, window: "1 h" },
   emergencyAlert: { prefix: "emergency-alert", limit: 5, window: "15 m" },
+  accountDeletion: { prefix: "account-deletion", limit: 3, window: "1 h" },
   emailConfirmation: { prefix: "email-confirmation", limit: 10, window: "10 m" },
 };
 

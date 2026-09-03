@@ -188,6 +188,21 @@ describe("ensureOAuthUserProvisioned", () => {
     expect(store.rows[0]?.role).toBe("professional");
   });
 
+  it("does not recreate a closed account on Google sign-in", async () => {
+    const store = memoryStore();
+    const result = await ensureOAuthUserProvisioned(googleUser(), {
+      store,
+      persistAppRole: async () => undefined,
+      isClosedAccount: async () => true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("account_closed");
+    }
+    expect(store.created).toHaveLength(0);
+  });
+
   it("classifies profile lookup failure without throwing", async () => {
     const store = memoryStore();
     store.findUserByEmail = async () => {

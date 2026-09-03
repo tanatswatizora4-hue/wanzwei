@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { completeLoginAfterAuth } from "./complete-login";
+import {
+  completeLoginAfterAuth,
+  type CompleteLoginOptions,
+} from "./complete-login";
 import type { AppUserStore } from "./provision-app-user";
 import type { NewDbUser } from "@/lib/db/schema";
 import type { User } from "@/lib/types";
@@ -63,11 +66,22 @@ function memoryStore(seed: User[] = []): AppUserStore & {
   };
 }
 
+function login(
+  user: ReturnType<typeof authUser>,
+  store: AppUserStore,
+  options: CompleteLoginOptions = {},
+) {
+  return completeLoginAfterAuth(user, store, {
+    isClosedAccount: async () => false,
+    ...options,
+  });
+}
+
 describe("completeLoginAfterAuth", () => {
   it("continues login when a matching public.users profile already exists", async () => {
     const existing = makeUser();
     const store = memoryStore([existing]);
-    const result = await completeLoginAfterAuth(authUser(), store);
+    const result = await login(authUser(), store);
 
     expect(result).toEqual({
       ok: true,
@@ -78,10 +92,23 @@ describe("completeLoginAfterAuth", () => {
     expect(store.created).toHaveLength(0);
   });
 
+  it("does not recreate a profile for a closed account", async () => {
+    const store = memoryStore();
+    const result = await login(authUser(), store, {
+      isClosedAccount: async () => true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("account_closed");
+    }
+    expect(store.created).toHaveLength(0);
+  });
+
   it("matches an existing profile when the Auth email differs only by case", async () => {
     const existing = makeUser({ email: "Pro@Example.com" });
     const store = memoryStore([existing]);
-    const result = await completeLoginAfterAuth(authUser(), store);
+    const result = await login(authUser(), store);
 
     expect(result).toEqual({
       ok: true,
@@ -94,7 +121,7 @@ describe("completeLoginAfterAuth", () => {
 
   it("repairs an orphan Auth user by creating public.users with the Auth UUID", async () => {
     const store = memoryStore();
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({
         app_metadata: { role: "professional" },
         user_metadata: { full_name: "Tinashe Moyo", role: "admin" },
@@ -125,7 +152,7 @@ describe("completeLoginAfterAuth", () => {
 
   it("does not create an unlinked facility profile on login without organisation details", async () => {
     const store = memoryStore();
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({
         app_metadata: { role: "facility" },
         user_metadata: { full_name: "Chipo Ncube" },
@@ -142,14 +169,14 @@ describe("completeLoginAfterAuth", () => {
 
   it("rejects a missing or invalid app_metadata role without creating a profile", async () => {
     const store = memoryStore();
-    const missing = await completeLoginAfterAuth(
+    const missing = await login(
       authUser({
         app_metadata: {},
         user_metadata: { role: "admin" },
       }),
       store,
     );
-    const invalid = await completeLoginAfterAuth(
+    const invalid = await login(
       authUser({ app_metadata: { role: "owner" } }),
       store,
     );
@@ -170,7 +197,7 @@ describe("completeLoginAfterAuth", () => {
 
   it("rejects an email that already belongs to a different Auth UUID", async () => {
     const store = memoryStore([makeUser({ id: OTHER_ID })]);
-    const result = await completeLoginAfterAuth(authUser(), store);
+    const result = await login(authUser(), store);
 
     expect(result).toEqual({
       ok: false,
@@ -189,7 +216,7 @@ describe("completeLoginAfterAuth", () => {
       throw new Error("insert failed: relation public.users does not exist");
     };
 
-    const result = await completeLoginAfterAuth(authUser(), store);
+    const result = await login(authUser(), store);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -201,7 +228,7 @@ describe("completeLoginAfterAuth", () => {
 
   it("does not attempt repair when the database is not configured", async () => {
     let queried = 0;
-    const result = await completeLoginAfterAuth(authUser(), {
+    const result = await login(authUser(), {
       hasDbConfig: () => false,
       findUserByEmail: async () => {
         queried += 1;
@@ -222,7 +249,7 @@ describe("completeLoginAfterAuth", () => {
 
   it("falls back through full_name, name, then email local-part", async () => {
     const fullNameStore = memoryStore();
-    await completeLoginAfterAuth(
+    await login(
       authUser({
         user_metadata: { full_name: "  Alois Muchamba  ", name: "Ignored" },
       }),
@@ -231,14 +258,14 @@ describe("completeLoginAfterAuth", () => {
     expect(fullNameStore.created[0]?.name).toBe("Alois Muchamba");
 
     const nameStore = memoryStore();
-    await completeLoginAfterAuth(
+    await login(
       authUser({ user_metadata: { name: "Chipo Ncube" } }),
       nameStore,
     );
     expect(nameStore.created[0]?.name).toBe("Chipo Ncube");
 
     const localStore = memoryStore();
-    await completeLoginAfterAuth(
+    await login(
       authUser({
         email: "locum.lead@hospital.co.zw",
         user_metadata: {},
@@ -251,7 +278,7 @@ describe("completeLoginAfterAuth", () => {
   it("first Google login defaults to professional, verified false, and ignores user_metadata.role", async () => {
     const store = memoryStore();
     const persisted: Array<{ userId: string; role: string }> = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({
         app_metadata: {},
         user_metadata: { role: "admin", full_name: "Tinashe Moyo" },
@@ -281,7 +308,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "facility", name: "Clinic Admin" });
     const store = memoryStore([existing]);
     const persisted: string[] = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({
         app_metadata: { role: "facility" },
         user_metadata: { role: "admin" },
@@ -310,7 +337,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "facility" });
     const store = memoryStore([existing]);
     const persisted: string[] = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({ app_metadata: {} }),
       store,
       {
@@ -333,7 +360,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "facility" });
     const store = memoryStore([existing]);
     const persisted: string[] = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({
         app_metadata: { role: "professional" },
         user_metadata: { role: "admin" },
@@ -361,7 +388,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "professional" });
     const store = memoryStore([existing]);
     const persisted: string[] = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({ app_metadata: { role: "facility" } }),
       store,
       {
@@ -382,7 +409,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "admin", name: "Ops Admin" });
     const store = memoryStore([existing]);
     const persisted: string[] = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({ app_metadata: { role: "professional" } }),
       store,
       {
@@ -403,7 +430,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "professional" });
     const store = memoryStore([existing]);
     const persisted: string[] = [];
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({
         app_metadata: { role: "facility" },
         user_metadata: { role: "admin" },
@@ -428,7 +455,7 @@ describe("completeLoginAfterAuth", () => {
     const existing = makeUser({ role: "facility" });
     const store = memoryStore([existing]);
 
-    const missingHelper = await completeLoginAfterAuth(
+    const missingHelper = await login(
       authUser({ app_metadata: { role: "professional" } }),
       store,
     );
@@ -438,7 +465,7 @@ describe("completeLoginAfterAuth", () => {
       logReason: "persist_role_unavailable",
     });
 
-    const failed = await completeLoginAfterAuth(
+    const failed = await login(
       authUser({ app_metadata: { role: "admin" } }),
       store,
       {
@@ -461,7 +488,7 @@ describe("completeLoginAfterAuth", () => {
     let persistStarted = false;
     let observedRoleDuringPersist: string | undefined;
 
-    const result = await completeLoginAfterAuth(
+    const result = await login(
       authUser({ app_metadata: { role: "admin" } }),
       store,
       {
@@ -488,7 +515,7 @@ describe("completeLoginAfterAuth", () => {
       );
     };
 
-    const result = await completeLoginAfterAuth(authUser(), store);
+    const result = await login(authUser(), store);
 
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -499,7 +526,7 @@ describe("completeLoginAfterAuth", () => {
   });
 
   it("maps unexpected store errors to a controlled failure instead of throwing", async () => {
-    const result = await completeLoginAfterAuth(authUser(), {
+    const result = await login(authUser(), {
       hasDbConfig: () => {
         throw new Error("env read failed");
       },
