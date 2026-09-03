@@ -17,6 +17,8 @@ import {
   Building2,
   FileBadge,
   Siren,
+  GraduationCap,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
@@ -63,6 +65,21 @@ function professionalNav(): NavSection[] {
           label: "Saved Jobs",
           href: "/professional/saved",
           icon: <Bookmark className="h-4 w-4" />,
+        },
+      ],
+    },
+    {
+      heading: "Practice",
+      items: [
+        {
+          label: "CPD",
+          href: "/professional/cpd",
+          icon: <GraduationCap className="h-4 w-4" />,
+        },
+        {
+          label: "Marketplace",
+          href: "/professional/marketplace",
+          icon: <Store className="h-4 w-4" />,
         },
       ],
     },
@@ -124,6 +141,11 @@ function facilityNav(): NavSection[] {
           href: "/facility/emergency",
           icon: <Siren className="h-4 w-4" />,
         },
+        {
+          label: "Marketplace",
+          href: "/facility/marketplace",
+          icon: <Store className="h-4 w-4" />,
+        },
       ],
     },
     {
@@ -179,6 +201,16 @@ function adminNav(): NavSection[] {
           href: "/admin/emergency",
           icon: <Siren className="h-4 w-4" />,
         },
+        {
+          label: "CPD",
+          href: "/admin/cpd",
+          icon: <GraduationCap className="h-4 w-4" />,
+        },
+        {
+          label: "Marketplace",
+          href: "/admin/marketplace",
+          icon: <Store className="h-4 w-4" />,
+        },
       ],
     },
     {
@@ -215,17 +247,23 @@ export function navForRole(role: Role): NavSection[] {
   return professionalNav();
 }
 
-export function Sidebar({ user }: { user: User }) {
+export function Sidebar({
+  user,
+  onNavigate,
+}: {
+  user: User;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const nav = React.useMemo(() => navForRole(user.role), [user.role]);
 
   return (
-    <aside className="glass-panel flex h-screen w-[244px] shrink-0 flex-col sticky top-0 z-20">
-      <div className="topbar-band h-14 px-5 flex items-center">
+    <aside className="glass-panel flex h-dvh min-h-0 w-[244px] max-w-full shrink-0 flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] lg:sticky lg:top-0 lg:h-screen">
+      <div className="topbar-band flex h-14 min-h-14 items-center px-5">
         <Logo tone="dark" size={30} />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 pb-3">
+      <nav id="app-primary-nav" className="flex-1 overflow-y-auto px-3 pb-3" aria-label="Primary">
         {nav.map((section, sectionIdx) => (
           <div key={section.heading ?? `s-${sectionIdx}`} className="mt-3 first:mt-1">
             {section.heading ? (
@@ -243,8 +281,9 @@ export function Sidebar({ user }: { user: User }) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-[13.5px] font-medium",
+                        "group relative flex min-h-11 items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13.5px] font-medium",
                         "text-[color:var(--color-ink-700)] hover:bg-white/60",
                         active &&
                           "bg-white/80 text-[color:var(--color-brand-700)] shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-white/70 hover:bg-white/80",
@@ -280,11 +319,11 @@ export function Sidebar({ user }: { user: User }) {
         ))}
       </nav>
 
-      <div className="px-3 pb-4 pt-2 border-t border-white/60">
+      <div className="border-t border-white/60 px-3 pb-4 pt-2">
         <form action="/api/auth/logout" method="post">
           <button
             type="submit"
-            className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-1.5 text-[13px] text-[color:var(--color-ink-500)] hover:bg-rose-50 hover:text-[color:var(--color-danger-700)]"
+            className="flex min-h-11 w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13px] text-[color:var(--color-ink-500)] hover:bg-rose-50 hover:text-[color:var(--color-danger-700)]"
           >
             <LogOut className="h-4 w-4" /> Logout
           </button>

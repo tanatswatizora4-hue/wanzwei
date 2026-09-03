@@ -136,6 +136,20 @@ export const listingKindEnum = pgEnum("listing_kind", [
 
 export const listingModeEnum = pgEnum("listing_mode", ["Sale", "Lease"]);
 
+export const courseFormatEnum = pgEnum("course_format", [
+  "Online",
+  "In person",
+  "Hybrid",
+]);
+
+export const courseEnrolmentStatusEnum = pgEnum("course_enrolment_status", [
+  "registered",
+  "completed",
+  "withdrawn",
+]);
+
+export const listingStatusEnum = pgEnum("listing_status", ["Open", "Closed"]);
+
 // ---------------------------------------------------------------------------
 // facilities
 // ---------------------------------------------------------------------------
@@ -539,6 +553,11 @@ export const courses = pgTable(
     status: courseStatusEnum("status").notNull().default("not_started"),
     cover: text("cover").notNull(),
     recommended: boolean("recommended").notNull().default(false),
+    description: text("description").notNull().default(""),
+    format: courseFormatEnum("format").notNull().default("Online"),
+    location: text("location"),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -574,6 +593,10 @@ export const listings = pgTable(
     cover: text("cover").notNull(),
     description: text("description").notNull(),
     confidential: boolean("confidential").notNull().default(false),
+    ownerId: uuid("owner_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    status: listingStatusEnum("status").notNull().default("Open"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -585,6 +608,62 @@ export const listings = pgTable(
     index("listings_kind_idx").on(t.kind),
     index("listings_mode_idx").on(t.mode),
     index("listings_posted_idx").on(t.posted),
+    index("listings_owner_id_idx").on(t.ownerId),
+    index("listings_status_idx").on(t.status),
+  ],
+);
+
+export const courseEnrolments = pgTable(
+  "course_enrolments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "cascade" }),
+    status: courseEnrolmentStatusEnum("status").notNull().default("registered"),
+    enrolledAt: timestamp("enrolled_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("course_enrolments_user_course_uniq").on(t.userId, t.courseId),
+    index("course_enrolments_user_id_idx").on(t.userId),
+    index("course_enrolments_course_id_idx").on(t.courseId),
+  ],
+);
+
+export const listingEnquiries = pgTable(
+  "listing_enquiries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    fromUserId: uuid("from_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    email: text("email").notNull(),
+    phone: text("phone").notNull().default(""),
+    message: text("message").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("listing_enquiries_listing_id_idx").on(t.listingId),
+    index("listing_enquiries_from_user_id_idx").on(t.fromUserId),
+    index("listing_enquiries_created_at_idx").on(t.createdAt),
   ],
 );
 
@@ -690,6 +769,12 @@ export type NewDbCourse = typeof courses.$inferInsert;
 
 export type DbListing = typeof listings.$inferSelect;
 export type NewDbListing = typeof listings.$inferInsert;
+
+export type DbCourseEnrolment = typeof courseEnrolments.$inferSelect;
+export type NewDbCourseEnrolment = typeof courseEnrolments.$inferInsert;
+
+export type DbListingEnquiry = typeof listingEnquiries.$inferSelect;
+export type NewDbListingEnquiry = typeof listingEnquiries.$inferInsert;
 
 export type DbEmergencyAlert = typeof emergencyAlerts.$inferSelect;
 export type NewDbEmergencyAlert = typeof emergencyAlerts.$inferInsert;

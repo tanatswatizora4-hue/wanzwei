@@ -16,6 +16,8 @@ import {
   Siren,
   Building2,
   Bell,
+  GraduationCap,
+  Store,
 } from "lucide-react";
 import { Command } from "cmdk";
 import {
@@ -100,6 +102,18 @@ function commands(role: Role): Cmd[] {
         href: "/professional/notifications",
         icon: <Bell className="h-3.5 w-3.5" />,
       },
+      {
+        group: "Navigate",
+        label: "CPD",
+        href: "/professional/cpd",
+        icon: <GraduationCap className="h-3.5 w-3.5" />,
+      },
+      {
+        group: "Navigate",
+        label: "Marketplace",
+        href: "/professional/marketplace",
+        icon: <Store className="h-3.5 w-3.5" />,
+      },
     ];
   }
 
@@ -132,6 +146,12 @@ function commands(role: Role): Cmd[] {
         label: "Facility profile",
         href: "/facility/profile",
         icon: <Building2 className="h-3.5 w-3.5" />,
+      },
+      {
+        group: "Navigate",
+        label: "Marketplace",
+        href: "/facility/marketplace",
+        icon: <Store className="h-3.5 w-3.5" />,
       },
     ];
   }
@@ -174,6 +194,18 @@ function commands(role: Role): Cmd[] {
       label: "Emergency alerts",
       href: "/admin/emergency",
       icon: <Siren className="h-3.5 w-3.5" />,
+    },
+    {
+      group: "Navigate",
+      label: "CPD",
+      href: "/admin/cpd",
+      icon: <GraduationCap className="h-3.5 w-3.5" />,
+    },
+    {
+      group: "Navigate",
+      label: "Marketplace",
+      href: "/admin/marketplace",
+      icon: <Store className="h-3.5 w-3.5" />,
     },
   ];
 }

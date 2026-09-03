@@ -29,6 +29,8 @@ const TARGET_TABLES = [
   "facility_verification_documents",
   "practitioner_registry",
   "verification_events",
+  "course_enrolments",
+  "listing_enquiries",
 ] as const;
 
 /** Registry/audit tables are RLS-enabled with no client policies (default deny). */
@@ -56,7 +58,9 @@ const METADATA_SQL = `
       'professional_documents',
       'facility_verification_documents',
       'practitioner_registry',
-      'verification_events'
+      'verification_events',
+      'course_enrolments',
+      'listing_enquiries'
     ]::text[]) AS table_name
   )
   SELECT

@@ -12,8 +12,6 @@ const CUT = [
   "Talent pool",
   "Matching",
   "Matching workflow",
-  "Marketplace",
-  "CPD",
   "Invite",
   "Billing",
   "AI: Find best candidate match",
@@ -36,7 +34,13 @@ describe("MVP navigation and security invariants", () => {
     expect(sidebar).toContain('label: "Emergency"');
     expect(sidebar).toContain('label: "Verification"');
     expect(sidebar).toContain('label: "Facilities"');
-    expect(sidebar).toContain('href: "/admin/emergency"');
+    expect(sidebar).toContain('label: "CPD"');
+    expect(sidebar).toContain('label: "Marketplace"');
+    expect(sidebar).toContain('href: "/professional/cpd"');
+    expect(sidebar).toContain('href: "/professional/marketplace"');
+    expect(sidebar).toContain('href: "/facility/marketplace"');
+    expect(sidebar).toContain('href: "/admin/cpd"');
+    expect(sidebar).toContain('href: "/admin/marketplace"');
     expect(topbar).not.toContain("Billing");
     expect(topbar).not.toContain("Invite team");
   });
@@ -207,22 +211,27 @@ describe("MVP navigation and security invariants", () => {
     expect(source).not.toContain("Star");
   });
 
-  it("post-MVP demo routes are hidden", () => {
-    const files = [
+  it("post-MVP demo routes stay gated; CPD and Marketplace are restored", () => {
+    const gated = [
       "src/app/(app)/professional/messages/page.tsx",
       "src/app/(app)/facility/messages/page.tsx",
       "src/app/(app)/professional/availability/page.tsx",
       "src/app/(app)/facility/talent/page.tsx",
       "src/app/(app)/admin/matching/page.tsx",
+      "src/app/(app)/facility/cpd/page.tsx",
+    ];
+    for (const file of gated) {
+      expect(readFileSync(file, "utf8"), file).toContain("mvpSurfaceUnavailable");
+    }
+    const restored = [
       "src/app/(app)/professional/marketplace/page.tsx",
       "src/app/(app)/facility/marketplace/page.tsx",
       "src/app/(app)/admin/marketplace/page.tsx",
       "src/app/(app)/professional/cpd/page.tsx",
-      "src/app/(app)/facility/cpd/page.tsx",
       "src/app/(app)/admin/cpd/page.tsx",
     ];
-    for (const file of files) {
-      expect(readFileSync(file, "utf8"), file).toContain("mvpSurfaceUnavailable");
+    for (const file of restored) {
+      expect(readFileSync(file, "utf8"), file).not.toContain("mvpSurfaceUnavailable");
     }
   });
 });

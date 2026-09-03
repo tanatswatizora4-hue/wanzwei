@@ -96,24 +96,58 @@ export type Interview = {
   mode: "Onsite" | "Video" | "Phone";
 };
 
+export type CourseCategory =
+  | "Clinical"
+  | "Compliance"
+  | "Leadership"
+  | "Tech"
+  | "Wellbeing";
+
+export type CourseFormat = "Online" | "In person" | "Hybrid";
+
+export type CourseEnrolmentStatus = "registered" | "completed" | "withdrawn";
+
 export type Course = {
   id: string;
   title: string;
   provider: string;
-  category: "Clinical" | "Compliance" | "Leadership" | "Tech" | "Wellbeing";
+  category: CourseCategory;
   duration: string;
   credits: number;
-  progress: number; // 0-100
-  status: "not_started" | "in_progress" | "completed";
-  cover: string; // gradient classes
+  cover: string;
   recommended?: boolean;
+  description: string;
+  format: CourseFormat;
+  location?: string;
+  startsAt?: string;
+  endsAt?: string;
 };
+
+export type CourseEnrolment = {
+  id: string;
+  userId: string;
+  courseId: string;
+  status: CourseEnrolmentStatus;
+  enrolledAt: string;
+  completedAt?: string;
+};
+
+export type ListingKind =
+  | "Clinic"
+  | "Pharmacy"
+  | "Hospital"
+  | "Laboratory"
+  | "Practice";
+
+export type ListingMode = "Sale" | "Lease";
+
+export type ListingStatus = "Open" | "Closed";
 
 export type Listing = {
   id: string;
   title: string;
-  kind: "Clinic" | "Pharmacy" | "Hospital" | "Laboratory" | "Practice";
-  mode: "Sale" | "Lease";
+  kind: ListingKind;
+  mode: ListingMode;
   location: string;
   price: number;
   currency: string;
@@ -124,6 +158,20 @@ export type Listing = {
   cover: string;
   description: string;
   confidential?: boolean;
+  ownerId?: string;
+  ownerName?: string;
+  status: ListingStatus;
+};
+
+export type ListingEnquiry = {
+  id: string;
+  listingId: string;
+  fromUserId: string;
+  name: string;
+  email: string;
+  phone: string;
+  message: string;
+  createdAt: string;
 };
 
 export type Verification = {
