@@ -198,8 +198,8 @@ function StatInline({
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3.5">
-      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[color:var(--color-surface-muted)] text-[color:var(--color-ink-500)]">
+    <div className="flex min-w-0 items-center gap-2 px-2.5 py-3 sm:gap-3 sm:px-5 sm:py-3.5">
+      <div className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--color-surface-muted)] text-[color:var(--color-ink-500)] sm:flex">
         {icon}
       </div>
       <div className="min-w-0">

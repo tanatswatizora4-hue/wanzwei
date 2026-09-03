@@ -34,7 +34,7 @@ export const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-[var(--radius-lg)] border bg-white p-6 shadow-[var(--shadow-lg)] duration-200",
+        "fixed left-1/2 top-1/2 z-50 grid w-[calc(100%-2rem)] max-w-lg max-h-[calc(100dvh-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-[var(--radius-lg)] border bg-white p-4 shadow-[var(--shadow-lg)] duration-200 sm:p-6",
         "border-[color:var(--color-border-default)]",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95",
         className,
@@ -43,7 +43,7 @@ export const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        className="absolute right-4 top-4 rounded-full p-1.5 text-[color:var(--color-ink-400)] hover:bg-[color:var(--color-ink-900)]/[0.05] hover:text-[color:var(--color-ink-900)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-200)]"
+        className="absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-[color:var(--color-ink-400)] hover:bg-[color:var(--color-ink-900)]/[0.05] hover:text-[color:var(--color-ink-900)] transition-colors focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-200)] sm:right-3 sm:top-3 sm:h-8 sm:w-8"
         aria-label="Close"
       >
         <X className="h-4 w-4" />

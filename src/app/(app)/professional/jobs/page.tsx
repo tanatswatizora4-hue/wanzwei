@@ -96,7 +96,7 @@ export default async function JobsPage({
                 />
               </header>
 
-              <div className="mx-5 flex items-center gap-3 rounded-[10px] border border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/70 px-3 py-2 text-[12px]">
+              <div className="mx-5 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-[10px] border border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/70 px-3 py-2 text-[12px]">
                 <span className="inline-flex items-center gap-1.5 text-[color:var(--color-ink-700)]">
                   <MapPin className="h-3.5 w-3.5 text-[color:var(--color-ink-400)]" />
                   <span className="font-medium">{job.location}</span>
@@ -106,7 +106,7 @@ export default async function JobsPage({
                   {job.type}
                 </Badge>
                 {job.salary ? (
-                  <span className="ml-auto inline-flex items-center gap-1 font-display num text-[12.5px] font-semibold text-[color:var(--color-ink-900)] tabular-nums">
+                  <span className="inline-flex min-w-0 items-center gap-1 font-display num text-[12.5px] font-semibold text-[color:var(--color-ink-900)] tabular-nums sm:ml-auto">
                     {job.salary}
                   </span>
                 ) : null}
@@ -127,8 +127,8 @@ export default async function JobsPage({
                 ) : null}
               </div>
 
-              <footer className="flex items-center justify-between gap-3 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/50 px-5 py-2.5">
-                <div className="flex items-center gap-3 text-[11.5px] text-[color:var(--color-ink-500)]">
+              <footer className="flex flex-col gap-2.5 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/50 px-5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-[color:var(--color-ink-500)]">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3 w-3" />
                     {timeAgoLong(job.postedAt)}

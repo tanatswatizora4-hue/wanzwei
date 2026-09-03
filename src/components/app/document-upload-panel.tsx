@@ -132,7 +132,7 @@ export function DocumentUploadPanel(props: {
               </p>
             ) : null}
           </div>
-          <div className="relative mt-2 inline-flex min-h-8 shrink-0 self-start sm:mt-0">
+          <div className="relative mt-2 inline-flex min-h-11 w-full shrink-0 self-stretch sm:mt-0 sm:min-h-8 sm:w-auto sm:self-start">
             <span className="pointer-events-none relative z-0 inline-flex">
               <Button
                 type="button"
@@ -140,6 +140,7 @@ export function DocumentUploadPanel(props: {
                 size="sm"
                 tabIndex={-1}
                 aria-hidden="true"
+                className="w-full sm:w-auto"
               >
                 <Upload className="h-3.5 w-3.5" aria-hidden />
                 Upload files
@@ -200,7 +201,7 @@ export function DocumentUploadPanel(props: {
                     <CheckCircle2 className="h-3 w-3" /> Uploaded
                   </Badge>
                 ) : (
-                  <span className="inline-flex max-w-[200px] items-center gap-1 text-rose-600">
+                  <span className="inline-flex max-w-full min-w-0 items-center gap-1 text-rose-600 sm:max-w-[200px]">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                     <span className="truncate text-[12px]">{p.error}</span>
                   </span>

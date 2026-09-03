@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-12">
+    <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 py-12 sm:px-6">
       <Link href="/" className="mb-8 inline-flex">
         <Logo tone="dark" size={30} />
       </Link>

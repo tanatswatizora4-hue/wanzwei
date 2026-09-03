@@ -105,7 +105,7 @@ export function FacilityApplicationsClient({
                     <button
                       type="button"
                       onClick={() => setActiveId(applicant.id)}
-                      className={`flex w-full items-center gap-3 px-4 py-3 text-left ${
+                      className={`flex min-h-11 w-full items-center gap-3 px-4 py-3 text-left ${
                         applicant.id === active?.id
                           ? "bg-[color:var(--color-brand-50)]/60"
                           : "hover:bg-[color:var(--color-surface-muted)]"
@@ -181,14 +181,14 @@ function ApplicantDetail({
           <p className="text-[10.5px] uppercase tracking-wider text-[color:var(--color-ink-400)] font-semibold">
             Pipeline
           </p>
-          <div className="mt-2 flex gap-1">
+          <div className="mt-2 flex gap-1 overflow-x-auto overscroll-x-contain pb-0.5 [-webkit-overflow-scrolling:touch]">
             {PIPELINE.map((p) => {
               const here = PIPELINE.indexOf(p);
               const done = here <= stageIdx;
               return (
                 <div
                   key={p}
-                  className={`flex-1 rounded-full px-2 py-1 text-[10.5px] text-center font-medium ${done ? "bg-[color:var(--color-brand-600)] text-white" : "bg-[color:var(--color-ink-900)]/[0.06] text-[color:var(--color-ink-500)]"}`}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-[10.5px] text-center font-medium ${done ? "bg-[color:var(--color-brand-600)] text-white" : "bg-[color:var(--color-ink-900)]/[0.06] text-[color:var(--color-ink-500)]"}`}
                 >
                   {p}
                 </div>

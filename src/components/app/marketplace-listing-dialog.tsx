@@ -90,7 +90,7 @@ export function MarketplaceListingDialog({
                 id="listing-kind"
                 name="kind"
                 defaultValue={listing?.kind ?? "Clinic"}
-                className="mt-1 h-9 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm"
+                className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
               >
                 {KINDS.map((kind) => (
                   <option key={kind} value={kind}>
@@ -105,7 +105,7 @@ export function MarketplaceListingDialog({
                 id="listing-mode"
                 name="mode"
                 defaultValue={listing?.mode ?? "Sale"}
-                className="mt-1 h-9 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm"
+                className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
               >
                 {MODES.map((mode) => (
                   <option key={mode} value={mode}>
@@ -194,7 +194,7 @@ export function MarketplaceListingDialog({
               id="listing-status"
               name="status"
               defaultValue={listing?.status ?? "Open"}
-              className="mt-1 h-9 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm"
+              className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
             >
               <option value="Open">Open</option>
               <option value="Closed">Closed</option>

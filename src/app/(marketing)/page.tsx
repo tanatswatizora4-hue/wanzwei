@@ -28,9 +28,10 @@ export default function LandingPage() {
 function MarketingNav() {
   return (
     <header className="glass-bar sticky top-0 z-40">
-      <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-6">
-        <Link href="/" className="flex items-center">
-          <Logo />
+      <div className="mx-auto flex h-14 max-w-6xl min-w-0 items-center gap-2 px-4 sm:gap-6 sm:px-6">
+        <Link href="/" className="flex min-w-0 shrink-0 items-center">
+          <Logo showTagline={false} className="md:hidden" />
+          <Logo className="hidden md:flex" />
         </Link>
         <nav className="ml-6 hidden md:flex items-center gap-5 text-[13.5px] text-[color:var(--color-ink-500)]">
           <Link href="#features" className="hover:text-[color:var(--color-ink-900)]">
@@ -46,14 +47,14 @@ function MarketingNav() {
             For professionals
           </Link>
         </nav>
-        <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild>
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-1 sm:gap-2">
+          <Button variant="ghost" size="sm" asChild className="h-8 min-h-8 px-2.5">
             <Link href="/login">Sign in</Link>
           </Button>
-          <Button size="sm" asChild>
+          <Button size="sm" asChild className="h-8 min-h-8 px-2.5">
             <Link href="/signup">
               Get started
-              <ArrowRight className="h-3.5 w-3.5" />
+              <ArrowRight className="hidden h-3.5 w-3.5 sm:inline" />
             </Link>
           </Button>
         </div>
@@ -76,12 +77,12 @@ function Hero() {
         <div className="absolute inset-0 grid-bg opacity-50" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-12 lg:pt-24 lg:pb-16">
+      <div className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 sm:px-6 lg:pt-24 lg:pb-16">
         <div className="mx-auto max-w-3xl text-center">
           <Badge tone="brand" className="px-2.5 py-1 text-[11.5px]">
             Healthcare workforce platform
           </Badge>
-          <h1 className="mt-5 font-display text-[44px] sm:text-[60px] font-bold leading-[1.02] tracking-[-0.02em]">
+          <h1 className="mt-5 font-display text-[32px] font-bold leading-[1.05] tracking-[-0.02em] sm:text-[44px] lg:text-[60px] lg:leading-[1.02]">
             Hire trusted healthcare{" "}
             <span className="text-pop">talent — faster.</span>
           </h1>
@@ -91,17 +92,17 @@ function Hero() {
             jobs, manage applications, and oversee hiring from one platform.
           </p>
 
-          <div className="mt-7 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-            <Button size="lg" asChild>
+          <div className="mt-7 flex w-full min-w-0 flex-col items-stretch justify-center gap-2.5 sm:flex-row sm:items-center">
+            <Button size="lg" asChild className="w-full sm:w-auto">
               <Link href="/signup?role=professional">
                 Join as Professional
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="secondary" asChild>
+            <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto">
               <Link href="/signup?role=facility">Join as Facility</Link>
             </Button>
-            <Button size="lg" variant="ghost" asChild>
+            <Button size="lg" variant="ghost" asChild className="w-full sm:w-auto">
               <Link href="/login">Sign in</Link>
             </Button>
           </div>
@@ -205,7 +206,7 @@ function HeroPreview() {
 function CapabilityStrip() {
   return (
     <section className="border-y border-[color:var(--color-border-default)] bg-white">
-      <div className="mx-auto max-w-6xl px-6 py-6">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
         <p className="text-center text-[11px] uppercase tracking-[0.18em] text-[color:var(--color-ink-400)]">
           Built for hospitals, clinics, and pharmacies in Zimbabwe
         </p>
@@ -243,7 +244,7 @@ const FEATURES = [
 
 function Features() {
   return (
-    <section className="mx-auto max-w-6xl px-6 py-16 lg:py-20" id="features">
+    <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20" id="features">
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-[11.5px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-brand-600)]">
           Why Wanzwei
@@ -285,7 +286,7 @@ function ProductPreview() {
       id="professionals"
       className="bg-white border-y border-[color:var(--color-border-default)]"
     >
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-16 lg:grid-cols-2 lg:py-20">
+      <div className="mx-auto grid max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-20">
         <div>
           <Badge tone="brand">For professionals</Badge>
           <h2 className="mt-3 font-display text-[30px] sm:text-[34px] font-bold leading-tight tracking-[-0.015em]">
@@ -339,7 +340,7 @@ function ProductPreview() {
       </div>
       <div
         id="facilities"
-        className="mx-auto grid max-w-6xl gap-12 px-6 pb-16 lg:grid-cols-2 lg:pb-20"
+        className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 sm:px-6 lg:grid-cols-2 lg:pb-20"
       >
         <div className="card p-5 lg:order-1">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-ink-400)]">
@@ -398,8 +399,8 @@ function ProductPreview() {
 
 function FinalCTA() {
   return (
-    <section className="px-6 pb-16 pt-16">
-      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[20px] p-10 lg:p-14 text-white">
+    <section className="px-4 pb-16 pt-16 sm:px-6">
+      <div className="relative mx-auto max-w-6xl overflow-hidden rounded-[20px] p-6 text-white sm:p-10 lg:p-14">
         <div
           className="absolute inset-0 -z-10"
           style={{
@@ -416,7 +417,7 @@ function FinalCTA() {
           }}
         />
         <div className="max-w-2xl">
-          <h2 className="font-display text-[36px] sm:text-[44px] font-bold leading-tight tracking-[-0.02em]">
+          <h2 className="font-display text-[28px] font-bold leading-tight tracking-[-0.02em] sm:text-[36px] lg:text-[44px]">
             Ready to hire or apply?
           </h2>
           <p className="mt-3 text-[15px] text-white/85">
@@ -447,7 +448,7 @@ function FinalCTA() {
 function MarketingFooter() {
   return (
     <footer className="border-t border-[color:var(--color-border-default)] bg-white">
-      <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-12 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <Logo />
           <p className="mt-3 max-w-xs text-[13px] text-[color:var(--color-ink-500)]">
@@ -472,7 +473,7 @@ function MarketingFooter() {
         />
       </div>
       <div className="border-t border-[color:var(--color-border-default)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 text-[11.5px] text-[color:var(--color-ink-400)]">
+        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 py-4 text-[11.5px] text-[color:var(--color-ink-400)] sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>© {new Date().getFullYear()} Wanzwei. All rights reserved.</p>
           <p>Made with care in Harare.</p>
         </div>

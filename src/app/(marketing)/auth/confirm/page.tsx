@@ -110,7 +110,7 @@ function renderConfirmEmailPage(params: {
 
 function ConfirmShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-6 py-12">
+    <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-12 sm:px-6">
       <Link href="/" prefetch={false} className="mb-8 inline-flex">
         <Logo tone="dark" size={30} />
       </Link>

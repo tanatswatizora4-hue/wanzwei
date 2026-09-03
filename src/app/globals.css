@@ -70,9 +70,15 @@
   --foreground: var(--color-ink-900);
 }
 
+html {
+  height: 100%;
+  overflow-x: hidden;
+}
+
 html,
 body {
-  height: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
 }
 
 body {

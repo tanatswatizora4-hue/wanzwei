@@ -46,12 +46,12 @@ export function ApplicationStatusSelect({
   };
 
   return (
-    <div className="relative inline-flex items-center gap-2">
+    <div className="relative inline-flex w-full min-w-0 items-center gap-2 sm:w-auto">
       {pending ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin text-[color:var(--color-ink-400)]" />
       ) : null}
       <Select value={current} onValueChange={onChange} disabled={pending}>
-        <SelectTrigger className="h-8 w-[160px] text-[12px]">
+        <SelectTrigger className="h-11 w-full min-w-0 text-[12px] sm:h-8 sm:w-[160px]">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

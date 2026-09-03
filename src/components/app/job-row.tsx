@@ -33,7 +33,7 @@ export function JobRow({
   return (
     <div
       className={cn(
-        "group flex items-center gap-3 px-4 py-3 rounded-[var(--radius-md)] transition-colors hover:bg-[color:var(--color-ink-900)]/[0.025]",
+        "group flex items-center gap-3 px-4 py-3 rounded-[var(--radius-md)] transition-colors hover:bg-[color:var(--color-ink-900)]/[0.025] min-w-0",
         compact && "py-2.5",
       )}
     >
@@ -49,7 +49,7 @@ export function JobRow({
         >
           {job.title}
         </Link>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-[color:var(--color-ink-500)]">
+        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-1.5 text-[12px] text-[color:var(--color-ink-500)]">
           <span className="truncate">{facility.name}</span>
           <span className="text-[color:var(--color-ink-300)]">·</span>
           <MapPin className="h-3 w-3 shrink-0" />

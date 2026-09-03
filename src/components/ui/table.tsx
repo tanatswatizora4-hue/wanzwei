@@ -6,9 +6,9 @@ export function Table({
   ...props
 }: React.HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="relative w-full overflow-auto">
+    <div className="relative w-full overflow-x-auto overscroll-x-contain [-webkit-overflow-scrolling:touch]">
       <table
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full min-w-max caption-bottom text-sm", className)}
         {...props}
       />
     </div>
@@ -81,7 +81,10 @@ export function TableCell({
 }: React.TdHTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn("px-4 py-3 align-middle text-[13px] text-[color:var(--color-ink-700)]", className)}
+      className={cn(
+        "px-4 py-3 align-middle text-[13px] text-[color:var(--color-ink-700)] break-words",
+        className,
+      )}
       {...props}
     />
   );

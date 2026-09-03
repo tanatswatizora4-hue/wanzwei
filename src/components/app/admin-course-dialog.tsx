@@ -109,7 +109,7 @@ export function AdminCourseDialog({
                 id="course-category"
                 name="category"
                 defaultValue={course?.category ?? "Clinical"}
-                className="mt-1 h-9 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm"
+                className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
               >
                 {CATEGORIES.map((category) => (
                   <option key={category} value={category}>
@@ -124,7 +124,7 @@ export function AdminCourseDialog({
                 id="course-format"
                 name="format"
                 defaultValue={course?.format ?? "Online"}
-                className="mt-1 h-9 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm"
+                className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
               >
                 {FORMATS.map((format) => (
                   <option key={format} value={format}>

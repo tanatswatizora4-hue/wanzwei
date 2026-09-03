@@ -9,7 +9,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       ref={ref}
       type={type}
       className={cn(
-        "flex h-9 w-full rounded-[var(--radius-sm)] border bg-white px-3 text-sm",
+        "flex h-11 w-full rounded-[var(--radius-sm)] border bg-white px-3 text-sm sm:h-9",
         "border-[color:var(--color-border-default)] text-[color:var(--color-ink-900)] placeholder:text-[color:var(--color-ink-300)]",
         "shadow-[var(--shadow-xs)] transition-colors",
         "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--color-brand-100)] focus-visible:border-[color:var(--color-brand-500)]",
@@ -65,7 +65,7 @@ export function FieldHint({
   return (
     <p
       className={cn(
-        "text-xs text-[color:var(--color-ink-400)] mt-1",
+      "text-xs text-[color:var(--color-ink-400)] mt-1 break-words",
         className,
       )}
     >

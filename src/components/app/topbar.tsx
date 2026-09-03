@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell, HelpCircle, Search, ChevronDown, Plus } from "lucide-react";
+import { Bell, HelpCircle, Menu, Search, ChevronDown, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,9 +19,13 @@ import type { User } from "@/lib/types";
 export function Topbar({
   user,
   unreadNotificationCount = 0,
+  onOpenMobileNav,
+  mobileNavOpen = false,
 }: {
   user: User;
   unreadNotificationCount?: number;
+  onOpenMobileNav?: () => void;
+  mobileNavOpen?: boolean;
 }) {
   const openCommandPalette = React.useCallback(() => {
     document.dispatchEvent(
@@ -70,11 +74,24 @@ export function Topbar({
     unreadNotificationCount > 0 ? String(unreadNotificationCount) : undefined;
 
   return (
-    <header className="topbar-band sticky top-0 z-30 flex h-14 items-center gap-3 px-5">
+    <header className="topbar-band sticky top-0 z-30 flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] sm:gap-3 sm:px-5">
       <CommandPalette role={user.role} />
 
+      {onOpenMobileNav ? (
+        <button
+          type="button"
+          onClick={onOpenMobileNav}
+          aria-label="Open navigation"
+          aria-expanded={mobileNavOpen}
+          aria-controls="app-primary-nav"
+          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/90 hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 lg:hidden"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      ) : null}
+
       {/* Search — short placeholder avoids clipping when the pill is narrow */}
-      <div className="relative min-w-[7.5rem] flex-1 max-w-xl md:max-w-2xl">
+      <div className="relative min-w-0 flex-1 max-w-xl md:max-w-2xl">
         <Search className="pointer-events-none absolute left-3 top-1/2 z-[1] h-3.5 w-3.5 -translate-y-1/2 text-white/55" />
         <input
           aria-label="Search jobs, facilities, professionals, and navigate"
@@ -89,7 +106,7 @@ export function Topbar({
         </kbd>
       </div>
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         {/* Quick action pill */}
         <Link
           href={quickAction.href}
@@ -184,7 +201,7 @@ export function Topbar({
 }
 
 const iconBtnClass =
-  "relative inline-flex h-8 w-8 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40";
+  "relative inline-flex h-11 w-11 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:h-8 sm:w-8";
 
 function Badge({ badge }: { badge?: string }) {
   if (!badge) return null;
@@ -252,11 +269,11 @@ export function PageHeader({
         {meta ? (
           <div className="mb-2 flex items-center gap-2">{meta}</div>
         ) : null}
-        <h1 className="font-display text-[24px] font-semibold tracking-tight text-[color:var(--color-ink-900)]">
+        <h1 className="font-display text-[22px] font-semibold tracking-tight text-[color:var(--color-ink-900)] sm:text-[24px]">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 text-[13.5px] text-[color:var(--color-ink-500)]">
+          <p className="mt-1 break-words text-[13.5px] text-[color:var(--color-ink-500)]">
             {description}
           </p>
         ) : null}

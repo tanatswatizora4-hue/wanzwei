@@ -6,7 +6,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-dvh overflow-x-hidden">
       <MedicalBackground variant="marketing" />
       {children}
     </div>

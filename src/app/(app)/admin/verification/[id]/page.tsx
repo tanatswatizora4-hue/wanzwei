@@ -177,7 +177,7 @@ function Row({ label, value }: { label: string; value: string }) {
       <dt className="text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-ink-400)]">
         {label}
       </dt>
-      <dd className="mt-0.5 text-[color:var(--color-ink-800)]">{value}</dd>
+      <dd className="mt-0.5 break-words text-[color:var(--color-ink-800)]">{value}</dd>
     </div>
   );
 }

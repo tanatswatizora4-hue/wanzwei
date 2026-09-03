@@ -52,7 +52,7 @@ export default async function ProfessionalDashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="font-display text-[26px] font-bold tracking-tight">
+        <h1 className="font-display text-[22px] font-bold tracking-tight sm:text-[26px]">
           Welcome back, {user.name.split(" ")[0]}.
         </h1>
         <p className="mt-1.5 text-[13.5px] text-[color:var(--color-ink-500)]">

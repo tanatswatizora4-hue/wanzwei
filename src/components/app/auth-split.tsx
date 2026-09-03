@@ -12,7 +12,7 @@ const features = [
 
 export function AuthSplit({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+    <div className="relative min-h-screen overflow-x-hidden lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden p-10 text-white">
         <div className="pointer-events-none absolute inset-0">
           <div
@@ -73,7 +73,7 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
           </ul>
         </div>
 
-        <div className="relative flex items-center justify-between text-[12px] text-white/55">
+        <div className="relative flex flex-col gap-3 text-[12px] text-white/55 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} Wanzwei</p>
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:text-white">
@@ -89,7 +89,7 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <section className="relative flex min-h-screen items-center justify-center px-6 py-10 lg:py-14">
+      <section className="relative flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 sm:py-10 lg:py-14">
         <div className="w-full max-w-[440px]">
           <Link
             href="/"
@@ -97,7 +97,7 @@ export function AuthSplit({ children }: { children: React.ReactNode }) {
           >
             <Logo />
           </Link>
-          <div className="glass glass-highlight rounded-[var(--radius-lg)] p-7 sm:p-8">
+          <div className="glass glass-highlight rounded-[var(--radius-lg)] p-5 sm:p-7 md:p-8">
             {children}
           </div>
         </div>

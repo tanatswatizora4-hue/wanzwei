@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -22,6 +22,13 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
+
 export const metadata: Metadata = {
   title: "Wanzwei — Healthcare Workforce Platform",
   description:
@@ -40,19 +47,19 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jakarta.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${jakarta.variable} ${geistMono.variable} h-full overflow-x-hidden antialiased`}
     >
-      <body className="min-h-full bg-[color:var(--color-canvas)] text-[color:var(--color-ink-900)]">
+      <body className="min-h-full overflow-x-hidden bg-[color:var(--color-canvas)] text-[color:var(--color-ink-900)]">
         {children}
         <Toaster
-          position="bottom-right"
+          position="bottom-center"
           theme="light"
           richColors
           closeButton
           toastOptions={{
             classNames: {
               toast:
-                "rounded-[var(--radius-md)] border-[color:var(--color-border-default)] shadow-[var(--shadow-md)]",
+                "max-w-[calc(100vw-1.5rem)] rounded-[var(--radius-md)] border-[color:var(--color-border-default)] shadow-[var(--shadow-md)] sm:max-w-md",
             },
           }}
         />

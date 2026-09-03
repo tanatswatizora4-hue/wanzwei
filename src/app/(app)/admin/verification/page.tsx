@@ -48,12 +48,12 @@ export default async function AdminVerificationPage({
         title="Verification queue"
         description="Review credential submissions and approve verified professionals."
         actions={
-          <div className="flex flex-wrap gap-1 rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white p-0.5 text-[12.5px]">
+          <div className="flex max-w-full flex-wrap gap-1 overflow-x-auto rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white p-0.5 text-[12.5px]">
             {STATUSES.map((s) => (
               <Link
                 key={s.label}
                 href={s.value ? `/admin/verification?status=${encodeURIComponent(s.value)}` : "/admin/verification"}
-                className={`rounded-[6px] px-2.5 py-1 font-medium ${
+                className={`inline-flex min-h-9 items-center rounded-[6px] px-2.5 py-1 font-medium ${
                   statusFilter === s.value
                     ? "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]"
                     : "text-[color:var(--color-ink-500)] hover:text-[color:var(--color-ink-800)]"

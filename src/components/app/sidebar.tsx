@@ -259,7 +259,7 @@ export function Sidebar({
 
   return (
     <aside className="glass-panel flex h-dvh min-h-0 w-[244px] max-w-full shrink-0 flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] lg:sticky lg:top-0 lg:h-screen">
-      <div className="topbar-band flex h-14 min-h-14 items-center px-5">
+      <div className="topbar-band flex h-14 min-h-14 items-center px-5 pr-12 lg:pr-5">
         <Logo tone="dark" size={30} />
       </div>
 

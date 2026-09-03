@@ -25,7 +25,7 @@ export function EmergencyAlertsPanel({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
+      <div className="flex min-w-0 items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="relative flex h-7 w-7 items-center justify-center rounded-[8px] bg-gradient-to-br from-rose-500 to-pink-600 text-white shadow-[0_4px_16px_-4px_rgba(244,63,94,0.4)]">
             <Siren className="h-3.5 w-3.5" />
@@ -210,7 +210,7 @@ function EmergencyAlertCard({
       ) : null}
 
       {/* Action bar */}
-      <footer className="flex items-center justify-between gap-3 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/50 px-5 py-2.5">
+      <footer className="flex flex-col gap-2.5 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/50 px-5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <p className="text-[11px] text-[color:var(--color-ink-400)]">
           Pushed {timeAgoLong(alert.createdAt)}
         </p>

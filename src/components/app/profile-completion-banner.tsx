@@ -43,7 +43,7 @@ export function ProfileCompletionBanner({
             "linear-gradient(110deg, rgba(111,94,240,0.18) 0%, rgba(255,153,235,0.14) 60%, transparent 90%)",
         }}
       />
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] bg-[color:var(--color-brand-600)] text-white shadow-[var(--shadow-md)]">
           <Rocket className="h-5 w-5" />
         </div>
@@ -54,6 +54,7 @@ export function ProfileCompletionBanner({
             review a complete application.
           </p>
         </div>
+        <div className="flex shrink-0 items-center gap-2 self-start sm:self-center">
         <Button size="sm" asChild>
           <Link href={href}>Complete Profile</Link>
         </Button>
@@ -61,11 +62,12 @@ export function ProfileCompletionBanner({
           type="button"
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="rounded-full p-1 text-[color:var(--color-ink-400)] hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-500)]/40"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full p-1 text-[color:var(--color-ink-400)] hover:bg-black/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-500)]/40 sm:h-8 sm:w-8"
         >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
+    </div>
     </div>
   );
 }

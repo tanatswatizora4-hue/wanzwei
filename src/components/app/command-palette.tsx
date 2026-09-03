@@ -281,7 +281,7 @@ export function CommandPalette({ role }: { role: Role }) {
                       setOpen(false);
                     }}
                     className={cn(
-                      "flex cursor-pointer select-none items-center gap-2.5 rounded-[6px] px-2 py-1.5 text-[13px] text-[color:var(--color-ink-700)]",
+                      "flex min-h-11 cursor-pointer select-none items-center gap-2.5 rounded-[6px] px-2 py-2.5 text-[13px] text-[color:var(--color-ink-700)] sm:min-h-0 sm:py-1.5",
                       "aria-selected:bg-[color:var(--color-brand-50)] aria-selected:text-[color:var(--color-brand-700)]",
                     )}
                   >
