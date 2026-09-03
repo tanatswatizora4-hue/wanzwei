@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
 
 import { applyAuthCookies, updateSession } from "@/lib/supabase/middleware";
+import { isEmailAuthConfirmed } from "@/lib/auth/signup-session";
 
 const PROTECTED_PREFIXES = ["/professional", "/facility", "/admin"] as const;
 
@@ -50,6 +51,13 @@ export async function middleware(req: NextRequest) {
       return applyAuthCookies(NextResponse.redirect(url), response);
     }
 
+    if (!isEmailAuthConfirmed(user)) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/signup/check-email";
+      if (user.email) url.searchParams.set("email", user.email);
+      return applyAuthCookies(NextResponse.redirect(url), response);
+    }
+
     const role = readRole(user);
     const expected = rolePrefix(role);
 
@@ -68,6 +76,12 @@ export async function middleware(req: NextRequest) {
   }
 
   if ((pathname === "/login" || pathname === "/signup") && user) {
+    if (!isEmailAuthConfirmed(user)) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/signup/check-email";
+      if (user.email) url.searchParams.set("email", user.email);
+      return applyAuthCookies(NextResponse.redirect(url), response);
+    }
     const url = req.nextUrl.clone();
     url.pathname = dashboardForRole(readRole(user));
     return applyAuthCookies(NextResponse.redirect(url), response);

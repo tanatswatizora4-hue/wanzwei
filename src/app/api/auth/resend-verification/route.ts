@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { resendVerificationEmail } from "@/lib/auth/email";
+import { signupCheckEmailLocation } from "@/lib/auth/signup-session";
 import {
   addRateLimitHeaders,
   checkRateLimit,
@@ -66,6 +67,17 @@ async function handlePOST(req: Request) {
 
   if (wantsJson(req)) {
     return NextResponse.json({ ok: true });
+  }
+
+  const rawNext = payload.get("next");
+  if (
+    typeof rawNext === "string" &&
+    (rawNext === "/signup/check-email" ||
+      rawNext.startsWith("/signup/check-email?"))
+  ) {
+    const url = new URL(signupCheckEmailLocation(parsed.data.email), req.url);
+    url.searchParams.set("sent", "1");
+    return NextResponse.redirect(url, { status: 303 });
   }
 
   const url = new URL("/login", req.url);

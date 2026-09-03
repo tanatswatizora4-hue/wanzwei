@@ -57,6 +57,11 @@ export default async function LoginPage({
           </>
         ) : null}
 
+        {verified === "1" ? (
+          <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
+            Your email is confirmed. Sign in with your password to continue.
+          </p>
+        ) : null}
         {error === "unconfirmed" ? (
           <div className="rounded-[var(--radius-sm)] bg-amber-50 px-3 py-2 text-[12.5px] text-amber-800">
             <p>You need to confirm your email before signing in.</p>
@@ -167,11 +172,6 @@ export default async function LoginPage({
         {verificationEmail === "1" ? (
           <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
             If an account exists, a verification email is on the way.
-          </p>
-        ) : null}
-        {verified === "1" ? (
-          <p className="rounded-[var(--radius-sm)] bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">
-            Email verified. You can sign in now.
           </p>
         ) : null}
 

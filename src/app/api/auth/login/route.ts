@@ -4,6 +4,7 @@ import { isEmailNotConfirmedError } from "@/lib/auth/auth-errors";
 import { completeLoginAfterAuth } from "@/lib/auth/complete-login";
 import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
 import { authorizedPostAuthPath } from "@/lib/auth/role-paths";
+import { isEmailAuthConfirmed } from "@/lib/auth/signup-session";
 import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
 import {
   addRateLimitHeaders,
@@ -101,6 +102,18 @@ async function handlePOST(req: Request) {
       "error",
       isNetworkFailure ? "unavailable" : unconfirmed ? "unconfirmed" : "invalid",
     );
+    url.searchParams.set("email", email);
+    return NextResponse.redirect(url, { status: 303 });
+  }
+
+  if (!isEmailAuthConfirmed(data.user)) {
+    logAuthWarn("auth.password.login_failed", {
+      reason: "email_not_confirmed",
+      userId: data.user.id,
+    });
+    await supabase.auth.signOut();
+    const url = new URL("/login", req.url);
+    url.searchParams.set("error", "unconfirmed");
     url.searchParams.set("email", email);
     return NextResponse.redirect(url, { status: 303 });
   }

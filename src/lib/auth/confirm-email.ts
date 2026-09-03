@@ -78,14 +78,15 @@ export function confirmLandingErrorQuery(
 
 export { loginErrorForAuthApiFailure };
 
+import { EMAIL_CONFIRMED_LOGIN_PATH } from "@/lib/auth/signup-session";
+
 export function confirmationSuccessPath(
   params: Extract<ConfirmEmailParams, { kind: "otp" | "code" }>,
-  authorizedDestination: string,
 ): string {
   if (params.kind === "otp" && params.type === "recovery") {
     return "/reset-password";
   }
-  return authorizedDestination;
+  return EMAIL_CONFIRMED_LOGIN_PATH;
 }
 
 export type ConfirmableAuthUser = Pick<

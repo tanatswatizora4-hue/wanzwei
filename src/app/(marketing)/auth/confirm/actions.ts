@@ -14,7 +14,6 @@ import {
   ensureOAuthUserProvisioned,
 } from "@/lib/auth/oauth-provision";
 import {
-  authorizedPostAuthPath,
   loginErrorForProvisionFailure,
 } from "@/lib/auth/role-paths";
 import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
@@ -94,11 +93,11 @@ async function runConfirmEmailAction(formData: FormData): Promise<void> {
     redirect("/login?error=auth_callback");
   }
 
-  const destination = confirmationSuccessPath(
-    parsed,
-    authorizedPostAuthPath(parsed.next, provisioned.role),
-  );
+  const destination = confirmationSuccessPath(parsed);
   const isRecovery = parsed.kind === "otp" && parsed.type === "recovery";
+  if (!isRecovery) {
+    await supabase.auth.signOut();
+  }
   logAuthEvent(
     isRecovery ? "auth.recovery.success" : "auth.confirmation.success",
     {

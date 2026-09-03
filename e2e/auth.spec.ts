@@ -10,7 +10,7 @@ test.describe("auth workflows", () => {
       await route.fulfill({
         status: 303,
         headers: {
-          location: "/login?check-email=1&email=e2e.signup%40example.com",
+          location: "/signup/check-email?email=e2e.signup%40example.com",
         },
       });
     });
@@ -83,5 +83,21 @@ test.describe("auth workflows", () => {
       page.getByRole("button", { name: "Confirm email" }),
     ).toBeVisible();
     expect(posts).toEqual([]);
+  });
+
+  test("signup check-email page asks the user to verify before signing in", async ({
+    page,
+  }) => {
+    await page.goto("/signup/check-email?email=e2e.signup%40example.com", {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(
+      page.getByRole("heading", { name: "Check your email" }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Check your email to verify your account before signing in."),
+    ).toBeVisible();
+    await expect(page.getByText("e2e.signup@example.com")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
   });
 });

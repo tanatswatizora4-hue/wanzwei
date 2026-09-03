@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/signup-payload";
 import { resendVerificationEmail } from "@/lib/auth/email";
 import { completeEmailSignup } from "@/lib/auth/provision-app-user";
+import { signupCheckEmailLocation } from "@/lib/auth/signup-session";
 import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
 import {
   addRateLimitHeaders,
@@ -14,6 +15,7 @@ import {
   rateLimitKeyFromRequest,
 } from "@/lib/rate-limit";
 import { withRouteLogging } from "@/lib/observability/logger";
+import { getServerSupabase } from "@/lib/supabase/server";
 import { SignupSchema } from "@/lib/validation/auth";
 import { validationErrorResponse } from "@/lib/validation/errors";
 
@@ -134,27 +136,36 @@ async function handlePOST(req: Request) {
     }
   }
 
+  const supabase = await getServerSupabase();
+  await supabase.auth.signOut();
+
   logAuthEvent("auth.signup.created", {
     role,
     recovered: provisioned.recovered,
     emailConfirmed: provisioned.emailConfirmed,
+    destination: provisioned.emailConfirmed
+      ? "/login"
+      : signupCheckEmailLocation(email),
   });
 
   if (wantsJson(req)) {
     return NextResponse.json({
       ok: true,
       needsConfirmation: !provisioned.emailConfirmed,
+      sessionEstablished: false,
     });
   }
 
-  const url = new URL("/login", req.url);
   if (provisioned.emailConfirmed) {
-    url.searchParams.set("verified", "1");
-  } else {
-    url.searchParams.set("check-email", "1");
+    const url = new URL("/login", req.url);
+    url.searchParams.set("email", email);
+    return NextResponse.redirect(url, { status: 303 });
   }
-  url.searchParams.set("email", email);
-  return NextResponse.redirect(url, { status: 303 });
+
+  return NextResponse.redirect(
+    new URL(signupCheckEmailLocation(email), req.url),
+    { status: 303 },
+  );
 }
 
 function wantsJson(req: Request): boolean {

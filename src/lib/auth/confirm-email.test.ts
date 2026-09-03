@@ -8,7 +8,6 @@ import {
   parseConfirmEmailForm,
   parseConfirmEmailParams,
 } from "./confirm-email";
-import { authorizedPostAuthPath } from "./role-paths";
 
 const TOKEN = "a".repeat(40);
 const AUTH_CODE = "b".repeat(40);
@@ -98,14 +97,14 @@ describe("consumeEmailConfirmation", () => {
       token_hash: TOKEN,
     });
     expect(result.status).toBe("verified");
-    if (result.status === "verified") {
-      expect(
-        confirmationSuccessPath(
-          { kind: "otp", tokenHash: TOKEN, type: "signup", next: null },
-          authorizedPostAuthPath(null, "professional"),
-        ),
-      ).toBe("/professional/dashboard");
-    }
+    expect(
+      confirmationSuccessPath({
+        kind: "otp",
+        tokenHash: TOKEN,
+        type: "signup",
+        next: null,
+      }),
+    ).toBe("/login?verified=1");
   });
 
   it("maps expired tokens to expired, never success", async () => {
@@ -159,17 +158,25 @@ describe("consumeEmailConfirmation", () => {
     );
   });
 
+  it("sends signup confirmation to password login, not the dashboard", () => {
+    expect(
+      confirmationSuccessPath({
+        kind: "otp",
+        tokenHash: TOKEN,
+        type: "signup",
+        next: "/professional/dashboard",
+      }),
+    ).toBe("/login?verified=1");
+  });
+
   it("sends recovery confirmation to reset-password, not login", () => {
     expect(
-      confirmationSuccessPath(
-        {
-          kind: "otp",
-          tokenHash: TOKEN,
-          type: "recovery",
-          next: "/admin",
-        },
-        authorizedPostAuthPath("/admin", "professional"),
-      ),
+      confirmationSuccessPath({
+        kind: "otp",
+        tokenHash: TOKEN,
+        type: "recovery",
+        next: "/admin",
+      }),
     ).toBe("/reset-password");
   });
 

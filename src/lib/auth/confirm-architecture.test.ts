@@ -27,10 +27,11 @@ describe("email confirmation architecture", () => {
     expect(page).toContain("Confirm email");
   });
 
-  it("explicit human confirmation POST is the only verify step", () => {
+  it("explicit human confirmation POST verifies, then signs out for password login", () => {
     expect(actions).toContain('"use server"');
     expect(actions).toContain("consumeEmailConfirmation");
     expect(actions).toContain("verifyOtp");
+    expect(actions).toContain("signOut");
     expect(actions).toContain("redirect");
   });
 
@@ -42,5 +43,13 @@ describe("email confirmation architecture", () => {
 
   it("Google sign-in is not prefetchable", () => {
     expect(googleButton).toContain("prefetch={false}");
+  });
+
+  it("keeps Google callback session exchange unchanged", () => {
+    expect(callback).toContain("auth.google.callback_received");
+    expect(callback).toContain("exchangeCodeForSession");
+    expect(callback).toContain("authorizedPostAuthPath");
+    expect(callback).not.toContain("/signup/check-email");
+    expect(callback).not.toContain("/login?verified=1");
   });
 });
