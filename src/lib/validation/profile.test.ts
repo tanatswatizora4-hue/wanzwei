@@ -35,6 +35,20 @@ describe("SettingsProfileUpdateSchema", () => {
       ).toBe(false);
     }
   });
+
+  it("accepts facility premisesNumber without verified", () => {
+    expect(
+      SettingsProfileUpdateSchema.parse({
+        name: "Chipo Ncube",
+        organisationName: "Cure Hospital",
+        facilityLocation: "Harare",
+        facilityType: "Hospital",
+        premisesNumber: " w01-2026-12 ",
+      }),
+    ).toMatchObject({
+      premisesNumber: "W01-2026-12",
+    });
+  });
 });
 
 describe("assertNoProtectedSettingsFields", () => {

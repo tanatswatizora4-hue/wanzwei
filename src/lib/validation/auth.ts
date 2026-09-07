@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
+import { parsePremisesNumberInput } from "@/lib/facilities/premises-number";
+import { CanonicalProfessionSchema } from "@/lib/professions";
 
 const EmailSchema = z
   .string()
@@ -66,8 +68,33 @@ export const SignupSchema = z
       (value) => (value === null || value === "" ? undefined : value),
       FacilityTypeSchema.optional(),
     ),
+    profession: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      CanonicalProfessionSchema.optional(),
+    ),
+    premisesNumber: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      z.string().trim().max(40).optional(),
+    ),
   })
   .superRefine((value, ctx) => {
+    if (value.role === "professional" && !value.profession) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["profession"],
+        message: "Profession is required",
+      });
+    }
+    if (value.premisesNumber) {
+      const parsed = parsePremisesNumberInput(value.premisesNumber);
+      if (!parsed.ok) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["premisesNumber"],
+          message: parsed.message,
+        });
+      }
+    }
     if (value.role !== "facility") return;
     if (!value.organisationName?.trim()) {
       ctx.addIssue({
@@ -90,6 +117,14 @@ export const SignupSchema = z
         message: "Facility type is required",
       });
     }
+  })
+  .transform((value) => {
+    if (!value.premisesNumber) return value;
+    const parsed = parsePremisesNumberInput(value.premisesNumber);
+    return {
+      ...value,
+      premisesNumber: parsed.ok ? (parsed.value ?? undefined) : value.premisesNumber,
+    };
   });
 
 export type SignupInput = z.infer<typeof SignupSchema>;

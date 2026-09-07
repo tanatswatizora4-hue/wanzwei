@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { postDocumentUpload } from "@/lib/client/post-document-upload";
+import type { ProfessionalDocumentPurpose } from "@/lib/verification/document-purpose";
 
 export type UploadedDocListItem = {
   id: string;
@@ -22,6 +23,7 @@ export type UploadedDocListItem = {
   public_url: string;
   content_type: string;
   created_at: string;
+  purpose?: ProfessionalDocumentPurpose | null;
 };
 
 type InFlightUpload = {
@@ -44,19 +46,40 @@ export function DocumentUploadPanel(props: {
   apiPath: "/api/uploads/professional" | "/api/uploads/facility-verification";
   initialDocuments: UploadedDocListItem[];
   enabled: boolean;
+  purpose?: ProfessionalDocumentPurpose;
+  multiple?: boolean;
 }) {
-  const { title, description, hint, apiPath, initialDocuments, enabled } = props;
+  const {
+    title,
+    description,
+    hint,
+    apiPath,
+    initialDocuments,
+    enabled,
+    purpose,
+    multiple = true,
+  } = props;
   const [docs, setDocs] = React.useState<UploadedDocListItem[]>(initialDocuments);
   const [pending, setPending] = React.useState<InFlightUpload[]>([]);
 
+  const listPath =
+    apiPath === "/api/uploads/professional" && purpose
+      ? `${apiPath}?purpose=${purpose}`
+      : apiPath;
+
   const refresh = React.useCallback(async () => {
     if (!enabled) return;
-    const res = await fetch(apiPath, { credentials: "same-origin" });
+    const res = await fetch(listPath, { credentials: "same-origin" });
     const json = await res.json().catch(() => ({}));
     if (res.ok && Array.isArray(json.documents)) {
-      setDocs(json.documents as UploadedDocListItem[]);
+      const listed = json.documents as UploadedDocListItem[];
+      setDocs(
+        purpose
+          ? listed.filter((doc) => (doc.purpose ?? "supporting") === purpose)
+          : listed,
+      );
     }
-  }, [apiPath, enabled]);
+  }, [listPath, enabled, purpose]);
 
   const uploadFile = React.useCallback(
     async (file: File) => {
@@ -77,7 +100,7 @@ export function DocumentUploadPanel(props: {
           ),
         );
         try {
-          const json = await postDocumentUpload(file, apiPath);
+          const json = await postDocumentUpload(file, apiPath, { purpose });
           setPending((p) =>
             p.map((x) =>
               x.tempId === tempId ? { ...x, status: "success" } : x,
@@ -85,7 +108,11 @@ export function DocumentUploadPanel(props: {
           );
           toast.success(`${file.name} uploaded`);
           if (json.document) {
-            setDocs((d) => [json.document as UploadedDocListItem, ...d]);
+            setDocs((d) =>
+              multiple
+                ? [json.document as UploadedDocListItem, ...d]
+                : [json.document as UploadedDocListItem],
+            );
           } else {
             await refresh();
           }
@@ -108,7 +135,7 @@ export function DocumentUploadPanel(props: {
 
       void run();
     },
-    [apiPath, refresh],
+    [apiPath, purpose, multiple, refresh],
   );
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -149,7 +176,7 @@ export function DocumentUploadPanel(props: {
             <input
               type="file"
               accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-              multiple
+              multiple={multiple}
               disabled={!enabled}
               aria-label="Choose PDF, JPG, or PNG files to upload"
               onChange={onInputChange}

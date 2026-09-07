@@ -83,7 +83,7 @@ async function handlePOST(req: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const { name, email, password, role, organisationName, location, facilityType } =
+  const { name, email, password, role, organisationName, location, facilityType, profession, premisesNumber } =
     parsed.data;
 
   logAuthEvent("auth.signup.started", { role });
@@ -93,12 +93,14 @@ async function handlePOST(req: Request) {
     password,
     name,
     role,
+    profession: role === "professional" ? profession : undefined,
     facility:
       role === "facility" && organisationName && location && facilityType
         ? {
             organisationName,
             location,
             facilityType,
+            premisesNumber: premisesNumber ?? null,
           }
         : undefined,
   });

@@ -18,6 +18,7 @@ import {
   getVerification,
   listVerificationEvents,
 } from "@/lib/repos/verifications";
+import { findLatestVerificationEvidence } from "@/lib/repos/verification-evidence";
 
 export default async function AdminVerificationDetailPage({
   params,
@@ -32,12 +33,13 @@ export default async function AdminVerificationDetailPage({
   const verification = await getVerification(verificationId);
   if (!verification) notFound();
 
-  const [account, events, registry] = await Promise.all([
+  const [account, events, registry, evidence] = await Promise.all([
     findUserById(verification.userId),
     listVerificationEvents(verification.id),
     verification.matchedRegistryId
       ? getRegistryByIdForAdmin(verification.matchedRegistryId)
       : Promise.resolve(null),
+    findLatestVerificationEvidence(verification.id),
   ]);
 
   return (
@@ -92,6 +94,65 @@ export default async function AdminVerificationDetailPage({
           </CardBody>
         </Card>
       </div>
+
+      <Card>
+        <CardBody className="pt-5">
+          <h2 className="text-[13px] font-semibold uppercase tracking-wider text-[color:var(--color-ink-400)]">
+            Hybrid evidence
+          </h2>
+          {evidence ? (
+            <dl className="mt-3 grid gap-2 text-[13px] sm:grid-cols-2">
+              <Row label="Identity name" value={evidence.identityName ?? "—"} />
+              <Row
+                label="Identity document"
+                value={evidence.identityDocumentType ?? "—"}
+              />
+              <Row label="Identity quality" value={evidence.identityQuality ?? "—"} />
+              <Row label="Credential name" value={evidence.credentialName ?? "—"} />
+              <Row label="Credential type" value={evidence.credentialType ?? "—"} />
+              <Row
+                label="Credential class"
+                value={evidence.credentialClass?.replaceAll("_", " ") ?? "—"}
+              />
+              <Row
+                label="Credential quality"
+                value={evidence.credentialQuality ?? "—"}
+              />
+              <Row
+                label="Detected profession"
+                value={evidence.detectedProfession ?? "—"}
+              />
+              <Row label="Issuing body" value={evidence.issuingBody ?? "—"} />
+              <Row
+                label="Registration number"
+                value={evidence.registrationNumber ?? "—"}
+              />
+              <Row label="Issue date" value={evidence.issueDate ?? "—"} />
+              <Row label="Expiry" value={evidence.expiryDate ?? "—"} />
+              <Row label="Name comparison" value={evidence.nameMatch ?? "—"} />
+              <Row
+                label="Profession comparison"
+                value={evidence.professionMatch ?? "—"}
+              />
+              <Row label="Expiry check" value={evidence.expiryCheck ?? "—"} />
+              <Row
+                label="Registry result"
+                value={evidence.registryOutcome?.replaceAll("_", " ") ?? "—"}
+              />
+              <Row label="Analyzer status" value={evidence.analysisStatus} />
+              <Row
+                label="Deterministic decision"
+                value={evidence.decision.replaceAll("_", " ")}
+              />
+              <Row label="Decision reason" value={evidence.decisionReason} />
+            </dl>
+          ) : (
+            <p className="mt-3 text-[13px] text-[color:var(--color-ink-500)]">
+              No structured analysis evidence is stored for this case yet.
+            </p>
+          )}
+        </CardBody>
+      </Card>
 
       <Card>
         <CardBody className="pt-5">

@@ -55,6 +55,7 @@ export type FacilitySignupDetails = {
   organisationName: string;
   location: string;
   facilityType: Facility["type"];
+  premisesNumber?: string | null;
 };
 
 export type AppUserStore = {
@@ -68,12 +69,14 @@ export type AppUserStore = {
     organisationName: string;
     location: string;
     facilityType: Facility["type"];
+    premisesNumber?: string | null;
   }) => Promise<{ userId: string; facilityId: string; verified: boolean } | null>;
   attachFacilityToExistingUser?: (input: {
     userId: string;
     organisationName: string;
     location: string;
     facilityType: Facility["type"];
+    premisesNumber?: string | null;
   }) => Promise<{ facilityId: string; verified: boolean } | null>;
 };
 
@@ -128,7 +131,12 @@ function requireFacilityDetails(
       "Facility organisation name, location, and type are required.",
     );
   }
-  return { organisationName, location, facilityType };
+  return {
+    organisationName,
+    location,
+    facilityType,
+    premisesNumber: facility?.premisesNumber ?? null,
+  };
 }
 
 async function linkFacilityToProfile(
@@ -149,6 +157,7 @@ async function linkFacilityToProfile(
     organisationName: facility.organisationName,
     location: facility.location,
     facilityType: facility.facilityType,
+    premisesNumber: facility.premisesNumber,
   });
   if (!attached || attached.verified) {
     throw new AppUserProvisionError(
@@ -183,6 +192,7 @@ export async function ensureAppUserProfile(
     email: string;
     name: string;
     role: Role;
+    profession?: string | null;
     facility?: FacilitySignupDetails;
   },
   store: AppUserStore = defaultStore,
@@ -230,6 +240,7 @@ export async function ensureAppUserProfile(
         organisationName: details.organisationName,
         location: details.location,
         facilityType: details.facilityType,
+        premisesNumber: details.premisesNumber,
       });
       if (!provisioned || provisioned.verified) {
         throw new AppUserProvisionError(
@@ -257,6 +268,8 @@ export async function ensureAppUserProfile(
       name: input.name,
       role: input.role,
       verified: false,
+      profession:
+        input.role === "professional" ? (input.profession ?? null) : null,
     });
     if (!created) {
       throw new AppUserProvisionError(
@@ -306,6 +319,7 @@ export async function completeEmailSignup(
     password: string;
     name: string;
     role: Exclude<Role, "admin">;
+    profession?: string | null;
     facility?: FacilitySignupDetails;
   },
   deps: EmailSignupDeps = defaultSignupDeps,
@@ -377,6 +391,7 @@ export async function completeEmailSignup(
         email,
         name: input.name,
         role: input.role,
+        profession: input.profession,
         facility: input.role === "facility" ? input.facility : undefined,
       },
       deps,

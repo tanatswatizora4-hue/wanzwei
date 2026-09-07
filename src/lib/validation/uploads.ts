@@ -7,6 +7,10 @@ import {
   MAX_DOCUMENT_BYTES,
   MAX_PROFILE_PHOTO_BYTES,
 } from "@/lib/upload-rules";
+import {
+  parseProfessionalDocumentPurpose,
+  type ProfessionalDocumentPurpose,
+} from "@/lib/verification/document-purpose";
 
 const uploadedFileSchema = z.instanceof(File, {
   message: "Missing file",
@@ -44,6 +48,16 @@ export const DocumentUploadSchema = z.object({
       (file) => file.size <= MAX_DOCUMENT_BYTES,
       "File is too large (max 15 MB).",
     ),
+  purpose: z.preprocess(
+    (value) => (value == null || value === "" ? "supporting" : value),
+    z
+      .string()
+      .refine(
+        (value): value is ProfessionalDocumentPurpose =>
+          parseProfessionalDocumentPurpose(value) != null,
+        "Invalid document purpose.",
+      ),
+  ),
 });
 
 export type ProfileAvatarUploadInput = z.infer<

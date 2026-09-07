@@ -29,14 +29,19 @@ const TARGET_TABLES = [
   "facility_verification_documents",
   "practitioner_registry",
   "verification_events",
+  "verification_evidence",
   "course_enrolments",
   "listing_enquiries",
 ] as const;
+
+/** Unapplied additive migrations. Missing tables are skipped, not failed. */
+const OPTIONAL_UNAPPLIED_TABLES = new Set<string>(["verification_evidence"]);
 
 /** Registry/audit tables are RLS-enabled with no client policies (default deny). */
 const DEFAULT_DENY_TABLES = new Set<string>([
   "practitioner_registry",
   "verification_events",
+  "verification_evidence",
 ]);
 
 const METADATA_SQL = `
@@ -59,6 +64,7 @@ const METADATA_SQL = `
       'facility_verification_documents',
       'practitioner_registry',
       'verification_events',
+      'verification_evidence',
       'course_enrolments',
       'listing_enquiries'
     ]::text[]) AS table_name
@@ -119,6 +125,19 @@ function formatPassFail(ok: boolean): string {
   return ok ? "PASS" : "FAIL";
 }
 
+function isOptionalUnapplied(row: TableMetadata): boolean {
+  return OPTIONAL_UNAPPLIED_TABLES.has(row.table_name) && row.rls_enabled == null;
+}
+
+function rowStatusOk(row: TableMetadata): boolean {
+  if (isOptionalUnapplied(row)) return true;
+  const rlsOk = row.rls_enabled === true;
+  const policiesOk = DEFAULT_DENY_TABLES.has(row.table_name)
+    ? row.policy_count === 0
+    : row.policy_count >= 1;
+  return rlsOk && policiesOk;
+}
+
 function printTable(rows: TableMetadata[]): void {
   const header = ["Table", "RLS", "Policies", "Status"];
   const colWidths = [36, 6, 10, 6];
@@ -130,18 +149,16 @@ function printTable(rows: TableMetadata[]): void {
   console.log(line(colWidths.map((width) => "-".repeat(width))));
 
   for (const row of rows) {
-    const rlsOk = row.rls_enabled === true;
-    const policiesOk = DEFAULT_DENY_TABLES.has(row.table_name)
-      ? row.policy_count === 0
-      : row.policy_count >= 1;
-    const statusOk = rlsOk && policiesOk;
+    const status = isOptionalUnapplied(row)
+      ? "SKIP"
+      : formatPassFail(rowStatusOk(row));
 
     console.log(
       line([
         row.table_name,
         row.rls_enabled === true ? "on" : row.rls_enabled === false ? "off" : "n/a",
         String(row.policy_count),
-        formatPassFail(statusOk),
+        status,
       ]),
     );
   }
@@ -191,22 +208,23 @@ async function verifyRls(): Promise<void> {
 
     printTable(orderedRows);
 
-    const failures = orderedRows.filter((row) => {
-      const rlsOk = row.rls_enabled === true;
-      const policiesOk = DEFAULT_DENY_TABLES.has(row.table_name)
-        ? row.policy_count === 0
-        : row.policy_count >= 1;
-      return !rlsOk || !policiesOk;
-    });
+    const failures = orderedRows.filter((row) => !rowStatusOk(row));
+    const skipped = orderedRows.filter(isOptionalUnapplied).length;
+    const checked = orderedRows.length - skipped;
 
     console.log("");
     if (failures.length > 0) {
       failFast(
-        `verify:rls failed: ${failures.length}/${TARGET_TABLES.length} table(s) missing RLS or policies.`,
+        `verify:rls failed: ${failures.length}/${checked} table(s) missing RLS or policies.`,
       );
     }
 
-    console.log(`verify:rls passed (${TARGET_TABLES.length}/${TARGET_TABLES.length} tables).`);
+    console.log(`verify:rls passed (${checked}/${checked} tables).`);
+    if (skipped > 0) {
+      console.log(
+        `Skipped ${skipped} unapplied optional table(s) pending migration.`,
+      );
+    }
   } finally {
     void sql.end({ timeout: 1 }).catch(() => undefined);
   }

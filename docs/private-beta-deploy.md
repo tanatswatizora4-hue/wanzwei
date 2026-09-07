@@ -36,8 +36,29 @@ Set these for **Production** (and Preview if you want staging):
 | `RESEND_API_KEY` | App transactional email (optional; Auth emails use Supabase). Missing key skips send and does not roll back DB writes. |
 | `RESEND_FROM_EMAIL` | Optional From address. Defaults to `Wanzwei <onboarding@resend.dev>` |
 | `RESEND_REPLY_TO_EMAIL` | Optional Reply-To |
+| `GEMINI_API_KEY` | Server-only Gemini document extraction. Never `NEXT_PUBLIC_*`. If unset, professional verification stays under review and never auto-verifies. |
 
-### Security note
+### Professional verification (v1)
+
+v1 uses:
+
+- Gemini document extraction for identity and professional credentials
+- a deterministic Wanzwei decision engine
+- HPA registry corroboration for Pharmacist, Pharmacy Technician, Nurse, and Midwife
+- manual review for exceptions
+
+Gemini extracts evidence. It does **not** set `users.verified`. Model confidence is never a verification grant by itself.
+
+v1 Gemini analysis is **not** equivalent to dedicated government-ID authenticity or liveness verification.
+
+### v1.1 (not in this release)
+
+- Smile ID / dedicated identity authenticity verification
+- liveness if required
+- additional professional registries
+- facility premises registry
+
+## 3. Auth URL configuration
 
 Authentication is always enforced via Supabase Auth. Do not add env flags or code paths that bypass login in any environment.
 

@@ -14,6 +14,7 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label, Textarea } from "@/components/ui/input";
+import { ProfessionSelect } from "@/components/app/profession-select";
 import {
   Select,
   SelectContent,
@@ -24,16 +25,6 @@ import {
 import { SegmentedRadio } from "@/components/ui/segmented";
 import { Stepper } from "@/components/ui/stepper";
 import { createAlertAction } from "./actions";
-
-const PROFESSIONS = [
-  "Registered Nurse",
-  "Theatre Nurse",
-  "ICU Nurse",
-  "Clinical Officer",
-  "Pharmacist",
-  "Radiographer",
-  "Medical Laboratory Scientist",
-];
 
 const LOCATIONS = ["Harare", "Bulawayo", "Mutare", "Gweru", "Any"];
 
@@ -72,18 +63,7 @@ export function EmergencyAlertForm({
             hint="Only verified, available pros are matched."
             className="lg:col-span-1"
           >
-            <Select name="profession" defaultValue="Registered Nurse">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PROFESSIONS.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ProfessionSelect name="profession" required defaultValue="Nurse" />
           </FieldGroup>
 
           <FieldGroup label="Location" hint="Use ‘Any’ for nationwide push.">
@@ -245,7 +225,7 @@ export function EmergencyAlertForm({
         <div className="flex items-center justify-between gap-3 border-t border-[color:var(--color-border-default)] bg-[color:var(--color-surface-muted)]/70 px-5 py-3">
           <div className="flex items-center gap-2 text-[11.5px] text-[color:var(--color-ink-500)]">
             <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--color-brand-600)]" />
-            Verified-only delivery · counts as 1 of 5 monthly alerts
+            Verified-only delivery · every eligible professional is notified
           </div>
           <Button type="submit">
             <Siren className="h-3.5 w-3.5" />

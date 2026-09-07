@@ -78,6 +78,7 @@ describe("applyOwnProfileUpdate", () => {
         organisationName: "Mutare Clinic",
         facilityLocation: "Mutare",
         facilityType: "Clinic",
+        premisesNumber: " w01-2026-0042 ",
       }),
       {
         hasDbConfig: () => true,
@@ -114,6 +115,7 @@ describe("applyOwnProfileUpdate", () => {
         name: "Mutare Clinic",
         location: "Mutare",
         type: "Clinic",
+        premisesNumber: "W01-2026-0042",
       },
     ]);
     expect(JSON.stringify(facilityPatches)).not.toContain("verified");

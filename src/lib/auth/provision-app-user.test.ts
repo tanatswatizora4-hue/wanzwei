@@ -24,10 +24,10 @@ function makeUser(overrides: Partial<User> = {}): User {
 
 function memoryStore(seed: User[] = []): AppUserStore & {
   rows: User[];
-  facilities: { id: string; verified: boolean }[];
+  facilities: { id: string; verified: boolean; premisesNumber?: string | null }[];
 } {
   const rows = [...seed];
-  const facilities: { id: string; verified: boolean }[] = [];
+  const facilities: { id: string; verified: boolean; premisesNumber?: string | null }[] = [];
   return {
     rows,
     facilities,
@@ -43,6 +43,7 @@ function memoryStore(seed: User[] = []): AppUserStore & {
         role: user.role,
         verified: user.verified === true,
         facilityId: user.facilityId ?? undefined,
+        profession: user.profession ?? undefined,
       });
       rows.push(created);
       return created;
@@ -59,7 +60,11 @@ function memoryStore(seed: User[] = []): AppUserStore & {
         location: input.location,
       });
       rows.push(created);
-      facilities.push({ id: facilityId, verified: false });
+      facilities.push({
+        id: facilityId,
+        verified: false,
+        premisesNumber: input.premisesNumber ?? null,
+      });
       return { userId: input.userId, facilityId, verified: false };
     },
     attachFacilityToExistingUser: async (input) => {
@@ -607,7 +612,11 @@ describe("facility signup provisioning", () => {
       facilityId: "fac-11111111-1111-4111-8111-111111111111",
     });
     expect(store.facilities).toEqual([
-      { id: "fac-11111111-1111-4111-8111-111111111111", verified: false },
+      {
+        id: "fac-11111111-1111-4111-8111-111111111111",
+        verified: false,
+        premisesNumber: null,
+      },
     ]);
   });
 
@@ -759,5 +768,45 @@ describe("facility signup provisioning", () => {
     expect(provisioned).toBe(0);
     expect(store.rows[0]?.role).toBe("professional");
     expect(store.rows[0]?.facilityId).toBeUndefined();
+  });
+
+  it("stores a professional profession without marking the account verified", async () => {
+    const store = memoryStore();
+    const result = await completeEmailSignup(
+      {
+        email: "pro@example.com",
+        password: "secret1",
+        name: "Tinashe Moyo",
+        role: "professional",
+        profession: "Digital Health Specialist",
+      },
+      signupDeps(store),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(store.rows[0]?.profession).toBe("Digital Health Specialist");
+    expect(store.rows[0]?.verified).toBe(false);
+  });
+
+  it("stores a facility premises number without marking the facility verified", async () => {
+    const store = memoryStore();
+    const result = await completeEmailSignup(
+      {
+        email: "facility@example.com",
+        password: "secret1",
+        name: "Chipo Ncube",
+        role: "facility",
+        facility: {
+          ...FACILITY_SIGNUP,
+          premisesNumber: "W01-2026-0042",
+        },
+      },
+      signupDeps(store),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(store.facilities[0]?.premisesNumber).toBe("W01-2026-0042");
+    expect(store.facilities[0]?.verified).toBe(false);
+    expect(store.rows[0]?.verified).toBe(false);
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { parsePremisesNumberInput } from "@/lib/facilities/premises-number";
 import { FacilityTypeSchema } from "@/lib/validation/auth";
 
 const ProtectedSettingsFieldsSchema = z
@@ -23,8 +24,30 @@ export const SettingsProfileUpdateSchema = z
     organisationName: z.string().trim().min(1).max(160).optional(),
     facilityLocation: z.string().trim().min(1).max(120).optional(),
     facilityType: FacilityTypeSchema.optional(),
+    premisesNumber: z.string().trim().max(40).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.premisesNumber === undefined) return;
+    const parsed = parsePremisesNumberInput(value.premisesNumber);
+    if (!parsed.ok) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["premisesNumber"],
+        message: parsed.message,
+      });
+    }
+  })
+  .transform((value) => {
+    if (value.premisesNumber === undefined) return value;
+    const parsed = parsePremisesNumberInput(value.premisesNumber);
+    return {
+      ...value,
+      premisesNumber: parsed.ok
+        ? (parsed.value ?? "")
+        : value.premisesNumber,
+    };
+  });
 
 export const AvatarProfilePatchSchema = z.object({
   avatar: z.string().trim().min(1, "Avatar path is required").max(512),

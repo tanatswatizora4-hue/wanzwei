@@ -6,6 +6,7 @@ export type ProfessionalDocumentRow = {
   file_name: string;
   content_type: string;
   created_at: string;
+  purpose?: "identity" | "credential" | "supporting" | null;
 };
 
 export type FacilityVerificationDocumentRow = {

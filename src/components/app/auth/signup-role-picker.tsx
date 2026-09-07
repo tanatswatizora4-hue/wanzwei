@@ -3,7 +3,11 @@
 import { useState } from "react";
 
 import { cn } from "@/lib/cn";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, FieldHint } from "@/components/ui/input";
+import { ProfessionSelect } from "@/components/app/profession-select";
+import {
+  professionSupportsHpaAutoVerify,
+} from "@/lib/professions";
 import { FacilityTypeSchema } from "@/lib/validation/auth";
 
 type SignupRole = "professional" | "facility";
@@ -11,7 +15,7 @@ type SignupRole = "professional" | "facility";
 const FACILITY_TYPES = FacilityTypeSchema.options;
 
 const nativeSelectClassName = cn(
-  "flex h-9 w-full rounded-[var(--radius-sm)] border bg-white px-3 text-sm",
+  "flex min-h-11 w-full rounded-[var(--radius-sm)] border bg-white px-3 text-sm sm:h-9 sm:min-h-9",
   "border-[color:var(--color-border-default)] text-[color:var(--color-ink-900)]",
   "shadow-[var(--shadow-xs)] transition-colors",
   "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--color-brand-100)] focus-visible:border-[color:var(--color-brand-500)]",
@@ -23,6 +27,7 @@ export function SignupRolePicker({
   defaultRole: SignupRole;
 }) {
   const [selectedRole, setSelectedRole] = useState<SignupRole>(defaultRole);
+  const [profession, setProfession] = useState("");
 
   return (
     <>
@@ -66,7 +71,24 @@ export function SignupRolePicker({
         </button>
       </div>
 
-      {selectedRole === "facility" ? (
+      {selectedRole === "professional" ? (
+        <div className="mt-3.5 grid gap-1.5">
+          <Label htmlFor="profession">Profession</Label>
+          <ProfessionSelect
+            name="profession"
+            required
+            value={profession}
+            onValueChange={setProfession}
+          />
+          <FieldHint>
+            {profession && !professionSupportsHpaAutoVerify(profession)
+              ? "This profession is not in the HPA auto-match register yet. You can still create an account; credentials may require manual review."
+              : profession
+                ? "After signup you can submit your HPA registration for automatic matching where the register supports it."
+                : "Search and select your profession."}
+          </FieldHint>
+        </div>
+      ) : (
         <div className="mt-3.5 flex flex-col gap-3.5">
           <div className="grid gap-1.5">
             <Label htmlFor="organisationName">Organisation name</Label>
@@ -76,6 +98,19 @@ export function SignupRolePicker({
               placeholder="Cure Hospital"
               required
             />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="premisesNumber">Premises registration number</Label>
+            <Input
+              id="premisesNumber"
+              name="premisesNumber"
+              placeholder="W01-2026-1234"
+              autoComplete="off"
+            />
+            <FieldHint>
+              Enter the premises registration number issued to your facility.
+              Submitting a number does not verify the facility.
+            </FieldHint>
           </div>
           <div className="grid gap-1.5">
             <Label htmlFor="location">City / location</Label>
@@ -106,7 +141,7 @@ export function SignupRolePicker({
             </select>
           </div>
         </div>
-      ) : null}
+      )}
     </>
   );
 }

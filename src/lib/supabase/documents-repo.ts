@@ -1,16 +1,18 @@
 import { createUploadClient, isSupabaseConfigured } from "./service";
 import { withSignedDocumentUrls } from "./private-storage";
 import { createLogger, withRepositoryLogging } from "@/lib/observability/logger";
-import { isMissingTableError, toRepositoryError } from "./errors";
+import { isMissingTableError, isUndefinedColumnError, toRepositoryError } from "./errors";
 import type {
   FacilityVerificationDocumentRow,
   ProfessionalDocumentRow,
 } from "./document-types";
+import type { ProfessionalDocumentPurpose } from "@/lib/verification/document-purpose";
 
 const logger = createLogger("documents");
 
 export async function listProfessionalDocuments(
   userId: string,
+  options?: { purpose?: ProfessionalDocumentPurpose },
 ): Promise<ProfessionalDocumentRow[]> {
   if (!isSupabaseConfigured()) return [];
   return withRepositoryLogging(
@@ -18,11 +20,24 @@ export async function listProfessionalDocuments(
     "listProfessionalDocuments",
     async () => {
       const supabase = createUploadClient();
-      const { data, error } = await supabase
+      let query = supabase
         .from("professional_documents")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
+      if (options?.purpose) {
+        query = query.eq("purpose", options.purpose);
+      }
+      let { data, error } = await query;
+      if (error && options?.purpose && isUndefinedColumnError(error)) {
+        const fallback = await supabase
+          .from("professional_documents")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
       if (error) {
         if (isMissingTableError(error)) {
           logger.warn("documents.schema_missing", {

@@ -86,11 +86,14 @@ export default async function ProfilePage() {
           </Card>
 
           <DocumentUploadPanel
-            title="Uploaded documents"
-            description="Licences, credentials, and supporting files for facilities. Files are stored in your private documents bucket."
-            hint="PDF, JPG, or PNG · max 15 MB · bucket: documents"
+            title="Supporting documents"
+            description="Private supporting files such as references. Identity documents and professional credentials used for verification are submitted from Settings and are never shown to facilities or other professionals."
+            hint="PDF, JPG, or PNG · max 15 MB · private documents bucket"
             apiPath="/api/uploads/professional"
-            initialDocuments={initialDocs}
+            purpose="supporting"
+            initialDocuments={initialDocs.filter(
+              (doc) => (doc.purpose ?? "supporting") === "supporting",
+            )}
             enabled={uploadsEnabled}
           />
         </div>
@@ -115,7 +118,7 @@ export default async function ProfilePage() {
                   done={Boolean(user.profession?.trim())}
                 />
                 <ProfileFact
-                  label="HPA verification"
+                  label="Verification"
                   done={user.verified === true}
                 />
                 <ProfileFact

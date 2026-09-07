@@ -17,12 +17,17 @@ const NON_CLINICAL_QUALIFICATIONS = new Set(["SALES REPRESENTATIVE"]);
  * Conservative auto-verify families. Only exact membership in the same
  * group is compatible. Unknown titles never auto-qualify, including when
  * the submitted string equals the registry string.
+ *
+ * UI label "Nurse" is mapped onto the existing REGISTERED NURSE / RN
+ * family because that is the compatible practitioner_registry match.
+ * Adjacent titles (Nurse Anesthetist, Warehouse Pharmacist, Dentist)
+ * are intentionally not added here.
  */
 export const PROFESSION_FAMILIES: readonly string[][] = [
   ["PHARMACIST"],
   ["PHARMACY TECHNICIAN", "PHARM TECH", "PHARMACY TECH"],
   ["IND CLINIC NURSE", "INDEPENDENT CLINIC NURSE"],
-  ["REGISTERED NURSE", "RN"],
+  ["REGISTERED NURSE", "RN", "NURSE"],
   ["MIDWIFE"],
 ];
 
@@ -180,6 +185,10 @@ export function professionsCompatible(
   }
 
   return false;
+}
+
+export function professionHasHpaAutoVerifyFamily(raw: string): boolean {
+  return professionFamily(normalizeQualification(raw)) != null;
 }
 
 function professionFamily(normalized: string): string | null {

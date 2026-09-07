@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { SignupSchema } from "@/lib/validation/auth";
 import { SettingsProfileUpdateSchema } from "@/lib/validation/profile";
+import { SubmitVerificationSchema } from "@/lib/validation/verifications";
 import { isVerifiedProfessional } from "@/lib/auth/professional-verification";
 import { cancelOwnedEmergencyAlert } from "@/lib/emergency/cancel-owned-alert";
 
@@ -27,6 +28,17 @@ describe("Phase A security invariants", () => {
       }).success,
     ).toBe(false);
     expect(
+      SubmitVerificationSchema.safeParse({
+        profession: "Pharmacist",
+        identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        credentialDocumentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        verified: true,
+        decision: "verified",
+        confidence: 0.99,
+        registry_match: true,
+      }).success,
+    ).toBe(false);
+    expect(
       isVerifiedProfessional({ role: "professional", verified: false }),
     ).toBe(false);
   });
@@ -44,6 +56,7 @@ describe("Phase A security invariants", () => {
     );
     const end = source.indexOf("export async function provisionFacilityUser");
     expect(source.slice(start, end)).not.toMatch(/verified/);
+    expect(source.slice(start, end)).toContain("premisesNumber");
   });
 
   it("USER_CAN_CHOOSE_FACILITY_ID=false", () => {
@@ -78,5 +91,27 @@ describe("Phase A security invariants", () => {
       "utf8",
     );
     expect(source).toContain("requireVerifiedProfessional");
+  });
+
+  it("FACILITY_CANNOT_READ_PROFESSIONAL_VERIFICATION_DOCUMENTS=true", () => {
+    const source = readFileSync(
+      "supabase/migrations/0005_rls_gap_hardening.sql",
+      "utf8",
+    ).replaceAll("\r\n", "\n");
+    const start = source.indexOf(
+      "-- professional_documents\n-- ---------------------------------------------------------------------",
+    );
+    const end = source.indexOf(
+      "-- facility_verification_documents\n-- ---------------------------------------------------------------------",
+    );
+    const policy = source.slice(start, end);
+    expect(policy).toContain("app_user_is_professional()");
+    expect(policy).toContain("app_user_is_admin()");
+    expect(policy).not.toContain("app_user_is_facility()");
+    const facilityApps = readFileSync(
+      "src/app/(app)/facility/applications/[id]/page.tsx",
+      "utf8",
+    );
+    expect(facilityApps).not.toContain("professional_documents");
   });
 });

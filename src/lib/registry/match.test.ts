@@ -208,8 +208,14 @@ describe("professionsCompatible", () => {
   it("does not treat midwife as generic nurse and does not auto-qualify unknown equals", () => {
     expect(professionsCompatible("Midwife", "NURSE")).toBe(false);
     expect(professionsCompatible("Midwife", "REGISTERED NURSE")).toBe(false);
-    expect(professionsCompatible("Nurse", "REGISTERED NURSE")).toBe(false);
+    expect(professionsCompatible("Nurse", "REGISTERED NURSE")).toBe(true);
+    expect(professionsCompatible("Nurse Anesthetist", "REGISTERED NURSE")).toBe(
+      false,
+    );
     expect(professionsCompatible("Dentist", "DENTIST")).toBe(false);
+    expect(professionsCompatible("Warehouse Pharmacist", "PHARMACIST")).toBe(
+      false,
+    );
     expect(professionsCompatible("Midwife", "MIDWIFE")).toBe(true);
   });
 });

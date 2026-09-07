@@ -50,6 +50,9 @@ export function readSettingsProfileForm(
     organisationName: readOptional(formData, "organisationName"),
     facilityLocation: readOptional(formData, "facilityLocation"),
     facilityType: readOptional(formData, "facilityType"),
+    premisesNumber: formData.has("premisesNumber")
+      ? (readOptional(formData, "premisesNumber") ?? "")
+      : undefined,
   };
 }
 
@@ -106,6 +109,7 @@ export async function applyOwnProfileUpdate(
     name?: string;
     location?: string;
     type?: Facility["type"];
+    premisesNumber?: string | null;
   } = {};
   if (parsed.data.organisationName) {
     facilityPatch.name = parsed.data.organisationName;
@@ -115,6 +119,11 @@ export async function applyOwnProfileUpdate(
   }
   if (parsed.data.facilityType) {
     facilityPatch.type = parsed.data.facilityType;
+  }
+  if (parsed.data.premisesNumber !== undefined) {
+    facilityPatch.premisesNumber = parsed.data.premisesNumber.trim()
+      ? parsed.data.premisesNumber
+      : null;
   }
 
   if (Object.keys(facilityPatch).length > 0) {

@@ -72,7 +72,10 @@ export default async function FacilityDashboardPage() {
                   <h2 className="text-[18px] font-semibold tracking-tight">
                     {facility?.name ?? "Facility profile pending"}
                   </h2>
-                  <FacilityVerifiedBadge verified={facility?.verified === true} />
+                  <FacilityVerifiedBadge
+                    verified={facility?.verified === true}
+                    premisesNumber={facility?.premisesNumber}
+                  />
                 </div>
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
                   {facility ? `${facility.type} · ${facility.location}` : "Link your facility profile"}

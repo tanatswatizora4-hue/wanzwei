@@ -5,6 +5,7 @@ import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, jobs, users } from "@/lib/db/schema";
 import { facilityInitialsFromName } from "@/lib/facilities/initials";
+import { normalizePremisesNumber } from "@/lib/facilities/premises-number";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type { Facility as DbFacilityRow, NewFacility } from "@/lib/db/schema";
 import type { Facility } from "@/lib/types";
@@ -22,6 +23,7 @@ export function toFacility(row: DbFacilityRow): Facility {
     name: row.name,
     type: row.type,
     location: row.location,
+    premisesNumber: row.premisesNumber ?? null,
     verified: row.verified,
     rating: Number(row.rating),
     openRoles: row.openRoles,
@@ -226,6 +228,7 @@ export type NewUnverifiedFacilityInput = {
   name: string;
   type: Facility["type"];
   location: string;
+  premisesNumber?: string | null;
 };
 
 /**
@@ -240,6 +243,7 @@ export async function createUnverifiedFacility(
     name: input.name,
     type: input.type,
     location: input.location,
+    premisesNumber: normalizePremisesNumber(input.premisesNumber),
     verified: false,
     rating: "0",
     openRoles: 0,
@@ -257,6 +261,7 @@ export type FacilityProfilePatch = {
   name?: string;
   type?: Facility["type"];
   location?: string;
+  premisesNumber?: string | null;
 };
 
 export async function updateFacilityPublicProfile(
@@ -273,6 +278,9 @@ export async function updateFacilityPublicProfile(
   }
   if (patch.type !== undefined) set.type = patch.type;
   if (patch.location !== undefined) set.location = patch.location;
+  if (patch.premisesNumber !== undefined) {
+    set.premisesNumber = normalizePremisesNumber(patch.premisesNumber);
+  }
   return withRepositoryLogging(
     "facilities",
     "updateFacilityPublicProfile",
@@ -296,6 +304,7 @@ export async function provisionFacilityUser(input: {
   organisationName: string;
   location: string;
   facilityType: Facility["type"];
+  premisesNumber?: string | null;
 }): Promise<{ userId: string; facilityId: string; verified: boolean } | null> {
   if (!hasDbConfig()) return null;
   return withRepositoryLogging("facilities", "provisionFacilityUser", async () => {
@@ -321,6 +330,7 @@ export async function provisionFacilityUser(input: {
           name: input.organisationName,
           type: input.facilityType,
           location: input.location,
+          premisesNumber: normalizePremisesNumber(input.premisesNumber),
           verified: false,
           rating: "0",
           openRoles: 0,
@@ -350,6 +360,7 @@ export async function attachFacilityToExistingUser(input: {
   organisationName: string;
   location: string;
   facilityType: Facility["type"];
+  premisesNumber?: string | null;
 }): Promise<{ facilityId: string; verified: boolean } | null> {
   if (!hasDbConfig()) return null;
   return withRepositoryLogging(
@@ -375,6 +386,7 @@ export async function attachFacilityToExistingUser(input: {
             name: input.organisationName,
             type: input.facilityType,
             location: input.location,
+            premisesNumber: normalizePremisesNumber(input.premisesNumber),
             verified: false,
             rating: "0",
             openRoles: 0,

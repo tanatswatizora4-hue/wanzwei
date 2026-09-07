@@ -31,6 +31,8 @@ const INPUT = {
   registeringBody: "HPA" as const,
   registrationNumber: "P01-6420-2026",
   profession: "Pharmacist",
+  identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  credentialDocumentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
 };
 
 function pharmacistRow(
@@ -212,22 +214,59 @@ function memoryStore(options: {
 }
 
 describe("submitProfessionalVerification", () => {
-  it("auto-verifies an active unique HPA match and sets users.verified", async () => {
+  it("does not auto-verify an HPA match when document analysis is unavailable", async () => {
     const store = memoryStore({ rows: [pharmacistRow()] });
     const result = await submitProfessionalVerification(USER, INPUT, store);
 
-    expect(result.verification.status).toBe("Verified");
+    expect(result.verification.status).toBe("Under Review");
     expect(result.verification.matchOutcome).toBe("matched" satisfies VerificationMatchOutcome);
-    expect(result.userVerified).toBe(true);
-    expect(store.verified.has(USER.id)).toBe(true);
+    expect(result.userVerified).toBe(false);
+    expect(store.verified.has(USER.id)).toBe(false);
     expect(store.cases).toHaveLength(1);
     expect(store.events).toEqual([
       expect.objectContaining({
         method: "auto",
         fromStatus: null,
-        toStatus: "Verified",
+        toStatus: "Under Review",
       }),
     ]);
+  });
+
+  it("rejects using the same file for identity and credential", async () => {
+    const store = memoryStore({ rows: [pharmacistRow()] });
+    await expect(
+      submitProfessionalVerification(
+        USER,
+        { ...INPUT, credentialDocumentId: INPUT.identityDocumentId },
+        store,
+      ),
+    ).rejects.toMatchObject({ code: "invalid_documents" });
+    expect(store.cases).toHaveLength(0);
+  });
+
+  it("auto-verifies only when processed analysis corroborates a registry MATCH", async () => {
+    const store = memoryStore({ rows: [pharmacistRow()] });
+    store.analyzeIdentity = async () => ({
+      status: "processed",
+      identityName: USER.name,
+      identityDocumentType: "national_id",
+      documentQuality: "readable",
+      extractionQuality: "high",
+    });
+    store.analyzeCredential = async () => ({
+      status: "processed",
+      credentialName: USER.name,
+      credentialType: "practising_certificate",
+      credentialClass: "current_authorization",
+      detectedProfession: "Pharmacist",
+      expiryDate: "2099-01-01",
+      documentQuality: "readable",
+      extractionQuality: "high",
+    });
+    const result = await submitProfessionalVerification(USER, INPUT, store);
+    expect(result.verification.status).toBe("Verified");
+    expect(result.userVerified).toBe(true);
+    expect(store.verified.has(USER.id)).toBe(true);
   });
 
   it("acquires the user lock before findCurrentCase and lookup", async () => {
@@ -350,7 +389,7 @@ describe("submitProfessionalVerification", () => {
     expect(store.cases[0]!.submittedAt).toEqual(submittedAt);
   });
 
-  it("reclassifies an expired case to Verified after the registry is renewed", async () => {
+  it("reclassifies an expired case after the registry is renewed without auto-verifying", async () => {
     const rows = [pharmacistRow({ expiryDate: "2026-01-01" })];
     const store = memoryStore({ rows });
     const first = await submitProfessionalVerification(USER, INPUT, store);
@@ -361,14 +400,15 @@ describe("submitProfessionalVerification", () => {
     const second = await submitProfessionalVerification(USER, INPUT, store);
     expect(store.lookups).toBe(2);
     expect(second.reusedExisting).toBe(false);
-    expect(second.verification.status).toBe("Verified");
+    expect(second.verification.status).toBe("Under Review");
+    expect(second.verification.matchOutcome).toBe("matched");
     expect(second.verification.id).toBe(first.verification.id);
     expect(store.cases).toHaveLength(1);
     expect(store.events).toHaveLength(2);
-    expect(store.verified.has(USER.id)).toBe(true);
+    expect(store.verified.has(USER.id)).toBe(false);
   });
 
-  it("reclassifies not_found to Verified when the registry row appears later", async () => {
+  it("reclassifies not_found when the registry row appears later without auto-verifying", async () => {
     const rows: RegistryMatchRecord[] = [];
     const store = memoryStore({ rows });
     const first = await submitProfessionalVerification(USER, INPUT, store);
@@ -376,29 +416,46 @@ describe("submitProfessionalVerification", () => {
 
     rows.push(pharmacistRow());
     const second = await submitProfessionalVerification(USER, INPUT, store);
-    expect(second.verification.status).toBe("Verified");
+    expect(second.verification.status).toBe("Under Review");
+    expect(second.verification.matchOutcome).toBe("matched");
     expect(second.verification.id).toBe(first.verification.id);
     expect(store.events).toHaveLength(2);
+    expect(store.verified.has(USER.id)).toBe(false);
   });
 
   it("does not blindly reuse a Verified match after the registry later expires", async () => {
-    const rows = [pharmacistRow()];
-    const store = memoryStore({ rows });
-    const first = await submitProfessionalVerification(USER, INPUT, store);
-    expect(first.verification.status).toBe("Verified");
-
-    rows.splice(0, 1, pharmacistRow({ expiryDate: "2026-01-01" }));
+    const rows = [pharmacistRow({ expiryDate: "2026-01-01" })];
+    const store = memoryStore({
+      rows,
+      verifiedUserIds: [USER.id],
+      seedCases: [
+        {
+          id: "case-verified",
+          userId: USER.id,
+          name: USER.name,
+          profession: "Pharmacist",
+          status: "Verified",
+          registeringBody: "HPA",
+          registrationNumber: "P01-6420-2026",
+          matchOutcome: "matched",
+          matchedRegistryId: "reg-1",
+          documentCount: 0,
+          submittedAt: new Date("2026-08-01T00:00:00.000Z"),
+          createdAt: new Date("2026-08-01T00:00:00.000Z"),
+          flags: [],
+        },
+      ],
+    });
     const second = await submitProfessionalVerification(
       { ...USER, verified: true },
       INPUT,
       store,
     );
-    expect(store.lookups).toBe(2);
     expect(second.verification.status).toBe("Under Review");
     expect(second.verification.matchOutcome).toBe("expired");
-    expect(second.verification.id).not.toBe(first.verification.id);
+    expect(second.verification.id).not.toBe("case-verified");
     expect(store.cases).toHaveLength(2);
-    expect(store.cases.find((row) => row.id === first.verification.id)?.status).toBe(
+    expect(store.cases.find((row) => row.id === "case-verified")?.status).toBe(
       "Verified",
     );
     expect(store.verified.has(USER.id)).toBe(true);
@@ -416,17 +473,16 @@ describe("submitProfessionalVerification", () => {
     ).rejects.toBeInstanceOf(SubmitVerificationError);
   });
 
-  it("rolls back so a Verified case cannot persist with users.verified false", async () => {
+  it("does not set users.verified when document analysis is unavailable", async () => {
     const store = memoryStore({
       rows: [pharmacistRow()],
       failOnSetVerified: true,
     });
-    await expect(
-      submitProfessionalVerification(USER, INPUT, store),
-    ).rejects.toThrow(/users.verified update failed/);
-    expect(store.cases).toHaveLength(0);
+    const result = await submitProfessionalVerification(USER, INPUT, store);
+    expect(result.verification.status).toBe("Under Review");
+    expect(result.userVerified).toBe(false);
+    expect(store.cases).toHaveLength(1);
     expect(store.verified.has(USER.id)).toBe(false);
-    expect(store.events).toHaveLength(0);
   });
 
   it("preserves a Verified row when changed credentials go Under Review", async () => {

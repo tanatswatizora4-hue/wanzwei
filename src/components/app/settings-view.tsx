@@ -8,7 +8,7 @@ import { updateOwnProfileAction } from "@/app/(app)/settings/actions";
 import { PageHeader } from "@/components/app/topbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
-import { Input, Label } from "@/components/ui/input";
+import { Input, Label, FieldHint } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ProfileAvatarUploader } from "@/components/app/profile-avatar-uploader";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/cn";
 import type { Facility, User, Verification } from "@/lib/types";
 import { VerificationCredentialsForm } from "@/components/app/professional/verification-credentials-form";
 import { FacilityTypeSchema } from "@/lib/validation/auth";
+import type { ProfessionalDocumentRow } from "@/lib/supabase/document-types";
 
 type SettingsSection = "profile" | "security";
 
@@ -41,6 +42,7 @@ export function SettingsView({
   avatarUploadEnabled,
   verification = null,
   hasPasswordAuth,
+  professionalDocuments = [],
 }: {
   user: User;
   facility?: Facility | null;
@@ -48,6 +50,7 @@ export function SettingsView({
   avatarUploadEnabled: boolean;
   verification?: Verification | null;
   hasPasswordAuth: boolean;
+  professionalDocuments?: ProfessionalDocumentRow[];
 }) {
   const [section, setSection] = React.useState<SettingsSection>("profile");
   const [saving, setSaving] = React.useState(false);
@@ -142,6 +145,8 @@ export function SettingsView({
               defaultRegistrationNumber={user.registrationNumber}
               initialVerification={verification}
               accountVerified={user.verified === true}
+              uploadsEnabled={avatarUploadEnabled}
+              initialDocuments={professionalDocuments}
             />
           ) : null}
 
@@ -154,7 +159,7 @@ export function SettingsView({
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
                   {user.role === "facility"
                     ? "Update your contact details and facility profile."
-                    : "Update your personal details. Profession and HPA credentials are managed through verification."}
+                    : "Update your personal details. Profession and verification credentials are managed through verification."}
                 </p>
                 <Separator className="my-4" />
                 <form onSubmit={handleSaveProfile} className="flex flex-col gap-4">
@@ -188,6 +193,26 @@ export function SettingsView({
                           defaultValue={facility?.name ?? ""}
                           required
                         />
+                        <div className="grid gap-1.5">
+                          <Field
+                            label="Premises registration number"
+                            name="premisesNumber"
+                            defaultValue={facility?.premisesNumber ?? ""}
+                            autoComplete="off"
+                          />
+                          <FieldHint>
+                            Enter the premises registration number issued to your
+                            facility. Submitting a number does not verify the
+                            facility.
+                          </FieldHint>
+                          <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
+                            {facility?.verified
+                              ? "Verification status: verified by Wanzwei admin"
+                              : facility?.premisesNumber
+                                ? "Premises number submitted · pending manual verification"
+                                : "Verification status: unverified"}
+                          </p>
+                        </div>
                         <Field
                           label="Facility location"
                           name="facilityLocation"

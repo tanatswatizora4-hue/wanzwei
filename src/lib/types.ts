@@ -54,6 +54,7 @@ export type Facility = {
   name: string;
   type: "Hospital" | "Clinic" | "Pharmacy" | "Laboratory" | "Radiology";
   location: string;
+  premisesNumber?: string | null;
   verified: boolean;
   rating: number;
   openRoles: number;

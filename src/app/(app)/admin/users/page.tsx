@@ -98,6 +98,7 @@ export default async function AdminUsersPage({
               <TableRow>
                 <TableHead>User</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Profession</TableHead>
                 <TableHead>Facility</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Verified</TableHead>
@@ -106,7 +107,7 @@ export default async function AdminUsersPage({
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-8 text-center text-[13px] text-[color:var(--color-ink-500)]">
+                    <TableCell colSpan={6} className="py-8 text-center text-[13px] text-[color:var(--color-ink-500)]">
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -128,6 +129,11 @@ export default async function AdminUsersPage({
                       <Badge tone={ROLE_TONE[user.role]}>
                         {ROLE_LABEL[user.role]}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {user.role === "professional"
+                        ? (user.profession ?? "—")
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       {user.role === "facility"

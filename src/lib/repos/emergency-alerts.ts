@@ -19,6 +19,11 @@ import type {
   NewDbEmergencyAlert,
 } from "@/lib/db/schema";
 import { withRepositoryLogging } from "@/lib/observability/logger";
+import {
+  batchWithoutDropping,
+  filterEligibleEmergencyProfessionals,
+  recipientsForEmergencyAlert,
+} from "@/lib/emergency/match-candidates";
 import type {
   AlertResponseStatus,
   EmergencyAlert,
@@ -133,16 +138,10 @@ export async function matchProfessionals({
       .from(users)
       .where(and(eq(users.role, "professional"), eq(users.verified, true)));
 
-    const expectedProfession = profession.trim().toLowerCase();
-    const expectedLocation = location.trim().toLowerCase();
-    return rows
-      .filter(
-        (user) =>
-          (user.profession ?? "").toLowerCase() === expectedProfession &&
-          (expectedLocation === "any" ||
-            (user.location ?? "").toLowerCase() === expectedLocation),
-      )
-      .map(toUser);
+    return filterEligibleEmergencyProfessionals(
+      rows.map(toUser),
+      { profession, location },
+    ) as User[];
   }, { profession, location });
 }
 
@@ -357,7 +356,8 @@ export async function createEmergencyAlert(
       const alert = rows[0];
       if (!alert) return null;
 
-      const recipientValues = matched.slice(0, 8).map((professional) => ({
+      const recipientsToNotify = recipientsForEmergencyAlert(matched);
+      const recipientValues = recipientsToNotify.map((professional) => ({
         alertId: alert.id,
         professionalId: professional.id,
         status: "Pending" as const,
@@ -369,7 +369,7 @@ export async function createEmergencyAlert(
 
       const recipients = await loadRecipients([alert.id]);
       const created = toEmergencyAlert(alert, recipients.get(alert.id));
-      await sendEmergencyAlertNotifications(created, matched.slice(0, 8));
+      await sendEmergencyAlertNotifications(created, recipientsToNotify);
       return created;
     },
     {
@@ -462,23 +462,26 @@ async function sendEmergencyAlertNotifications(
   const facilityName = facility.name ?? "A facility";
   const payRange = `${alert.payCurrency} ${alert.payMin}-${alert.payMax}/${alert.payPeriod}`;
 
-  await Promise.all(
-    professionals.map((professional) =>
-      sendEmergencyAlertEmail({
-        to: professional.email,
-        professionalName: professional.name,
-        facilityName,
-        profession: alert.profession,
-        location: alert.location,
-        urgency: alert.urgency,
-        shiftStart: alert.shiftStart,
-        shiftEnd: alert.shiftEnd,
-        payRange,
-        expiresAt: alert.expiresAt,
-        notes: alert.notes,
-      }),
-    ),
-  );
+  const batches = batchWithoutDropping(professionals, 25);
+  for (const batch of batches) {
+    await Promise.all(
+      batch.map((professional) =>
+        sendEmergencyAlertEmail({
+          to: professional.email,
+          professionalName: professional.name,
+          facilityName,
+          profession: alert.profession,
+          location: alert.location,
+          urgency: alert.urgency,
+          shiftStart: alert.shiftStart,
+          shiftEnd: alert.shiftEnd,
+          payRange,
+          expiresAt: alert.expiresAt,
+          notes: alert.notes,
+        }),
+      ),
+    );
+  }
 }
 
 async function sendEmergencyAlertResponseNotification(

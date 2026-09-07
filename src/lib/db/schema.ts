@@ -159,6 +159,7 @@ export const facilities = pgTable("facilities", {
   name: text("name").notNull(),
   type: facilityTypeEnum("type").notNull(),
   location: text("location").notNull(),
+  premisesNumber: text("premises_number"),
   verified: boolean("verified").notNull().default(false),
   rating: numeric("rating", { precision: 3, scale: 2 }).notNull().default("0"),
   openRoles: integer("open_roles").notNull().default(0),
@@ -538,6 +539,55 @@ export const verificationEvents = pgTable(
   ],
 );
 
+export const verificationEvidence = pgTable(
+  "verification_evidence",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    verificationId: uuid("verification_id")
+      .notNull()
+      .references(() => verifications.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    identityDocumentId: uuid("identity_document_id"),
+    credentialDocumentId: uuid("credential_document_id"),
+    identityName: text("identity_name"),
+    identityDocumentType: text("identity_document_type"),
+    credentialName: text("credential_name"),
+    credentialType: text("credential_type"),
+    detectedProfession: text("detected_profession"),
+    registrationNumber: text("registration_number"),
+    issuingBody: text("issuing_body"),
+    issueDate: text("issue_date"),
+    expiryDate: text("expiry_date"),
+    nameMatch: text("name_match"),
+    professionMatch: text("profession_match"),
+    expiryCheck: text("expiry_check"),
+    registryAvailable: boolean("registry_available").notNull().default(false),
+    registryOutcome: text("registry_outcome"),
+    registryNameMatch: boolean("registry_name_match"),
+    registryProfessionMatch: boolean("registry_profession_match"),
+    documentQuality: text("document_quality"),
+    identityQuality: text("identity_quality"),
+    credentialQuality: text("credential_quality"),
+    credentialClass: text("credential_class"),
+    fraudFlags: text("fraud_flags"),
+    analysisStatus: text("analysis_status").notNull(),
+    decision: text("decision").notNull(),
+    decisionReason: text("decision_reason").notNull(),
+    verificationMethod: text("verification_method").notNull(),
+    reviewRequired: boolean("review_required").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("verification_evidence_verification_id_idx").on(t.verificationId),
+    index("verification_evidence_user_id_idx").on(t.userId),
+    index("verification_evidence_created_at_idx").on(t.createdAt),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // courses
 // ---------------------------------------------------------------------------
@@ -760,6 +810,9 @@ export type NewDbPractitionerRegistry = typeof practitionerRegistry.$inferInsert
 
 export type DbVerificationEvent = typeof verificationEvents.$inferSelect;
 export type NewDbVerificationEvent = typeof verificationEvents.$inferInsert;
+
+export type DbVerificationEvidence = typeof verificationEvidence.$inferSelect;
+export type NewDbVerificationEvidence = typeof verificationEvidence.$inferInsert;
 
 export type DbVerificationDocument =
   typeof verificationDocuments.$inferSelect;

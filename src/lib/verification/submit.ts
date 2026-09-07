@@ -3,14 +3,13 @@ import "server-only";
 import { and, count, desc, eq, ne } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
-import { users, verifications } from "@/lib/db/schema";
+import { users, verificationEvidence, verifications } from "@/lib/db/schema";
 import { findRegistryByRegistration } from "@/lib/repos/practitioner-registry";
 import { insertVerificationEvent } from "@/lib/repos/verification-events";
 import { toVerification } from "@/lib/repos/verifications";
 import {
   classifyRegistryMatch,
   normalizeRegisteringBody,
-  statusForMatchOutcome,
   type RegistryMatchRecord,
 } from "@/lib/registry/match";
 import {
@@ -26,6 +25,20 @@ import type {
 } from "@/lib/types";
 import type { SubmitVerificationInput } from "@/lib/validation/verifications";
 import { acquireVerificationSubmitLock } from "@/lib/verification/lock";
+import {
+  getCredentialDocumentAnalyzer,
+  getIdentityDocumentAnalyzer,
+} from "@/lib/verification/analyzers";
+import { decideHybridVerification, mapHybridDecisionToVerificationStatus } from "@/lib/verification/decision-engine";
+import { registryEvidenceFromMatch } from "@/lib/verification/registry-evidence";
+import type {
+  CredentialAnalysis,
+  IdentityAnalysis,
+} from "@/lib/verification/hybrid-types";
+import { createUploadClient, isSupabaseConfigured } from "@/lib/supabase/service";
+import { isMissingTableError } from "@/lib/supabase/errors";
+import { loadOwnedDocumentForAnalysis } from "@/lib/verification/load-document";
+import { extractionQualityOf } from "@/lib/verification/decision-engine";
 
 export type { PublicVerificationState } from "@/lib/verification/public-result";
 export {
@@ -42,7 +55,8 @@ export type SubmitVerificationResult = {
 
 export type SubmitVerificationErrorCode =
   | "db_not_configured"
-  | "forbidden_role";
+  | "forbidden_role"
+  | "invalid_documents";
 
 export class SubmitVerificationError extends Error {
   readonly code: SubmitVerificationErrorCode;
@@ -125,6 +139,38 @@ export type VerificationWriteTx = {
     matchRegistryId: string | null;
     reason: string;
   }) => Promise<void>;
+  insertEvidence?: (row: {
+    verificationId: string;
+    userId: string;
+    identityDocumentId?: string | null;
+    credentialDocumentId?: string | null;
+    identityName?: string | null;
+    identityDocumentType?: string | null;
+    credentialName?: string | null;
+    credentialType?: string | null;
+    detectedProfession?: string | null;
+    registrationNumber?: string | null;
+    issuingBody?: string | null;
+    issueDate?: string | null;
+    expiryDate?: string | null;
+    nameMatch: string;
+    professionMatch: string;
+    expiryCheck: string;
+    registryAvailable: boolean;
+    registryOutcome: string;
+    registryNameMatch: boolean | null;
+    registryProfessionMatch: boolean | null;
+    documentQuality?: string | null;
+    identityQuality?: string | null;
+    credentialQuality?: string | null;
+    credentialClass?: string | null;
+    fraudFlags?: string | null;
+    analysisStatus: string;
+    decision: string;
+    decisionReason: string;
+    verificationMethod: string;
+    reviewRequired: boolean;
+  }) => Promise<void>;
   countOtherVerifiedCases: (
     userId: string,
     exceptVerificationId: string,
@@ -134,6 +180,13 @@ export type VerificationWriteTx = {
 export type SubmitVerificationStore = {
   hasDbConfig: () => boolean;
   runInTransaction: <T>(fn: (tx: VerificationWriteTx) => Promise<T>) => Promise<T>;
+  analyzeIdentity?: () => Promise<IdentityAnalysis>;
+  analyzeCredential?: () => Promise<CredentialAnalysis>;
+  assertOwnedDocuments?: (
+    userId: string,
+    identityDocumentId: string,
+    credentialDocumentId: string,
+  ) => Promise<void>;
 };
 
 export function compareCurrentCaseOrder(
@@ -164,9 +217,9 @@ function sameLicenceIdentity(
 ): boolean {
   return (
     normalizeRegisteringBody(row.registeringBody ?? "") ===
-      normalizeRegisteringBody(input.registeringBody) &&
+      normalizeRegisteringBody(input.registeringBody ?? "") &&
     normalizeRegistrationNumber(row.registrationNumber ?? "") ===
-      normalizeRegistrationNumber(input.registrationNumber)
+      normalizeRegistrationNumber(input.registrationNumber ?? "")
   );
 }
 
@@ -230,35 +283,92 @@ export async function submitProfessionalVerification(
       "Database is not configured.",
     );
   }
+  if (input.identityDocumentId === input.credentialDocumentId) {
+    throw new SubmitVerificationError(
+      "invalid_documents",
+      "Identity and credential documents must be different files.",
+    );
+  }
+  await store.assertOwnedDocuments?.(
+    user.id,
+    input.identityDocumentId,
+    input.credentialDocumentId,
+  );
 
   return store.runInTransaction(async (tx) => {
     await tx.acquireUserLock(user.id);
     const existing = await tx.findCurrentCase(user.id);
 
-    let rows: RegistryMatchRecord[];
-    try {
-      rows = await tx.lookupRegistry(
-        input.registeringBody,
-        input.registrationNumber,
-      );
-    } catch {
-      return persistDecision(tx, {
-        user,
-        input,
-        existing,
-        outcome: "registry_lookup_failed",
-        autoVerify: false,
-        matchedRegistryId: null,
-        reason: "Registry lookup failed.",
-      });
+    const registrationNumber = input.registrationNumber?.trim() ?? "";
+    let rows: RegistryMatchRecord[] = [];
+    let lookupFailed = false;
+    if (registrationNumber) {
+      try {
+        rows = await tx.lookupRegistry(
+          input.registeringBody ?? "HPA",
+          registrationNumber,
+        );
+      } catch {
+        lookupFailed = true;
+      }
     }
 
-    const classified = classifyRegistryMatch({
-      registeringBody: input.registeringBody,
-      registrationNumber: input.registrationNumber,
+    const identity = store.analyzeIdentity
+      ? await store.analyzeIdentity()
+      : await getIdentityDocumentAnalyzer().analyze(
+          (await loadOwnedDocumentForAnalysis(
+            user.id,
+            input.identityDocumentId,
+          )) ?? { storagePath: "", contentType: "" },
+        );
+    const credential = store.analyzeCredential
+      ? await store.analyzeCredential()
+      : await getCredentialDocumentAnalyzer().analyze(
+          (await loadOwnedDocumentForAnalysis(
+            user.id,
+            input.credentialDocumentId,
+          )) ?? { storagePath: "", contentType: "" },
+        );
+
+    const registry = registryEvidenceFromMatch({
       submittedName: user.name,
       submittedProfession: input.profession,
+      registeringBody: input.registeringBody,
+      registrationNumber: registrationNumber || undefined,
       rows,
+      lookupFailed,
+    });
+
+    const classified = lookupFailed
+      ? {
+          outcome: "registry_lookup_failed" as const,
+          autoVerify: false,
+          matchedRegistryId: null,
+          reason: "Registry lookup failed.",
+        }
+      : registrationNumber
+        ? classifyRegistryMatch({
+            registeringBody: input.registeringBody ?? "HPA",
+            registrationNumber,
+            submittedName: user.name,
+            submittedProfession: input.profession,
+            rows,
+          })
+        : {
+            outcome: "missing_registration_number" as const,
+            autoVerify: false,
+            matchedRegistryId: null,
+            reason: registry.reason,
+          };
+
+    const hybrid = decideHybridVerification({
+      hasIdentityDocument: Boolean(input.identityDocumentId),
+      hasCredentialDocument: Boolean(input.credentialDocumentId),
+      submittedName: user.name,
+      submittedProfession: input.profession,
+      identity,
+      credential,
+      registry,
     });
 
     return persistDecision(tx, {
@@ -266,9 +376,13 @@ export async function submitProfessionalVerification(
       input,
       existing,
       outcome: classified.outcome,
-      autoVerify: classified.autoVerify,
+      autoVerify: hybrid.decision === "verified",
       matchedRegistryId: classified.matchedRegistryId,
-      reason: classified.reason,
+      reason: hybrid.decisionReason,
+      hybrid,
+      identity,
+      credential,
+      registry,
     });
   });
 }
@@ -283,13 +397,19 @@ async function persistDecision(
     autoVerify: boolean;
     matchedRegistryId: string | null;
     reason: string;
+    hybrid: ReturnType<typeof decideHybridVerification>;
+    identity: IdentityAnalysis;
+    credential: CredentialAnalysis;
+    registry: ReturnType<typeof registryEvidenceFromMatch>;
   },
 ): Promise<SubmitVerificationResult> {
-  const classifiedStatus = statusForMatchOutcome(args.outcome, args.autoVerify);
-  const body = normalizeRegisteringBody(args.input.registeringBody);
-  const registrationNumber = canonicalRegistrationNumber(
-    args.input.registrationNumber,
+  const classifiedStatus = mapHybridDecisionToVerificationStatus(
+    args.hybrid.decision,
   );
+  const body = normalizeRegisteringBody(args.input.registeringBody ?? "");
+  const registrationNumber = args.input.registrationNumber
+    ? canonicalRegistrationNumber(args.input.registrationNumber)
+    : "";
 
   const preserveVerifiedHistory =
     args.existing?.status === "Verified" &&
@@ -370,6 +490,42 @@ async function persistDecision(
     method: "auto",
     matchRegistryId: args.matchedRegistryId,
     reason: args.reason,
+  });
+
+  await tx.insertEvidence?.({
+    verificationId: saved.id,
+    userId: args.user.id,
+    identityDocumentId: args.input.identityDocumentId,
+    credentialDocumentId: args.input.credentialDocumentId,
+    identityName: args.identity.identityName ?? null,
+    identityDocumentType: args.identity.identityDocumentType ?? null,
+    credentialName: args.credential.credentialName ?? null,
+    credentialType: args.credential.credentialType ?? null,
+    detectedProfession: args.credential.detectedProfession ?? null,
+    registrationNumber: args.credential.registrationNumber ?? registrationNumber,
+    issuingBody: args.credential.issuingBody ?? (body || null),
+    issueDate: args.credential.issueDate ?? null,
+    expiryDate: args.credential.expiryDate ?? null,
+    nameMatch: args.hybrid.nameMatch,
+    professionMatch: args.hybrid.professionMatch,
+    expiryCheck: args.hybrid.expiryCheck,
+    registryAvailable: args.registry.registryAvailable,
+    registryOutcome: args.registry.outcome,
+    registryNameMatch: args.registry.registryNameMatch,
+    registryProfessionMatch: args.registry.registryProfessionMatch,
+    documentQuality:
+      args.identity.documentQuality ?? args.credential.documentQuality ?? null,
+    identityQuality: extractionQualityOf(args.identity),
+    credentialQuality: extractionQualityOf(args.credential),
+    credentialClass: args.credential.credentialClass ?? null,
+    fraudFlags: [...(args.identity.fraudFlags ?? []), ...(args.credential.fraudFlags ?? [])]
+      .join(",")
+      .trim() || null,
+    analysisStatus: args.hybrid.analysisStatus,
+    decision: args.hybrid.decision,
+    decisionReason: args.hybrid.decisionReason,
+    verificationMethod: args.hybrid.verificationMethod,
+    reviewRequired: args.hybrid.reviewRequired,
   });
 
   return {
@@ -487,6 +643,44 @@ export function createDrizzleWriteTx(
         .where(eq(users.id, userId));
     },
     insertEvent: (event) => insertVerificationEvent(event, db),
+    insertEvidence: async (row) => {
+      try {
+        await db.insert(verificationEvidence).values({
+          verificationId: row.verificationId,
+          userId: row.userId,
+          identityDocumentId: row.identityDocumentId ?? null,
+          credentialDocumentId: row.credentialDocumentId ?? null,
+          identityName: row.identityName ?? null,
+          identityDocumentType: row.identityDocumentType ?? null,
+          credentialName: row.credentialName ?? null,
+          credentialType: row.credentialType ?? null,
+          detectedProfession: row.detectedProfession ?? null,
+          registrationNumber: row.registrationNumber ?? null,
+          issuingBody: row.issuingBody ?? null,
+          issueDate: row.issueDate ?? null,
+          expiryDate: row.expiryDate ?? null,
+          nameMatch: row.nameMatch,
+          professionMatch: row.professionMatch,
+          expiryCheck: row.expiryCheck,
+          registryAvailable: row.registryAvailable,
+          registryNameMatch: row.registryNameMatch,
+          registryProfessionMatch: row.registryProfessionMatch,
+          registryOutcome: row.registryOutcome,
+          documentQuality: row.documentQuality ?? null,
+          identityQuality: row.identityQuality ?? null,
+          credentialQuality: row.credentialQuality ?? null,
+          credentialClass: row.credentialClass ?? null,
+          fraudFlags: row.fraudFlags ?? null,
+          analysisStatus: row.analysisStatus,
+          decision: row.decision,
+          decisionReason: row.decisionReason,
+          verificationMethod: row.verificationMethod,
+          reviewRequired: row.reviewRequired,
+        });
+      } catch {
+        // 0012 may not be applied yet; the verification case is still stored.
+      }
+    },
     countOtherVerifiedCases: async (userId, exceptVerificationId) => {
       const rows = await db
         .select({ value: count() })
@@ -503,8 +697,37 @@ export function createDrizzleWriteTx(
   };
 }
 
+async function assertOwnedProfessionalDocuments(
+  userId: string,
+  identityDocumentId: string,
+  credentialDocumentId: string,
+): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const supabase = createUploadClient();
+  const { data, error } = await supabase
+    .from("professional_documents")
+    .select("id")
+    .eq("user_id", userId)
+    .in("id", [identityDocumentId, credentialDocumentId]);
+  if (error) {
+    if (isMissingTableError(error)) return;
+    throw new SubmitVerificationError(
+      "invalid_documents",
+      "Could not confirm uploaded documents.",
+    );
+  }
+  const ids = new Set((data ?? []).map((row) => row.id as string));
+  if (!ids.has(identityDocumentId) || !ids.has(credentialDocumentId)) {
+    throw new SubmitVerificationError(
+      "invalid_documents",
+      "Identity and credential documents must belong to your account.",
+    );
+  }
+}
+
 export const defaultSubmitStore: SubmitVerificationStore = {
   hasDbConfig,
+  assertOwnedDocuments: assertOwnedProfessionalDocuments,
   runInTransaction: async (fn) => {
     const db = getDb();
     return db.transaction((tx) =>

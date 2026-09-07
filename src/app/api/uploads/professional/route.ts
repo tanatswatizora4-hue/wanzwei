@@ -14,12 +14,17 @@ import {
   withSignedDocumentUrl,
   withSignedDocumentUrls,
 } from "@/lib/supabase/private-storage";
-import { isMissingTableError, toRepositoryError } from "@/lib/supabase/errors";
+import {
+  isMissingTableError,
+  isUndefinedColumnError,
+  toRepositoryError,
+} from "@/lib/supabase/errors";
 import {
   fieldValidationErrorResponse,
   validationErrorResponse,
 } from "@/lib/validation/errors";
 import { DocumentUploadSchema } from "@/lib/validation/uploads";
+import { parseProfessionalDocumentPurpose } from "@/lib/verification/document-purpose";
 import { createLogger, logException, withRouteLogging } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
@@ -27,10 +32,10 @@ export const runtime = "nodejs";
 const logger = createLogger("uploads");
 
 export async function GET(req: Request) {
-  return withRouteLogging("/api/uploads/professional", req, handleGET);
+  return withRouteLogging("/api/uploads/professional", req, () => handleGET(req));
 }
 
-async function handleGET() {
+async function handleGET(req: Request) {
   if (!isSupabaseConfigured()) {
     return NextResponse.json({ documents: [], configured: false });
   }
@@ -38,13 +43,29 @@ async function handleGET() {
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  const purpose = parseProfessionalDocumentPurpose(
+    new URL(req.url).searchParams.get("purpose"),
+  );
   try {
     const supabase = createUploadClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("professional_documents")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
+    if (purpose) {
+      query = query.eq("purpose", purpose);
+    }
+    let { data, error } = await query;
+    if (error && purpose && isUndefinedColumnError(error)) {
+      const fallback = await supabase
+        .from("professional_documents")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
     if (error) {
       if (isMissingTableError(error)) {
         logger.warn("upload.professional_schema_missing", {
@@ -95,11 +116,12 @@ async function handlePOST(req: Request) {
 
   const parsed = DocumentUploadSchema.safeParse({
     file: formData.get("file"),
+    purpose: formData.get("purpose"),
   });
   if (!parsed.success) {
     return validationErrorResponse(parsed.error);
   }
-  const { file } = parsed.data;
+  const { file, purpose } = parsed.data;
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const validationMessage = validateDocumentFile(file, buffer);
@@ -130,17 +152,27 @@ async function handlePOST(req: Request) {
     );
   }
 
-  const { data: row, error: insertError } = await supabase
+  const metadata = {
+    user_id: user.id,
+    storage_path: objectPath,
+    public_url: "",
+    file_name: file.name,
+    content_type: file.type,
+  };
+  let { data: row, error: insertError } = await supabase
     .from("professional_documents")
-    .insert({
-      user_id: user.id,
-      storage_path: objectPath,
-      public_url: "",
-      file_name: file.name,
-      content_type: file.type,
-    })
+    .insert({ ...metadata, purpose })
     .select("*")
     .single();
+  if (insertError && isUndefinedColumnError(insertError)) {
+    const fallback = await supabase
+      .from("professional_documents")
+      .insert(metadata)
+      .select("*")
+      .single();
+    row = fallback.data;
+    insertError = fallback.error;
+  }
 
   if (insertError) {
     logger.error("upload.professional_metadata_failed", insertError, {

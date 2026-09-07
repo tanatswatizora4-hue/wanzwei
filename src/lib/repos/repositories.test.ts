@@ -74,6 +74,7 @@ describe("repository mapping helpers", () => {
         name: "Cure Hospital",
         type: "Hospital",
         location: "Harare",
+        premisesNumber: null,
         verified: true,
         rating: "4.80",
         openRoles: 12,

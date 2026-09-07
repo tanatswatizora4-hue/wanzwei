@@ -2,18 +2,25 @@ import { describe, expect, it } from "vitest";
 
 import { SubmitVerificationSchema } from "./verifications";
 
+const DOCS = {
+  identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  credentialDocumentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+};
+
 describe("SubmitVerificationSchema", () => {
-  it("accepts HPA credentials and normalizes the body", () => {
+  it("accepts HPA credentials and identity/credential document ids", () => {
     expect(
       SubmitVerificationSchema.parse({
         registeringBody: "hpa",
         registrationNumber: "P01-6420-2026",
         profession: "Pharmacist",
+        ...DOCS,
       }),
     ).toEqual({
       registeringBody: "HPA",
       registrationNumber: "P01-6420-2026",
       profession: "Pharmacist",
+      ...DOCS,
     });
   });
 
@@ -30,49 +37,47 @@ describe("SubmitVerificationSchema", () => {
           registeringBody: "HPA",
           registrationNumber,
           profession: "Pharmacist",
+          ...DOCS,
         }).registrationNumber,
       ).toBe("P01-6420-2026");
     }
   });
 
-  it("rejects a missing or invalid registration number", () => {
+  it("allows omitting a registration number for non-register professions", () => {
     expect(
-      SubmitVerificationSchema.safeParse({
-        registeringBody: "HPA",
-        registrationNumber: "",
-        profession: "Pharmacist",
-      }).success,
-    ).toBe(false);
+      SubmitVerificationSchema.parse({
+        profession: "Digital Health Specialist",
+        ...DOCS,
+      }).registrationNumber,
+    ).toBeUndefined();
+  });
+
+  it("rejects an invalid registration number when one is submitted", () => {
     expect(
       SubmitVerificationSchema.safeParse({
         registeringBody: "HPA",
         registrationNumber: "not-a-licence",
         profession: "Pharmacist",
-      }).success,
-    ).toBe(false);
-    expect(
-      SubmitVerificationSchema.safeParse({
-        registeringBody: "HPA",
-        registrationNumber: "P01-642-2026",
-        profession: "Pharmacist",
-      }).success,
-    ).toBe(false);
-    expect(
-      SubmitVerificationSchema.safeParse({
-        registeringBody: "HPA",
-        registrationNumber: "P01642026",
-        profession: "Pharmacist",
+        ...DOCS,
       }).success,
     ).toBe(false);
   });
 
-  it("strips a submitted userId so callers cannot target another user", () => {
-    const parsed = SubmitVerificationSchema.parse({
-      registeringBody: "HPA",
-      registrationNumber: "P01-6420-2026",
-      profession: "Pharmacist",
-      userId: "22222222-2222-4222-8222-222222222222",
-    });
-    expect(parsed).not.toHaveProperty("userId");
+  it("rejects client-supplied verification authority fields", () => {
+    for (const extra of [
+      { userId: "22222222-2222-4222-8222-222222222222" },
+      { verified: true },
+      { decision: "verified" },
+      { confidence: 0.99 },
+      { registry_match: true },
+    ]) {
+      expect(
+        SubmitVerificationSchema.safeParse({
+          profession: "Pharmacist",
+          ...DOCS,
+          ...extra,
+        }).success,
+      ).toBe(false);
+    }
   });
 });

@@ -39,6 +39,7 @@ export default async function AdminFacilitiesPage() {
                   <TableHead>Organisation</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Location</TableHead>
+                  <TableHead>Premises number</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Jobs</TableHead>
                   <TableHead>Verified</TableHead>
@@ -50,6 +51,9 @@ export default async function AdminFacilitiesPage() {
                     <TableCell className="font-semibold">{facility.name}</TableCell>
                     <TableCell>{facility.type}</TableCell>
                     <TableCell>{facility.location}</TableCell>
+                    <TableCell className="font-mono text-[12px]">
+                      {facility.premisesNumber || "—"}
+                    </TableCell>
                     <TableCell>
                       <p>{contactName ?? "—"}</p>
                       <p className="text-[11px] text-[color:var(--color-ink-400)]">
@@ -59,7 +63,11 @@ export default async function AdminFacilitiesPage() {
                     <TableCell className="tabular-nums">{facility.openRoles}</TableCell>
                     <TableCell>
                       <Badge tone={facility.verified ? "success" : "amber"} withDot>
-                        {facility.verified ? "Verified" : "Unverified"}
+                        {facility.verified
+                          ? "Verified"
+                          : facility.premisesNumber
+                            ? "Pending review"
+                            : "Unverified"}
                       </Badge>
                     </TableCell>
                   </TableRow>

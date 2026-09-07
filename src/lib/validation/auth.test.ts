@@ -8,6 +8,7 @@ describe("auth validation", () => {
       name: "  Tinashe Moyo  ",
       email: "  pro@example.com  ",
       password: "secret1",
+      profession: "Pharmacist",
     });
 
     expect(parsed).toEqual({
@@ -15,6 +16,7 @@ describe("auth validation", () => {
       email: "pro@example.com",
       password: "secret1",
       role: "professional",
+      profession: "Pharmacist",
     });
   });
 
@@ -24,6 +26,7 @@ describe("auth validation", () => {
         name: "Tinashe Moyo",
         email: "Pro@Example.com",
         password: "secret1",
+        profession: "Pharmacist",
       }).email,
     ).toBe("pro@example.com");
     expect(
@@ -40,6 +43,7 @@ describe("auth validation", () => {
       email: "pro@example.com",
       password: "secret1",
       role: null,
+      profession: "Nurse",
     });
 
     expect(parsed.role).toBe("professional");
@@ -89,8 +93,46 @@ describe("auth validation", () => {
       email: "pro@example.com",
       password: "secret1",
       role: "professional",
+      profession: "Pharmacist",
     });
     expect(parsed.role).toBe("professional");
+    expect(parsed.profession).toBe("Pharmacist");
+  });
+
+  it("requires a canonical profession for professional signup", () => {
+    expect(
+      SignupSchema.safeParse({
+        name: "Tinashe Moyo",
+        email: "pro@example.com",
+        password: "secret1",
+        role: "professional",
+      }).success,
+    ).toBe(false);
+    expect(
+      SignupSchema.safeParse({
+        name: "Tinashe Moyo",
+        email: "pro@example.com",
+        password: "secret1",
+        role: "professional",
+        profession: "Doctor",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("stores a premises number without treating it as facility verification", () => {
+    const parsed = SignupSchema.parse({
+      name: "Chipo Ncube",
+      email: "facility@example.com",
+      password: "secret1",
+      role: "facility",
+      organisationName: "Cure Hospital",
+      location: "Harare",
+      facilityType: "Hospital",
+      premisesNumber: " w01-2026-0042 ",
+      verified: true,
+    });
+    expect(parsed.premisesNumber).toBe("W01-2026-0042");
+    expect(parsed).not.toHaveProperty("verified");
   });
 
   it("allows only same-origin relative login redirects", () => {

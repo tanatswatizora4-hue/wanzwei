@@ -76,7 +76,10 @@ export default async function FacilityProfilePage() {
                 <h2 className="text-[20px] font-semibold tracking-tight">
                   {f?.name ?? "Facility profile pending"}
                 </h2>
-                <FacilityVerifiedBadge verified={f?.verified === true} />
+                <FacilityVerifiedBadge
+                  verified={f?.verified === true}
+                  premisesNumber={f?.premisesNumber}
+                />
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-3 text-[12.5px] text-[color:var(--color-ink-500)]">
                 <span className="inline-flex items-center gap-1">
@@ -94,11 +97,21 @@ export default async function FacilityProfilePage() {
 
           <Separator className="my-4" />
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="Open roles" value={f?.openRoles ?? 0} />
             <Stat
               label="Verification"
-              value={f?.verified ? "Verified" : "Unverified"}
+              value={
+                f?.verified
+                  ? "Verified"
+                  : f?.premisesNumber
+                    ? "Pending review"
+                    : "Unverified"
+              }
+            />
+            <Stat
+              label="Premises number"
+              value={f?.premisesNumber || "Not submitted"}
             />
             <Stat label="Type" value={f?.type ?? "—"} />
           </div>

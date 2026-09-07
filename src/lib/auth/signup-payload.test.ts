@@ -22,6 +22,8 @@ describe("signup payload", () => {
       organisationName: undefined,
       location: undefined,
       facilityType: undefined,
+      profession: undefined,
+      premisesNumber: undefined,
     });
   });
 
@@ -30,6 +32,7 @@ describe("signup payload", () => {
     formData.set("name", "Tinashe Moyo");
     formData.set("email", "pro@example.com");
     formData.set("password", "secret1");
+    formData.set("profession", "Pharmacist");
 
     const payload = readSignupPayload(formData);
     const parsed = SignupSchema.parse(payload);
@@ -43,6 +46,7 @@ describe("signup payload", () => {
     formData.set("email", "pro@example.com");
     formData.set("password", "secret1");
     formData.set("role", "   ");
+    formData.set("profession", "Nurse");
 
     const payload = readSignupPayload(formData);
     const parsed = SignupSchema.parse(payload);
@@ -66,6 +70,8 @@ describe("signup payload", () => {
       hasOrganisationName: false,
       hasLocation: false,
       hasFacilityType: false,
+      hasProfession: false,
+      hasPremisesNumber: false,
       role: "professional",
     });
     expect(flags).not.toHaveProperty("password");
@@ -80,14 +86,16 @@ describe("signup payload", () => {
     formData.set("organisationName", "Cure Hospital");
     formData.set("location", "Harare");
     formData.set("facilityType", "Hospital");
+    formData.set("premisesNumber", "W01-2026-1234");
 
     const payload = readSignupPayload(formData);
     expect(payload).toMatchObject({
       organisationName: "Cure Hospital",
       location: "Harare",
       facilityType: "Hospital",
+      premisesNumber: "W01-2026-1234",
       role: "facility",
     });
-    expect(SignupSchema.parse(payload).role).toBe("facility");
+    expect(SignupSchema.parse(payload).premisesNumber).toBe("W01-2026-1234");
   });
 });

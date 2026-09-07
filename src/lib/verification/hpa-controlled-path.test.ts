@@ -335,25 +335,54 @@ describe("controlled HPA auto-verify service path", () => {
     registeringBody: "HPA" as const,
     registrationNumber: CONTROLLED.registrationNumber,
     profession: "Pharmacist",
+    identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    credentialDocumentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
   };
 
-  it("A: sets users.verified, Verified status, and an auto event for a legitimate match", async () => {
+  it("A: does not set users.verified from registry match alone while analysis is unavailable", async () => {
     const user = professional(CONTROLLED.fullName);
     const store = memoryStore([controlledRow()]);
     const result = await submitProfessionalVerification(user, input, store);
 
-    expect(result.verification.status).toBe("Verified");
+    expect(result.verification.status).toBe("Under Review");
     expect(result.verification.matchOutcome).toBe("matched");
-    expect(result.userVerified).toBe(true);
-    expect(store.verified.has(user.id)).toBe(true);
+    expect(result.userVerified).toBe(false);
+    expect(store.verified.has(user.id)).toBe(false);
     expect(store.cases).toHaveLength(1);
     expect(store.events).toEqual([
       expect.objectContaining({
         method: "auto",
         fromStatus: null,
-        toStatus: "Verified",
+        toStatus: "Under Review",
       }),
     ]);
+  });
+
+  it("sets users.verified when processed analysis corroborates the HPA MATCH", async () => {
+    const user = professional(CONTROLLED.fullName);
+    const store = memoryStore([controlledRow()]);
+    store.analyzeIdentity = async () => ({
+      status: "processed",
+      identityName: CONTROLLED.fullName,
+      identityDocumentType: "national_id",
+      documentQuality: "readable",
+      extractionQuality: "high",
+    });
+    store.analyzeCredential = async () => ({
+      status: "processed",
+      credentialName: CONTROLLED.fullName,
+      credentialType: "practising_certificate",
+      credentialClass: "current_authorization",
+      detectedProfession: "Pharmacist",
+      expiryDate: "2099-01-01",
+      documentQuality: "readable",
+      extractionQuality: "high",
+    });
+    const result = await submitProfessionalVerification(user, input, store);
+
+    expect(result.verification.status).toBe("Verified");
+    expect(result.userVerified).toBe(true);
+    expect(store.verified.has(user.id)).toBe(true);
   });
 
   it("B: leaves users.verified false on name_mismatch Under Review", async () => {

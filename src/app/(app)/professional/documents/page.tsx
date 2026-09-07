@@ -58,7 +58,7 @@ export default async function DocumentsPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Documents"
-        description="Your verified credentials, certificates and references."
+        description="Private copies of your identity document, professional credentials, and supporting files. Facilities and other professionals cannot open these files."
         actions={
           <ProfessionalDocumentsUploadButton enabled={uploadsEnabled} />
         }
@@ -93,7 +93,7 @@ export default async function DocumentsPage() {
           <EmptyState
             icon={<FileBadge className="h-4 w-4" />}
             title="No documents yet"
-            description="Upload licences and credentials so facilities and administrators can review them."
+            description="Upload identity, credential, or supporting files for verification. These remain private to you and authorized reviewers."
           />
         ) : (
         <CardBody className="p-0">
@@ -106,7 +106,7 @@ export default async function DocumentsPage() {
                 <TableHead className="hidden lg:table-cell">Uploaded</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden lg:table-cell text-right">
-                  Shared
+                  Visibility
                 </TableHead>
                 <TableHead className="w-px"></TableHead>
               </TableRow>
@@ -151,7 +151,7 @@ export default async function DocumentsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="hidden lg:table-cell text-right tabular-nums text-[color:var(--color-ink-500)]">
-                    —
+                    Private
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="inline-flex items-center gap-0.5">

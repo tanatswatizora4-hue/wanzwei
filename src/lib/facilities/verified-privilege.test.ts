@@ -30,4 +30,19 @@ describe("facility verified cannot be self-promoted", () => {
     expect(fn).toMatch(/verified:\s*false/);
     expect(fn).not.toMatch(/verified:\s*true/);
   });
+
+  it("storing premisesNumber never sets verified true", () => {
+    const source = readFileSync("src/lib/repos/facilities.ts", "utf8");
+    expect(source).toContain("premisesNumber");
+    expect(source).not.toMatch(
+      /verified:\s*(true|Boolean\(input\.premisesNumber|!!input\.premisesNumber)/,
+    );
+    const patchStart = source.indexOf(
+      "export async function updateFacilityPublicProfile",
+    );
+    const patchEnd = source.indexOf("export async function provisionFacilityUser");
+    const patch = source.slice(patchStart, patchEnd);
+    expect(patch).toContain("premisesNumber");
+    expect(patch).not.toMatch(/verified/);
+  });
 });
