@@ -20,6 +20,13 @@ describe("mobile authenticated shell", () => {
     expect(shell).toContain("onNavigate={closeMobileNav}");
     expect(shell).toContain("onOpenMobileNav={openMobileNav}");
     expect(shell).toContain("aria-label=\"Close navigation\"");
+    expect(shell).toContain("bg-ink-900/60");
+    expect(shell).toContain("backdrop-blur-[2px]");
+    expect(shell).toContain("max-lg:bg-surface");
+    expect(shell).not.toContain("bg-slate-900/40");
+
+    const styles = readFileSync("src/app/globals.css", "utf8");
+    expect(styles).toMatch(/@media \(width < 64rem\)[\s\S]*\.glass-panel[\s\S]*backdrop-filter:\s*none/);
 
     expect(topbar).toContain("onOpenMobileNav");
     expect(topbar).toContain("lg:hidden");

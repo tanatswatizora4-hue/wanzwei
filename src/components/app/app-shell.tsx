@@ -50,14 +50,14 @@ export function AppShell({
         <button
           type="button"
           aria-label="Close navigation"
-          className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-ink-900/60 backdrop-blur-[2px] lg:hidden"
           onClick={closeMobileNav}
         />
       ) : null}
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[min(244px,100%)] max-w-full transition-transform duration-200 ease-out lg:static lg:z-20 lg:translate-x-0 lg:pointer-events-auto",
+          "fixed inset-y-0 left-0 z-50 flex w-[min(244px,100%)] max-w-full overflow-x-hidden max-lg:bg-surface transition-transform duration-200 ease-out lg:static lg:z-20 lg:translate-x-0 lg:pointer-events-auto",
           mobileNavOpen
             ? "translate-x-0"
             : "-translate-x-full pointer-events-none lg:translate-x-0",
