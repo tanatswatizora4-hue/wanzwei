@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { GEMINI_API_KEY_ENV, isGeminiConfigured } from "./config";
+import {
+  DEFAULT_GEMINI_MODEL,
+  GEMINI_API_KEY_ENV,
+  getGeminiModel,
+  isGeminiConfigured,
+} from "./config";
 
 describe("Gemini configuration", () => {
   it("uses a server-only env var name", () => {
@@ -14,5 +19,16 @@ describe("Gemini configuration", () => {
     expect(isGeminiConfigured()).toBe(false);
     if (previous == null) delete process.env.GEMINI_API_KEY;
     else process.env.GEMINI_API_KEY = previous;
+  });
+
+  it("defaults to an available Flash model and stays overridable", () => {
+    expect(DEFAULT_GEMINI_MODEL).toBe("gemini-3.5-flash");
+    const previous = process.env.GEMINI_MODEL;
+    delete process.env.GEMINI_MODEL;
+    expect(getGeminiModel()).toBe("gemini-3.5-flash");
+    process.env.GEMINI_MODEL = "gemini-3.1-flash-lite";
+    expect(getGeminiModel()).toBe("gemini-3.1-flash-lite");
+    if (previous == null) delete process.env.GEMINI_MODEL;
+    else process.env.GEMINI_MODEL = previous;
   });
 });
