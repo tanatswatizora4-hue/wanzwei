@@ -14,7 +14,9 @@ import { Badge } from "@/components/ui/badge";
 import { ProfileAvatarUploader } from "@/components/app/profile-avatar-uploader";
 import { AccountDeletionForm } from "@/components/app/account-deletion-form";
 import { cn } from "@/lib/cn";
+import { WorkspaceSettingsCard } from "@/components/app/workspace-settings-card";
 import type { Facility, User, Verification } from "@/lib/types";
+import { ProfessionalCredentialSummary } from "@/components/app/professional-credential-summary";
 import { VerificationCredentialsForm } from "@/components/app/professional/verification-credentials-form";
 import { FacilityTypeSchema } from "@/lib/validation/auth";
 import type { ProfessionalDocumentRow } from "@/lib/supabase/document-types";
@@ -43,6 +45,10 @@ export function SettingsView({
   verification = null,
   hasPasswordAuth,
   professionalDocuments = [],
+  hasProfessionalMembership = false,
+  canAddFacility = false,
+  canAddProfessional = false,
+  showProfessionalCredentials = false,
 }: {
   user: User;
   facility?: Facility | null;
@@ -51,6 +57,10 @@ export function SettingsView({
   verification?: Verification | null;
   hasPasswordAuth: boolean;
   professionalDocuments?: ProfessionalDocumentRow[];
+  hasProfessionalMembership?: boolean;
+  canAddFacility?: boolean;
+  canAddProfessional?: boolean;
+  showProfessionalCredentials?: boolean;
 }) {
   const [section, setSection] = React.useState<SettingsSection>("profile");
   const [saving, setSaving] = React.useState(false);
@@ -102,7 +112,11 @@ export function SettingsView({
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
                   {subtitle}
                 </p>
-                {user.verified ? (
+                {showProfessionalCredentials ? (
+                  <div className="mt-2">
+                    <ProfessionalCredentialSummary user={user} />
+                  </div>
+                ) : user.verified ? (
                   <Badge tone="success" withDot className="mt-2">
                     Account verification: Verified
                   </Badge>
@@ -138,19 +152,27 @@ export function SettingsView({
         </aside>
 
         <div className="flex min-w-0 flex-col gap-6">
-          {user.role === "professional" ? (
+          {showProfessionalCredentials ? (
             <VerificationCredentialsForm
               defaultProfession={user.profession}
               defaultRegisteringBody={user.registeringBody}
+              defaultRegulatoryBodyOther={user.regulatoryBodyOther}
               defaultRegistrationNumber={user.registrationNumber}
               initialVerification={verification}
               accountVerified={user.verified === true}
               uploadsEnabled={avatarUploadEnabled}
               initialDocuments={professionalDocuments}
+              credentialUser={user}
             />
           ) : null}
 
           {section === "profile" ? (
+            <>
+            <WorkspaceSettingsCard
+              hasProfessional={hasProfessionalMembership || user.role === "professional"}
+              canAddFacility={canAddFacility && user.role !== "admin"}
+              canAddProfessional={canAddProfessional && user.role !== "admin"}
+            />
             <Card>
               <CardBody className="pt-5">
                 <h2 className="text-[15px] font-semibold">
@@ -258,6 +280,7 @@ export function SettingsView({
                 </form>
               </CardBody>
             </Card>
+            </>
           ) : null}
 
           {section === "security" ? (

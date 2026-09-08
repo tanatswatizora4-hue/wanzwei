@@ -5,6 +5,11 @@ export const PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE =
 
 export function isVerifiedProfessional(
   user: Pick<User, "role" | "verified">,
+  options?: { professionalMembership?: boolean },
 ): boolean {
-  return user.role === "professional" && user.verified === true;
+  if (user.role === "admin") return false;
+  const hasProfessionalIdentity =
+    user.role === "professional" || options?.professionalMembership === true;
+  if (!hasProfessionalIdentity) return false;
+  return user.verified === true;
 }

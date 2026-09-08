@@ -15,6 +15,8 @@ export type VerificationEvidenceView = {
   credentialQuality: string | null;
   detectedProfession: string | null;
   issuingBody: string | null;
+  regulatoryBody: string | null;
+  regulatoryBodyOther: string | null;
   registrationNumber: string | null;
   issueDate: string | null;
   expiryDate: string | null;
@@ -25,6 +27,7 @@ export type VerificationEvidenceView = {
   analysisStatus: string;
   decision: string;
   decisionReason: string;
+  verificationMethod: string;
   reviewRequired: boolean;
 };
 
@@ -52,6 +55,8 @@ export async function findLatestVerificationEvidence(
       credentialQuality: row.credentialQuality,
       detectedProfession: row.detectedProfession,
       issuingBody: row.issuingBody,
+      regulatoryBody: row.regulatoryBody ?? null,
+      regulatoryBodyOther: row.regulatoryBodyOther ?? null,
       registrationNumber: row.registrationNumber,
       issueDate: row.issueDate,
       expiryDate: row.expiryDate,
@@ -62,6 +67,7 @@ export async function findLatestVerificationEvidence(
       analysisStatus: row.analysisStatus,
       decision: row.decision,
       decisionReason: row.decisionReason,
+      verificationMethod: row.verificationMethod,
       reviewRequired: row.reviewRequired,
     };
   } catch {

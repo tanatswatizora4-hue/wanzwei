@@ -1,4 +1,8 @@
 import type { VerificationStatus } from "@/lib/types";
+import {
+  extractedRegulatoryBodyCompatible,
+  isOtherRegulatoryBody,
+} from "@/lib/regulatory-bodies";
 import { classifyCredentialType } from "@/lib/verification/credential-class";
 import type {
   AnalysisStatus,
@@ -16,6 +20,7 @@ import {
   extractedProfessionCompatible,
   professionRequiresCurrentAuthorization,
 } from "@/lib/verification/profession-map";
+import { derivePractisingCertificateStatus } from "@/lib/verification/practising-certificate";
 
 const QUALITY_AUTO_VERIFY: ExtractionQuality[] = ["high"];
 const CONFIDENCE_QUALITY_FLOOR = 0.7;
@@ -112,11 +117,10 @@ function credentialClassOf(credential: CredentialAnalysis) {
 function expiryCheckFor(
   credential: CredentialAnalysis,
 ): HybridDecisionResult["expiryCheck"] {
-  const expiryRaw = credential.expiryDate?.trim() ?? "";
-  if (!expiryRaw) return "unknown";
-  const parsed = Date.parse(expiryRaw);
-  if (Number.isNaN(parsed)) return "unknown";
-  return parsed < Date.now() ? "expired" : "current";
+  const status = derivePractisingCertificateStatus(credential.expiryDate);
+  if (status === "expired") return "expired";
+  if (status === "current") return "current";
+  return "unknown";
 }
 
 function result(
@@ -149,7 +153,8 @@ function result(
 
 /**
  * Server-side only. Model confidence is never a verification grant.
- * Registry MATCH is required only for professions with a compatible register.
+ * Registry MATCH is corroboration when an authoritative source exists.
+ * Gemini extraction never sets users.verified.
  */
 export function decideHybridVerification(
   input: HybridDecisionInput,
@@ -181,14 +186,14 @@ export function decideHybridVerification(
   const requiresCurrentAuth = professionRequiresCurrentAuthorization(
     input.submittedProfession,
   );
+  const otherBody = isOtherRegulatoryBody(input.submittedRegulatoryBody);
+  const bodyCompatible = extractedRegulatoryBodyCompatible(
+    input.submittedRegulatoryBody,
+    input.credential.issuingBody,
+  );
   const fraud =
     (input.identity.fraudFlags?.length ?? 0) > 0 ||
     (input.credential.fraudFlags?.length ?? 0) > 0;
-  const registryCovered =
-    input.registry.outcome === "MATCH" ||
-    input.registry.outcome === "NOT_FOUND" ||
-    input.registry.outcome === "CONTRADICTION" ||
-    input.registry.outcome === "NOT_SUBMITTED";
 
   if (input.registry.outcome === "CONTRADICTION") {
     return result(
@@ -206,7 +211,12 @@ export function decideHybridVerification(
     );
   }
 
-  if (fraud || nameMatch === "mismatch" || professionMatch === "incompatible") {
+  if (
+    fraud ||
+    nameMatch === "mismatch" ||
+    professionMatch === "incompatible" ||
+    !bodyCompatible
+  ) {
     return result(
       {
         decision: "manual_review",
@@ -214,6 +224,8 @@ export function decideHybridVerification(
           ? "Document analysis reported a fraud, tamper, or contradiction flag."
           : nameMatch === "mismatch"
             ? "Identity and credential names do not match."
+            : !bodyCompatible
+              ? "Extracted regulatory body does not match the claimed council."
             : "Detected profession is not compatible with the submitted profession.",
         verificationMethod: "hybrid",
         reviewRequired: true,
@@ -253,8 +265,21 @@ export function decideHybridVerification(
       {
         decision: "additional_evidence_required",
         decisionReason:
-          "The professional credential appears expired. A current credential is required.",
+          "The practising certificate appears expired. A current practising certificate is required.",
         verificationMethod: "hybrid",
+        reviewRequired: true,
+      },
+      computed,
+    );
+  }
+
+  if (otherBody) {
+    return result(
+      {
+        decision: "manual_review",
+        decisionReason:
+          "Other regulatory bodies cannot be auto-verified. Admin review is required.",
+        verificationMethod: "manual",
         reviewRequired: true,
       },
       computed,
@@ -272,9 +297,8 @@ export function decideHybridVerification(
       (expiryCheck === "current" ||
         (input.registry.outcome === "MATCH" && expiryCheck !== "expired"));
 
-  if (registryCovered) {
+  if (input.registry.outcome === "MATCH") {
     if (
-      input.registry.outcome === "MATCH" &&
       nameMatch === "match" &&
       identityReady &&
       credentialReady &&
@@ -286,7 +310,7 @@ export function decideHybridVerification(
         {
           decision: "verified",
           decisionReason:
-            "Identity and credential documents were readable and the HPA register corroborated the match.",
+            "Identity and credential documents were readable and an authoritative registry record corroborated the registration.",
           verificationMethod: "registry_assisted",
           reviewRequired: false,
           professionMatch:
@@ -296,28 +320,37 @@ export function decideHybridVerification(
         computed,
       );
     }
-    if (
-      input.registry.outcome === "NOT_FOUND" ||
-      input.registry.outcome === "NOT_SUBMITTED"
-    ) {
-      return result(
-        {
-          decision: "additional_evidence_required",
-          decisionReason:
-            input.registry.outcome === "NOT_SUBMITTED"
-              ? "A current HPA registration number is required for this profession."
-              : input.registry.reason,
-          verificationMethod: "registry_assisted",
-          reviewRequired: true,
-        },
-        computed,
-      );
-    }
     return result(
       {
         decision: "manual_review",
         decisionReason:
-          "Document evidence is insufficient for automatic verification against the practitioner register.",
+          "Registry corroboration was found, but document evidence still requires review.",
+        verificationMethod: "registry_assisted",
+        reviewRequired: true,
+      },
+      computed,
+    );
+  }
+
+  if (input.registry.outcome === "NOT_FOUND") {
+    return result(
+      {
+        decision: "manual_review",
+        decisionReason:
+          "Wanzwei could not automatically corroborate this registration. Documents will be reviewed.",
+        verificationMethod: "registry_assisted",
+        reviewRequired: true,
+      },
+      computed,
+    );
+  }
+
+  if (input.registry.outcome === "NOT_SUBMITTED") {
+    return result(
+      {
+        decision: "additional_evidence_required",
+        decisionReason:
+          "A professional registration number is required for this regulatory body.",
         verificationMethod: "registry_assisted",
         reviewRequired: true,
       },
@@ -338,11 +371,11 @@ export function decideHybridVerification(
   if (nonRegistryReady) {
     return result(
       {
-        decision: "verified",
+        decision: "manual_review",
         decisionReason:
-          "Identity and professional credential documents were readable and satisfied deterministic non-registry verification rules.",
+          "Identity and credential documents are internally consistent. Wanzwei has no authoritative registry integration for this regulatory body, so admin review is required.",
         verificationMethod: "hybrid",
-        reviewRequired: false,
+        reviewRequired: true,
       },
       computed,
     );

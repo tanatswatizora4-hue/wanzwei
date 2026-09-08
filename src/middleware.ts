@@ -22,17 +22,28 @@ function readRole(user: User): AppRole | null {
   return null;
 }
 
-function rolePrefix(role: AppRole | null): string | null {
-  if (role === "admin") return "/admin";
-  if (role === "facility") return "/facility";
-  if (role === "professional") return "/professional";
-  return null;
-}
-
 function dashboardForRole(role: AppRole | null): string {
   if (role === "admin") return "/admin/dashboard";
   if (role === "facility") return "/facility/dashboard";
   return "/professional/dashboard";
+}
+
+/**
+ * Middleware authenticates and keeps admin on /admin.
+ * Professional vs facility prefixes are product workspaces: membership is
+ * checked on the server for every action. A JWT role is not rewritten to
+ * switch profiles.
+ */
+function mayAccessPath(role: AppRole, pathname: string): boolean {
+  const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isProfessionalPath =
+    pathname === "/professional" || pathname.startsWith("/professional/");
+  const isFacilityPath =
+    pathname === "/facility" || pathname.startsWith("/facility/");
+
+  if (role === "admin") return isAdminPath;
+  if (isAdminPath) return false;
+  return isProfessionalPath || isFacilityPath;
 }
 
 export async function middleware(req: NextRequest) {
@@ -59,18 +70,17 @@ export async function middleware(req: NextRequest) {
     }
 
     const role = readRole(user);
-    const expected = rolePrefix(role);
 
-    if (!expected) {
+    if (!role) {
       const url = req.nextUrl.clone();
       url.pathname = "/login";
       url.searchParams.set("error", "no_role");
       return applyAuthCookies(NextResponse.redirect(url), response);
     }
 
-    if (!pathname.startsWith(expected)) {
+    if (!mayAccessPath(role, pathname)) {
       const url = req.nextUrl.clone();
-      url.pathname = `${expected}/dashboard`;
+      url.pathname = dashboardForRole(role);
       return applyAuthCookies(NextResponse.redirect(url), response);
     }
   }

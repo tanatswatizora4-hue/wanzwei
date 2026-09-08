@@ -1,56 +1,67 @@
 import { z } from "zod";
 
+import { CanonicalProfessionSchema } from "@/lib/professions";
 import {
-  HPA_BODY,
-  isSupportedRegisteringBody,
-  parsedRegistrationOrNull,
-} from "@/lib/registry/match";
+  RegulatoryBodyOtherSchema,
+  RegulatoryBodySchema,
+  isOtherRegulatoryBody,
+} from "@/lib/regulatory-bodies";
+import { parsedRegistrationOrNull } from "@/lib/registry/match";
 import { formatParsedPersonNumber } from "@/lib/registry/persons-register";
 
-const optionalHpaBody = z.preprocess(
-  (value) => (value === null || value === "" ? undefined : value),
-  z
-    .string()
-    .trim()
-    .max(40)
-    .refine(isSupportedRegisteringBody, {
-      message: "Only HPA registration is supported right now.",
-    })
-    .transform(() => HPA_BODY)
-    .optional(),
-);
+function normalizeSubmittedRegistrationNumber(value: string): string {
+  const parsed = parsedRegistrationOrNull(value);
+  return parsed ? formatParsedPersonNumber(parsed) : value.trim().replace(/\s+/g, " ");
+}
 
-const optionalRegistrationNumber = z.preprocess(
+function isPlausibleRegistrationNumber(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed.length < 2 || trimmed.length > 40) return false;
+  return /^[A-Za-z0-9][A-Za-z0-9./\- ]*$/.test(trimmed);
+}
+
+const registrationNumber = z.preprocess(
   (value) => (value === null || value === "" ? undefined : value),
   z
     .string()
     .trim()
-    .max(32)
-    .refine((value) => parsedRegistrationOrNull(value) != null, {
-      message: "Registration number must look like A99-9999-YYYY.",
+    .min(2, "Registration number is required")
+    .max(40, "Registration number is too long")
+    .refine(isPlausibleRegistrationNumber, {
+      message: "Enter a valid professional registration number.",
     })
-    .transform((value) => {
-      const parsed = parsedRegistrationOrNull(value);
-      return parsed ? formatParsedPersonNumber(parsed) : value;
-    })
-    .optional(),
+    .transform(normalizeSubmittedRegistrationNumber),
 );
 
 export const SubmitVerificationSchema = z
   .object({
-    profession: z.string().trim().min(1, "Profession is required").max(120),
+    profession: CanonicalProfessionSchema,
     identityDocumentId: z.string().uuid("Identity document is required"),
     credentialDocumentId: z.string().uuid("Professional credential is required"),
-    registeringBody: optionalHpaBody,
-    registrationNumber: optionalRegistrationNumber,
+    registeringBody: RegulatoryBodySchema,
+    registrationNumber,
+    regulatoryBodyOther: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      RegulatoryBodyOtherSchema.optional(),
+    ),
   })
   .strict()
   .superRefine((value, ctx) => {
-    if (value.registrationNumber && !value.registeringBody) {
+    if (isOtherRegulatoryBody(value.registeringBody) && !value.regulatoryBodyOther) {
       ctx.addIssue({
         code: "custom",
-        path: ["registeringBody"],
-        message: "Registering body is required when a registration number is submitted.",
+        path: ["regulatoryBodyOther"],
+        message: "Name of regulatory body is required.",
+      });
+    }
+    if (
+      !isOtherRegulatoryBody(value.registeringBody) &&
+      value.regulatoryBodyOther
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["regulatoryBodyOther"],
+        message: "Name of regulatory body is only used when Other is selected.",
       });
     }
   });

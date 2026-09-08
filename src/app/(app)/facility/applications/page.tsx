@@ -1,12 +1,12 @@
 import { requireRole } from "@/lib/auth/session";
 import { timeAgoLong } from "@/lib/format";
 import { listApplicationsForFacility } from "@/lib/repos/applications";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityForUser } from "@/lib/facility-for-user";
 import { FacilityApplicationsClient } from "./applications-client";
 
 export default async function FacilityApplicationsPage() {
   const user = await requireRole(["facility"]);
-  const facility = await findFacilityForUserEmail(user.email);
+  const facility = await resolveFacilityForUser(user);
   const rows = facility
     ? await listApplicationsForFacility(facility.id, 200)
     : [];

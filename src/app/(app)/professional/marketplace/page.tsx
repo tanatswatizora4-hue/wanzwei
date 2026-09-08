@@ -2,6 +2,7 @@ import { MarketplaceView } from "@/components/app/marketplace-view";
 import { requireRole } from "@/lib/auth/session";
 import { parseMarketplaceSearchParams } from "@/lib/marketplace/search";
 import { listListings } from "@/lib/repos/listings";
+import { isVerifiedProfessional } from "@/lib/auth/professional-verification";
 
 export default async function ProfessionalMarketplacePage({
   searchParams,
@@ -16,7 +17,13 @@ export default async function ProfessionalMarketplacePage({
 }) {
   const user = await requireRole(["professional"]);
   const filters = parseMarketplaceSearchParams(await searchParams);
-  const listings = await listListings(200, filters, user.id);
+  const listings = await listListings(
+    200,
+    filters,
+    filters.mine
+      ? { sellerType: "professional", ownerId: user.id }
+      : undefined,
+  );
 
   return (
     <MarketplaceView
@@ -24,7 +31,7 @@ export default async function ProfessionalMarketplacePage({
       filters={filters}
       basePath="/professional/marketplace"
       viewer={user}
-      canCreate={false}
+      canCreate={isVerifiedProfessional(user, { professionalMembership: true })}
     />
   );
 }

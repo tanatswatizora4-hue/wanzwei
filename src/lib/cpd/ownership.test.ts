@@ -23,7 +23,14 @@ describe("CPD ownership", () => {
     expect(
       canProfessionalMutateEnrolment({
         actor: { role: "facility", id: "fac-1" },
-        enrolmentUserId: "pro-1",
+        enrolmentUserId: "fac-1",
+        professionalMembership: false,
+      }),
+    ).toBe(false);
+    expect(
+      canProfessionalEnrol({
+        actor: { role: "facility", id: "f" },
+        professionalMembership: false,
       }),
     ).toBe(false);
     expect(

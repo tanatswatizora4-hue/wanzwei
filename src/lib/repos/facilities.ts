@@ -3,7 +3,7 @@ import "server-only";
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
-import { facilities, jobs, users } from "@/lib/db/schema";
+import { accountMemberships, facilities, jobs, users } from "@/lib/db/schema";
 import { facilityInitialsFromName } from "@/lib/facilities/initials";
 import { normalizePremisesNumber } from "@/lib/facilities/premises-number";
 import { withRepositoryLogging } from "@/lib/observability/logger";
@@ -346,6 +346,15 @@ export async function provisionFacilityUser(input: {
         .set({ facilityId: facility.id, updatedAt: new Date() })
         .where(eq(users.id, userId));
 
+      await tx.insert(accountMemberships).values({
+        userId,
+        profileType: "facility",
+        professionalProfileId: null,
+        facilityId: facility.id,
+        membershipRole: "owner",
+        status: "active",
+      });
+
       return {
         userId,
         facilityId: facility.id,
@@ -406,10 +415,85 @@ export async function attachFacilityToExistingUser(input: {
           })
           .where(eq(users.id, input.userId));
 
+        await tx.insert(accountMemberships).values({
+          userId: input.userId,
+          profileType: "facility",
+          professionalProfileId: null,
+          facilityId: facility.id,
+          membershipRole: "owner",
+          status: "active",
+        });
+
         return {
           facilityId: facility.id,
           verified: facility.verified,
         };
+      });
+    },
+    { userId: input.userId },
+  );
+}
+
+/**
+ * Create a facility workspace for an already-authenticated account.
+ * Does not change public.users.role or Auth UUIDs.
+ */
+export async function createOwnedFacilityWorkspace(input: {
+  userId: string;
+  organisationName: string;
+  location: string;
+  facilityType: Facility["type"];
+  premisesNumber?: string | null;
+}): Promise<{ facilityId: string } | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "facilities",
+    "createOwnedFacilityWorkspace",
+    async () => {
+      const db = getDb();
+      return db.transaction(async (tx) => {
+        const current = await tx
+          .select({ role: users.role, facilityId: users.facilityId })
+          .from(users)
+          .where(eq(users.id, input.userId))
+          .limit(1);
+        const row = current[0];
+        if (!row || row.role === "admin") return null;
+
+        const facilityRows = await tx
+          .insert(facilities)
+          .values({
+            name: input.organisationName,
+            type: input.facilityType,
+            location: input.location,
+            premisesNumber: normalizePremisesNumber(input.premisesNumber),
+            verified: false,
+            rating: "0",
+            openRoles: 0,
+            initials: facilityInitialsFromName(input.organisationName),
+            logoColor: DEFAULT_FACILITY_LOGO,
+          })
+          .returning({ id: facilities.id });
+        const facility = facilityRows[0];
+        if (!facility) return null;
+
+        await tx.insert(accountMemberships).values({
+          userId: input.userId,
+          profileType: "facility",
+          professionalProfileId: null,
+          facilityId: facility.id,
+          membershipRole: "owner",
+          status: "active",
+        });
+
+        if (row.role === "facility" && !row.facilityId) {
+          await tx
+            .update(users)
+            .set({ facilityId: facility.id, updatedAt: new Date() })
+            .where(eq(users.id, input.userId));
+        }
+
+        return { facilityId: facility.id };
       });
     },
     { userId: input.userId },

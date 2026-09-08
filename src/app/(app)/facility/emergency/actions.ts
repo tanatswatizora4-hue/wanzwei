@@ -6,7 +6,6 @@ import {
   cancelEmergencyAlertForFacility,
   createEmergencyAlert,
 } from "@/lib/repos/emergency-alerts";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
 import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireRole } from "@/lib/auth/session";
@@ -56,12 +55,11 @@ export async function createAlertAction(formData: FormData) {
     expiresInMinutes,
   } = parsed.data;
 
-  const facility = await findFacilityForUserEmail(user.email);
-  if (!facility) {
+  const facilityId = await resolveFacilityIdForUser(user);
+  if (!facilityId) {
     revalidatePath("/facility/emergency");
     return;
   }
-  const facilityId = facility.id;
 
   const now = new Date();
   const expiresAt = new Date(
@@ -97,7 +95,7 @@ export async function cancelAlertAction(formData: FormData) {
   }
   const facilityId = await resolveFacilityIdForUser(user);
   await cancelOwnedEmergencyAlert(
-    { role: user.role, facilityId },
+    { role: "facility", facilityId },
     parsed.data.alertId,
     { cancelForFacility: cancelEmergencyAlertForFacility },
   );

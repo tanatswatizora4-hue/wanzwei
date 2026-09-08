@@ -61,6 +61,7 @@ export async function applyAdminVerificationDecision(
           await tx.setUserVerified(current.userId, false);
         }
       }
+      await recordManualCredentialReview(tx, current, status);
       return {
         verification: toVerification({
           ...current,
@@ -79,6 +80,7 @@ export async function applyAdminVerificationDecision(
       profession: current.profession,
       registeringBody: current.registeringBody ?? "",
       registrationNumber: current.registrationNumber ?? "",
+      regulatoryBodyOther: current.regulatoryBodyOther,
       status,
       matchOutcome,
       matchedRegistryId: current.matchedRegistryId,
@@ -100,6 +102,8 @@ export async function applyAdminVerificationDecision(
         userVerified = true;
       }
     }
+
+    await recordManualCredentialReview(tx, current, status);
 
     await tx.insertEvent({
       verificationId: saved.id,
@@ -135,4 +139,24 @@ function toOutcome(value: string | null): VerificationMatchOutcome {
     "non_clinical_qualification",
   ];
   return allowed.find((outcome) => outcome === value) ?? "not_found";
+}
+
+async function recordManualCredentialReview(
+  tx: VerificationWriteTx,
+  current: NonNullable<Awaited<ReturnType<VerificationWriteTx["getById"]>>>,
+  status: AdminManualDecisionStatus,
+) {
+  const now = new Date();
+  await tx.updateUserCredentials(current.userId, {
+    profession: current.profession,
+    registeringBody: current.registeringBody ?? "",
+    registrationNumber: current.registrationNumber ?? "",
+    regulatoryBodyOther: current.regulatoryBodyOther,
+    lastVerificationReviewAt: now,
+    credentialVerificationMethod: "manual",
+    identityVerificationStatus:
+      status === "Verified" ? "reviewed" : "processed",
+    credentialStatus: status === "Verified" ? "reviewed" : "pending_review",
+    credentialVerifiedAt: status === "Verified" ? now : null,
+  });
 }

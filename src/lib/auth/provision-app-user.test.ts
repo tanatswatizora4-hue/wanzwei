@@ -44,6 +44,8 @@ function memoryStore(seed: User[] = []): AppUserStore & {
         verified: user.verified === true,
         facilityId: user.facilityId ?? undefined,
         profession: user.profession ?? undefined,
+        registeringBody: user.registeringBody ?? undefined,
+        regulatoryBodyOther: user.regulatoryBodyOther ?? undefined,
       });
       rows.push(created);
       return created;
@@ -779,12 +781,14 @@ describe("facility signup provisioning", () => {
         name: "Tinashe Moyo",
         role: "professional",
         profession: "Digital Health Specialist",
+        registeringBody: "AHPCZ",
       },
       signupDeps(store),
     );
 
     expect(result.ok).toBe(true);
     expect(store.rows[0]?.profession).toBe("Digital Health Specialist");
+    expect(store.rows[0]?.registeringBody).toBe("AHPCZ");
     expect(store.rows[0]?.verified).toBe(false);
   });
 

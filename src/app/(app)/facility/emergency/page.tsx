@@ -16,14 +16,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { requireRole } from "@/lib/auth/session";
 import { getEmergencyAlertsForFacility } from "@/lib/repos/emergency-alerts";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityForUser } from "@/lib/facility-for-user";
 import { timeAgoLong } from "@/lib/format";
 import { EmergencyAlertForm } from "./emergency-form";
 import { cancelAlertAction } from "./actions";
 
 export default async function FacilityEmergencyPage() {
   const user = await requireRole(["facility"]);
-  const facility = await findFacilityForUserEmail(user.email);
+  const facility = await resolveFacilityForUser(user);
   const alerts = facility ? await getEmergencyAlertsForFacility(facility.id) : [];
 
   const stats = {

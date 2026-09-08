@@ -26,6 +26,8 @@ describe("SettingsProfileUpdateSchema", () => {
       { registrationNumber: "N123" },
       { registeringBody: "Nurses Council of Zimbabwe" },
       { profession: "Nurse" },
+      { practisingCertificateStatus: "current" },
+      { identityVerificationStatus: "reviewed" },
     ]) {
       expect(
         SettingsProfileUpdateSchema.safeParse({

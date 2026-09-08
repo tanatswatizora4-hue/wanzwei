@@ -77,6 +77,7 @@ type MemCase = {
   status: VerificationStatus;
   registeringBody: string | null;
   registrationNumber: string | null;
+  regulatoryBodyOther?: string | null;
   matchOutcome: string | null;
   matchedRegistryId: string | null;
   documentCount: number;
@@ -125,9 +126,18 @@ function memoryStore(rows: RegistryMatchRecord[]): SubmitVerificationStore & {
       const normalized = normalizeRegistrationNumber(registrationNumber);
       return rows.filter((row) => row.registrationNumberNormalized === normalized);
     },
-    findCurrentCase: async (userId) =>
-      cases.find((row) => row.userId === userId) ?? null,
-    getById: async (id) => cases.find((row) => row.id === id) ?? null,
+    findCurrentCase: async (userId) => {
+      const row = cases.find((row) => row.userId === userId) ?? null;
+      return row
+        ? { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null }
+        : null;
+    },
+    getById: async (id) => {
+      const row = cases.find((row) => row.id === id) ?? null;
+      return row
+        ? { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null }
+        : null;
+    },
     insertCase: async (input) => {
       const now = new Date("2026-08-31T10:00:00.000Z");
       const row: MemCase = {
@@ -138,6 +148,7 @@ function memoryStore(rows: RegistryMatchRecord[]): SubmitVerificationStore & {
         status: input.status,
         registeringBody: input.registeringBody,
         registrationNumber: input.registrationNumber,
+        regulatoryBodyOther: input.regulatoryBodyOther ?? null,
         matchOutcome: input.matchOutcome,
         matchedRegistryId: input.matchedRegistryId,
         documentCount: 0,
@@ -146,7 +157,7 @@ function memoryStore(rows: RegistryMatchRecord[]): SubmitVerificationStore & {
         flags: [],
       };
       cases.push(row);
-      return row;
+      return { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null };
     },
     updateCase: async (id, patch) => {
       const row = cases.find((item) => item.id === id);
@@ -158,7 +169,7 @@ function memoryStore(rows: RegistryMatchRecord[]): SubmitVerificationStore & {
       row.status = patch.status;
       row.matchOutcome = patch.matchOutcome;
       row.matchedRegistryId = patch.matchedRegistryId;
-      return { ...row };
+      return { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null };
     },
     setUserVerified: async (userId, isVerified) => {
       if (isVerified) verified.add(userId);
@@ -332,7 +343,7 @@ describe("controlled HPA record P02-6462-2026", () => {
 
 describe("controlled HPA auto-verify service path", () => {
   const input = {
-    registeringBody: "HPA" as const,
+    registeringBody: "PCZ" as const,
     registrationNumber: CONTROLLED.registrationNumber,
     profession: "Pharmacist",
     identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -405,7 +416,7 @@ describe("controlled HPA auto-verify service path", () => {
     const store = memoryStore([controlledRow()]);
     const result = await submitProfessionalVerification(
       user,
-      { ...input, profession: "Registered Nurse" },
+      { ...input, profession: "Nurse", registeringBody: "NCZ" },
       store,
     );
 

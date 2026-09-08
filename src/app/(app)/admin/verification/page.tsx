@@ -46,7 +46,7 @@ export default async function AdminVerificationPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Verification queue"
-        description="Review credential submissions and approve verified professionals."
+        description="Review identity and credential submissions. Registry comparison is corroboration when a supported source exists."
         actions={
           <div className="flex max-w-full flex-wrap gap-1 overflow-x-auto rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white p-0.5 text-[12.5px]">
             {STATUSES.map((s) => (

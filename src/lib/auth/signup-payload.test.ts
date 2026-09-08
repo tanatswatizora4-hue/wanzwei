@@ -23,6 +23,8 @@ describe("signup payload", () => {
       location: undefined,
       facilityType: undefined,
       profession: undefined,
+      registeringBody: undefined,
+      regulatoryBodyOther: undefined,
       premisesNumber: undefined,
     });
   });
@@ -33,6 +35,7 @@ describe("signup payload", () => {
     formData.set("email", "pro@example.com");
     formData.set("password", "secret1");
     formData.set("profession", "Pharmacist");
+    formData.set("registeringBody", "PCZ");
 
     const payload = readSignupPayload(formData);
     const parsed = SignupSchema.parse(payload);
@@ -47,6 +50,7 @@ describe("signup payload", () => {
     formData.set("password", "secret1");
     formData.set("role", "   ");
     formData.set("profession", "Nurse");
+    formData.set("registeringBody", "NCZ");
 
     const payload = readSignupPayload(formData);
     const parsed = SignupSchema.parse(payload);
@@ -71,6 +75,8 @@ describe("signup payload", () => {
       hasLocation: false,
       hasFacilityType: false,
       hasProfession: false,
+      hasRegisteringBody: false,
+      hasRegulatoryBodyOther: false,
       hasPremisesNumber: false,
       role: "professional",
     });

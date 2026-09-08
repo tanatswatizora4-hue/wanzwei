@@ -45,8 +45,16 @@ export type User = {
   profession?: string;
   registeringBody?: string;
   registrationNumber?: string;
-  cpdCredits?: number;
-  cpdTarget?: number;
+  regulatoryBodyOther?: string;
+  identityVerificationStatus?: string;
+  credentialStatus?: string;
+  credentialVerifiedAt?: string;
+  credentialVerificationMethod?: string;
+  practisingCertificateExpiry?: string;
+  practisingCertificateStatus?: string;
+    lastVerificationReviewAt?: string;
+    cpdCredits?: number;
+    cpdTarget?: number;
 };
 
 export type Facility = {
@@ -122,6 +130,9 @@ export type Course = {
   location?: string;
   startsAt?: string;
   endsAt?: string;
+  cpdPoints?: number | null;
+  accreditingBody?: string | null;
+  accreditationReference?: string | null;
 };
 
 export type CourseEnrolment = {
@@ -142,7 +153,9 @@ export type ListingKind =
 
 export type ListingMode = "Sale" | "Lease";
 
-export type ListingStatus = "Open" | "Closed";
+export type ListingStatus = "Open" | "Closed" | "Paused" | "Draft";
+
+export type ListingSellerType = "professional" | "facility";
 
 export type Listing = {
   id: string;
@@ -162,6 +175,11 @@ export type Listing = {
   ownerId?: string;
   ownerName?: string;
   status: ListingStatus;
+  category?: string | null;
+  condition?: string | null;
+  sellerType?: ListingSellerType | null;
+  facilityId?: string | null;
+  imageUrls?: string[];
 };
 
 export type ListingEnquiry = {
@@ -186,6 +204,7 @@ export type Verification = {
   flags?: string[];
   registeringBody?: string;
   registrationNumber?: string;
+  regulatoryBodyOther?: string;
   matchedRegistryId?: string;
   matchOutcome?: VerificationMatchOutcome;
 };

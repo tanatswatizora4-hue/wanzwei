@@ -5,9 +5,14 @@ import { useState } from "react";
 import { cn } from "@/lib/cn";
 import { Input, Label, FieldHint } from "@/components/ui/input";
 import { ProfessionSelect } from "@/components/app/profession-select";
+import { RegulatoryBodySelect } from "@/components/app/regulatory-body-select";
 import {
   professionSupportsHpaAutoVerify,
 } from "@/lib/professions";
+import {
+  isOtherRegulatoryBody,
+  regulatoryBodySupportsHpaCorroboration,
+} from "@/lib/regulatory-bodies";
 import { FacilityTypeSchema } from "@/lib/validation/auth";
 
 type SignupRole = "professional" | "facility";
@@ -28,6 +33,7 @@ export function SignupRolePicker({
 }) {
   const [selectedRole, setSelectedRole] = useState<SignupRole>(defaultRole);
   const [profession, setProfession] = useState("");
+  const [registeringBody, setRegisteringBody] = useState("");
 
   return (
     <>
@@ -72,21 +78,49 @@ export function SignupRolePicker({
       </div>
 
       {selectedRole === "professional" ? (
-        <div className="mt-3.5 grid gap-1.5">
-          <Label htmlFor="profession">Profession</Label>
-          <ProfessionSelect
-            name="profession"
-            required
-            value={profession}
-            onValueChange={setProfession}
-          />
-          <FieldHint>
-            {profession && !professionSupportsHpaAutoVerify(profession)
-              ? "This profession is not in the HPA auto-match register yet. You can still create an account; credentials may require manual review."
-              : profession
-                ? "After signup you can submit your HPA registration for automatic matching where the register supports it."
-                : "Search and select your profession."}
-          </FieldHint>
+        <div className="mt-3.5 flex flex-col gap-3.5">
+          <div className="grid gap-1.5">
+            <Label htmlFor="profession">Profession</Label>
+            <ProfessionSelect
+              name="profession"
+              required
+              value={profession}
+              onValueChange={setProfession}
+            />
+            <FieldHint>Search and select your profession.</FieldHint>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="registeringBody">Regulatory / registering body</Label>
+            <RegulatoryBodySelect
+              required
+              value={registeringBody}
+              onValueChange={setRegisteringBody}
+            />
+            <FieldHint>
+              {isOtherRegulatoryBody(registeringBody)
+                ? "Name the body that issued your practising certificate. Other cannot be auto-verified."
+                : profession &&
+                    !regulatoryBodySupportsHpaCorroboration(
+                      registeringBody,
+                      profession,
+                    )
+                  ? "Wanzwei reviews credential evidence for this council. Automatic register corroboration is only used where a supported source exists."
+                  : professionSupportsHpaAutoVerify(profession) && registeringBody
+                    ? "After signup you can submit your registration number and practising certificate. Where a register is available, Wanzwei may corroborate it."
+                    : "Select the council that issued your practising certificate or licence."}
+            </FieldHint>
+          </div>
+          {isOtherRegulatoryBody(registeringBody) ? (
+            <div className="grid gap-1.5">
+              <Label htmlFor="regulatoryBodyOther">Name of regulatory body</Label>
+              <Input
+                id="regulatoryBodyOther"
+                name="regulatoryBodyOther"
+                placeholder="Name of the registering body"
+                required
+              />
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="mt-3.5 flex flex-col gap-3.5">

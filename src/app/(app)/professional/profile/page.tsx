@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { Pencil, Shield } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
 import { Card, CardBody } from "@/components/ui/card";
 import { ProfileAvatarUploader } from "@/components/app/profile-avatar-uploader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ProfessionalCredentialSummary } from "@/components/app/professional-credential-summary";
 import { requireRole } from "@/lib/auth/session";
 import { DocumentUploadPanel } from "@/components/app/document-upload-panel";
 import { isSupabaseConfigured } from "@/lib/supabase/service";
@@ -59,27 +60,14 @@ export default async function ProfilePage() {
                     <h2 className="text-[20px] font-semibold tracking-tight">
                       {user.name}
                     </h2>
-                    {user.verified ? (
-                      <Badge tone="success" withDot>
-                        <Shield className="h-3 w-3" /> Account verification: Verified
-                      </Badge>
-                    ) : (
-                      <Badge tone="amber" withDot>
-                        Account verification: Not verified
-                      </Badge>
-                    )}
                   </div>
                   <p className="text-[13.5px] text-[color:var(--color-ink-500)]">
                     {user.profession ?? "Profession not set"}
                     {user.location ? ` · ${user.location}` : ""}
                   </p>
-                  {user.registeringBody || user.registrationNumber ? (
-                    <p className="mt-1 text-[12.5px] text-[color:var(--color-ink-500)]">
-                      {[user.registeringBody, user.registrationNumber]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  ) : null}
+                  <div className="mt-3">
+                    <ProfessionalCredentialSummary user={user} />
+                  </div>
                 </div>
               </div>
             </CardBody>

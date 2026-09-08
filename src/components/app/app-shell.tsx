@@ -6,16 +6,25 @@ import { X } from "lucide-react";
 import { Sidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
 import { cn } from "@/lib/cn";
-import type { User } from "@/lib/types";
+import type { Role, User } from "@/lib/types";
+import type { switcherProfiles } from "@/lib/auth/workspace-model";
+
+type SwitcherItem = ReturnType<typeof switcherProfiles>[number];
 
 export function AppShell({
   user,
   unreadNotificationCount = 0,
   children,
+  navRole,
+  switcherProfiles: profiles = [],
+  activeWorkspaceKey,
 }: {
   user: User;
   unreadNotificationCount?: number;
   children: React.ReactNode;
+  navRole: Role;
+  switcherProfiles?: SwitcherItem[];
+  activeWorkspaceKey: string;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
@@ -63,7 +72,13 @@ export function AppShell({
             : "-translate-x-full pointer-events-none lg:translate-x-0",
         )}
       >
-        <Sidebar user={user} onNavigate={closeMobileNav} />
+        <Sidebar
+          user={user}
+          navRole={navRole}
+          onNavigate={closeMobileNav}
+          switcherProfiles={profiles}
+          activeWorkspaceKey={activeWorkspaceKey}
+        />
         <button
           type="button"
           onClick={closeMobileNav}
@@ -77,9 +92,12 @@ export function AppShell({
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           user={user}
+          navRole={navRole}
           unreadNotificationCount={unreadNotificationCount}
           onOpenMobileNav={openMobileNav}
           mobileNavOpen={mobileNavOpen}
+          switcherProfiles={profiles}
+          activeWorkspaceKey={activeWorkspaceKey}
         />
         <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
       </div>

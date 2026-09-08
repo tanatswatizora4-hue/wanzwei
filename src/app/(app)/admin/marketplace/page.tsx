@@ -16,7 +16,11 @@ export default async function AdminMarketplacePage({
 }) {
   const user = await requireRole(["admin"]);
   const filters = parseMarketplaceSearchParams(await searchParams);
-  const listings = await listListings(200, filters, user.id);
+  const listings = await listListings(
+    200,
+    filters,
+    filters.mine ? { ownerId: user.id } : undefined,
+  );
 
   return (
     <MarketplaceView

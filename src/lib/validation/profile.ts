@@ -13,7 +13,23 @@ const ProtectedSettingsFieldsSchema = z
     registration_number: z.never().optional(),
     registeringBody: z.never().optional(),
     registering_body: z.never().optional(),
+    regulatoryBodyOther: z.never().optional(),
+    regulatory_body_other: z.never().optional(),
     profession: z.never().optional(),
+    identityVerificationStatus: z.never().optional(),
+    identity_verification_status: z.never().optional(),
+    credentialStatus: z.never().optional(),
+    credential_status: z.never().optional(),
+    credentialVerifiedAt: z.never().optional(),
+    credential_verified_at: z.never().optional(),
+    credentialVerificationMethod: z.never().optional(),
+    credential_verification_method: z.never().optional(),
+    practisingCertificateExpiry: z.never().optional(),
+    practising_certificate_expiry: z.never().optional(),
+    practisingCertificateStatus: z.never().optional(),
+    practising_certificate_status: z.never().optional(),
+    lastVerificationReviewAt: z.never().optional(),
+    last_verification_review_at: z.never().optional(),
   })
   .strict();
 

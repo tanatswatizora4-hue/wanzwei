@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { PageHeader } from "@/components/app/topbar";
+import { ListingOwnerActions } from "@/components/app/listing-owner-actions";
 import { MarketplaceEnquiryDialog } from "@/components/app/marketplace-enquiry-dialog";
 import { MarketplaceListingDialog } from "@/components/app/marketplace-listing-dialog";
 import { MarketplaceSearchStrip } from "@/components/app/marketplace-search-strip";
@@ -44,14 +45,24 @@ export function MarketplaceView({
   viewer: User;
   canCreate: boolean;
 }) {
+  const listingContext = basePath.startsWith("/facility")
+    ? "facility"
+    : basePath.startsWith("/admin")
+      ? "admin"
+      : "professional";
   return (
     <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         title="Healthcare Marketplace"
-        description="Enquiry-based listings for buying, selling, or leasing healthcare practices. Wanzwei does not process payments or orders."
+        description="Enquiry-based classified listings for healthcare equipment and supplies. Wanzwei does not process payments or orders."
         actions={
           canCreate ? (
-            <MarketplaceListingDialog />
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="secondary" asChild>
+                <Link href={`${basePath}/mine`}>My Listings</Link>
+              </Button>
+              <MarketplaceListingDialog listingContext={listingContext} />
+            </div>
           ) : null
         }
       />
@@ -92,6 +103,8 @@ export function MarketplaceView({
               listing={listing}
               href={`${basePath}/${listing.id}`}
               viewer={viewer}
+              listingContext={listingContext}
+              manageOwn={Boolean(filters.mine)}
             />
           ))}
         </div>
@@ -104,10 +117,14 @@ function ListingCard({
   listing,
   href,
   viewer,
+  listingContext,
+  manageOwn,
 }: {
   listing: Listing;
   href: string;
   viewer: User;
+  listingContext: "professional" | "facility" | "admin";
+  manageOwn: boolean;
 }) {
   const canEnquire =
     listing.status === "Open" && listing.ownerId !== viewer.id;
@@ -151,6 +168,11 @@ function ListingCard({
             ? `Listed by ${listing.ownerName}`
             : "Seller identity is not assigned"}
         </p>
+        {manageOwn ? (
+          <Badge tone={listing.status === "Open" ? "emerald" : "slate"}>
+            {listing.status}
+          </Badge>
+        ) : null}
         <div className="mt-1 flex flex-wrap gap-3 text-[11.5px] text-[color:var(--color-ink-500)]">
           {listing.beds ? (
             <span className="inline-flex items-center gap-1">
@@ -187,7 +209,9 @@ function ListingCard({
             <Button variant="ghost" size="sm" asChild>
               <Link href={href}>Details</Link>
             </Button>
-            {canEnquire ? (
+            {manageOwn ? (
+              <ListingOwnerActions listing={listing} listingContext={listingContext} />
+            ) : canEnquire ? (
               <MarketplaceEnquiryDialog
                 listingId={listing.id}
                 listingTitle={listing.title}

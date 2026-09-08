@@ -11,6 +11,8 @@ describe("marketplace validation", () => {
       title: "Borrowdale clinic",
       kind: "Clinic",
       mode: "Sale",
+      category: "office_facility_equipment",
+      condition: "good",
       location: "Harare",
       price: "120000",
       description: "Consulting rooms with existing staff.",

@@ -19,7 +19,7 @@ import {
 import { timeAgoLong } from "@/lib/format";
 import { facilityJobPath } from "@/lib/jobs/paths";
 import { requireRole } from "@/lib/auth/session";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityForUser } from "@/lib/facility-for-user";
 import { listJobsForFacility } from "@/lib/repos/jobs";
 import type { JobStatus } from "@/lib/types";
 
@@ -30,7 +30,7 @@ export default async function FacilityJobsPage({
 }) {
   const user = await requireRole(["facility"]);
   const { new: newParam, status: statusParam } = await searchParams;
-  const facility = await findFacilityForUserEmail(user.email);
+  const facility = await resolveFacilityForUser(user);
   const allJobs = facility ? await listJobsForFacility(facility.id, 100) : [];
   const statusFilter =
     statusParam === "Open" || statusParam === "Closed"

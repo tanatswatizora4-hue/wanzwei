@@ -193,6 +193,8 @@ export async function ensureAppUserProfile(
     name: string;
     role: Role;
     profession?: string | null;
+    registeringBody?: string | null;
+    regulatoryBodyOther?: string | null;
     facility?: FacilitySignupDetails;
   },
   store: AppUserStore = defaultStore,
@@ -270,6 +272,12 @@ export async function ensureAppUserProfile(
       verified: false,
       profession:
         input.role === "professional" ? (input.profession ?? null) : null,
+      registeringBody:
+        input.role === "professional" ? (input.registeringBody ?? null) : null,
+      regulatoryBodyOther:
+        input.role === "professional" && input.registeringBody === "OTHER"
+          ? (input.regulatoryBodyOther ?? null)
+          : null,
     });
     if (!created) {
       throw new AppUserProvisionError(
@@ -320,6 +328,8 @@ export async function completeEmailSignup(
     name: string;
     role: Exclude<Role, "admin">;
     profession?: string | null;
+    registeringBody?: string | null;
+    regulatoryBodyOther?: string | null;
     facility?: FacilitySignupDetails;
   },
   deps: EmailSignupDeps = defaultSignupDeps,
@@ -392,6 +402,8 @@ export async function completeEmailSignup(
         name: input.name,
         role: input.role,
         profession: input.profession,
+        registeringBody: input.registeringBody,
+        regulatoryBodyOther: input.regulatoryBodyOther,
         facility: input.role === "facility" ? input.facility : undefined,
       },
       deps,

@@ -5,6 +5,7 @@ import { and, asc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import { facilities, users } from "@/lib/db/schema";
+import { insertProfessionalMembership } from "@/lib/repos/account-memberships";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type { DbUser, NewDbUser } from "@/lib/db/schema";
 import type { User, Role } from "@/lib/types";
@@ -23,6 +24,16 @@ export function toUser(row: DbUser): User {
     profession: row.profession ?? undefined,
     registeringBody: row.registeringBody ?? undefined,
     registrationNumber: row.registrationNumber ?? undefined,
+    regulatoryBodyOther: row.regulatoryBodyOther ?? undefined,
+    identityVerificationStatus: row.identityVerificationStatus ?? undefined,
+    credentialStatus: row.credentialStatus ?? undefined,
+    credentialVerifiedAt: row.credentialVerifiedAt?.toISOString(),
+    credentialVerificationMethod: row.credentialVerificationMethod ?? undefined,
+    practisingCertificateExpiry: row.practisingCertificateExpiry
+      ? String(row.practisingCertificateExpiry)
+      : undefined,
+    practisingCertificateStatus: row.practisingCertificateStatus ?? undefined,
+    lastVerificationReviewAt: row.lastVerificationReviewAt?.toISOString(),
     cpdCredits: row.cpdCredits == null ? undefined : Number(row.cpdCredits),
     cpdTarget: row.cpdTarget == null ? undefined : Number(row.cpdTarget),
   };
@@ -125,7 +136,11 @@ export async function createUser(user: NewDbUser): Promise<User | null> {
   return withRepositoryLogging("users", "createUser", async () => {
     const db = getDb();
     const rows = await db.insert(users).values(normalized).returning();
-    return rows[0] ? toUser(rows[0]) : null;
+    const created = rows[0] ? toUser(rows[0]) : null;
+    if (created?.role === "professional") {
+      await insertProfessionalMembership(created.id);
+    }
+    return created;
   }, { email: normalized.email, role: user.role });
 }
 
@@ -209,6 +224,14 @@ export async function anonymizeOwnUserForDeletion(
         profession: null,
         registeringBody: null,
         registrationNumber: null,
+        regulatoryBodyOther: null,
+        identityVerificationStatus: null,
+        credentialStatus: null,
+        credentialVerifiedAt: null,
+        credentialVerificationMethod: null,
+        practisingCertificateExpiry: null,
+        practisingCertificateStatus: null,
+        lastVerificationReviewAt: null,
         facilityId: null,
         deletedAt: now,
         updatedAt: now,

@@ -50,8 +50,8 @@ export function ProfileCompletionBanner({
         <div className="min-w-0 flex-1">
           <p className="text-[14px] font-semibold">Complete your profile</p>
           <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-            Add your location and submit HPA verification so facilities can
-            review a complete application.
+            Add your location and submit identity and credential evidence so
+            facilities can review a complete application.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2 self-start sm:self-center">

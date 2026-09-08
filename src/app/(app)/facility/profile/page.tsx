@@ -12,13 +12,13 @@ import { FacilityLogo } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { DocumentUploadPanel } from "@/components/app/document-upload-panel";
 import { requireRole } from "@/lib/auth/session";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityForUser } from "@/lib/facility-for-user";
 import { isSupabaseConfigured } from "@/lib/supabase/service";
 import { listFacilityVerificationDocuments } from "@/lib/supabase/documents-repo";
 
 export default async function FacilityProfilePage() {
   const user = await requireRole(["facility"]);
-  const f = await findFacilityForUserEmail(user.email);
+  const f = await resolveFacilityForUser(user);
   const facilityId = f?.id;
 
   const uploadsEnabled = isSupabaseConfigured();

@@ -22,7 +22,11 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
+import { ProfileSwitcher } from "@/components/app/profile-switcher";
+import type { switcherProfiles } from "@/lib/auth/workspace-model";
 import type { Role, User } from "@/lib/types";
+
+type SwitcherItem = ReturnType<typeof switcherProfiles>[number];
 
 type NavSection = {
   heading?: string;
@@ -77,8 +81,18 @@ function professionalNav(): NavSection[] {
           icon: <GraduationCap className="h-4 w-4" />,
         },
         {
+          label: "Certificates",
+          href: "/professional/cpd/certificates",
+          icon: <FileBadge className="h-4 w-4" />,
+        },
+        {
           label: "Marketplace",
           href: "/professional/marketplace",
+          icon: <Store className="h-4 w-4" />,
+        },
+        {
+          label: "My Listings",
+          href: "/professional/marketplace/mine",
           icon: <Store className="h-4 w-4" />,
         },
       ],
@@ -144,6 +158,11 @@ function facilityNav(): NavSection[] {
         {
           label: "Marketplace",
           href: "/facility/marketplace",
+          icon: <Store className="h-4 w-4" />,
+        },
+        {
+          label: "My Listings",
+          href: "/facility/marketplace/mine",
           icon: <Store className="h-4 w-4" />,
         },
       ],
@@ -248,14 +267,29 @@ export function navForRole(role: Role): NavSection[] {
 }
 
 export function Sidebar({
-  user,
+  navRole,
   onNavigate,
+  switcherProfiles: profiles = [],
+  activeWorkspaceKey,
 }: {
   user: User;
+  navRole: Role;
   onNavigate?: () => void;
+  switcherProfiles?: SwitcherItem[];
+  activeWorkspaceKey: string;
 }) {
   const pathname = usePathname();
-  const nav = React.useMemo(() => navForRole(user.role), [user.role]);
+  const pathRole: Role | null = pathname?.startsWith("/admin")
+    ? "admin"
+    : pathname?.startsWith("/facility")
+      ? "facility"
+      : pathname?.startsWith("/professional")
+        ? "professional"
+        : null;
+  const nav = React.useMemo(
+    () => navForRole(pathRole ?? navRole),
+    [pathRole, navRole],
+  );
 
   return (
     <aside className="glass-panel flex h-dvh min-h-0 w-[244px] max-w-full shrink-0 flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] lg:sticky lg:top-0 lg:h-screen">
@@ -320,6 +354,14 @@ export function Sidebar({
       </nav>
 
       <div className="border-t border-white/60 px-3 pb-4 pt-2">
+        {profiles.length > 1 ? (
+          <div className="mb-2 lg:hidden">
+            <ProfileSwitcher
+              profiles={profiles}
+              activeKey={activeWorkspaceKey}
+            />
+          </div>
+        ) : null}
         <form action="/api/auth/logout" method="post">
           <button
             type="submit"

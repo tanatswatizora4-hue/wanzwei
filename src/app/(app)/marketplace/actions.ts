@@ -3,19 +3,26 @@
 import { revalidatePath } from "next/cache";
 
 import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
+import { isVerifiedProfessional } from "@/lib/auth/professional-verification";
 import { requireRole } from "@/lib/auth/session";
+import {
+  listCachedMembershipsForUser,
+  resolveWorkspaceForUser,
+} from "@/lib/auth/workspace";
+import { facilityMemberships } from "@/lib/auth/workspace-model";
 import { catalogueCoverClass } from "@/lib/catalogue/cover";
 import { hasDbConfig } from "@/lib/db/client";
 import {
-  canCreateListing,
   canManageListing,
   canSendListingEnquiry,
+  listingVisiblePublicly,
 } from "@/lib/marketplace/ownership";
 import { createNotification } from "@/lib/repos/notifications";
 import {
   createListing,
+  deleteListingById,
   getListingById,
-  updateListingForOwner,
+  updateListingById,
 } from "@/lib/repos/listings";
 import {
   createListingEnquiry,
@@ -25,6 +32,8 @@ import { ServerActionValidationError } from "@/lib/validation/errors";
 import {
   CreateListingEnquirySchema,
   CreateListingSchema,
+  ListingIdSchema,
+  ListingStatusSchema,
   UpdateListingSchema,
 } from "@/lib/validation/marketplace";
 
@@ -34,6 +43,8 @@ function revalidateMarketplace(listingId?: string) {
   revalidatePath("/professional/marketplace");
   revalidatePath("/facility/marketplace");
   revalidatePath("/admin/marketplace");
+  revalidatePath("/professional/marketplace/mine");
+  revalidatePath("/facility/marketplace/mine");
   if (listingId) {
     revalidatePath(`/professional/marketplace/${listingId}`);
     revalidatePath(`/facility/marketplace/${listingId}`);
@@ -44,36 +55,113 @@ function revalidateMarketplace(listingId?: string) {
 function listingFields(formData: FormData) {
   return {
     title: formData.get("title"),
-    kind: formData.get("kind"),
-    mode: formData.get("mode"),
+    description: formData.get("description"),
+    category: formData.get("category"),
+    condition: formData.get("condition"),
     location: formData.get("location"),
     price: formData.get("price"),
     currency: formData.get("currency") || "USD",
+    status: formData.get("status") || "Open",
+    kind: formData.get("kind") || "Practice",
+    mode: formData.get("mode") || "Sale",
     beds: formData.get("beds"),
     rooms: formData.get("rooms"),
     staff: formData.get("staff"),
     cover: formData.get("cover") || undefined,
-    description: formData.get("description"),
     confidential: formData.get("confidential"),
-    status: formData.get("status") || "Open",
   };
+}
+
+async function actorFacilityIdsForUser(userId: string): Promise<string[]> {
+  const memberships = await listCachedMembershipsForUser(userId);
+  return facilityMemberships(memberships)
+    .map((membership) => membership.facilityId)
+    .filter((id): id is string => Boolean(id));
 }
 
 export async function createListingAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const user = await requireRole(["facility", "admin"]);
-  if (!canCreateListing({ actor: user })) {
-    return actionError("You cannot create marketplace listings.");
-  }
+  const user = await requireRole(["professional", "facility", "admin"]);
   if (!hasDbConfig()) {
     return actionError("Database is not configured.");
+  }
+
+  const { workspace } = await resolveWorkspaceForUser(user);
+  const listingContext = String(formData.get("listingContext") ?? "");
+  if (listingContext === "facility") {
+    if (workspace?.type !== "facility") {
+      return actionError("Switch to a facility workspace to create facility listings.");
+    }
+    if (
+      workspace.membershipRole !== "owner" &&
+      workspace.membershipRole !== "admin"
+    ) {
+      return actionError("You cannot create marketplace listings.");
+    }
+    const memberships = await listCachedMembershipsForUser(user.id);
+    const owned = facilityMemberships(memberships);
+    const allowed = owned.some(
+      (membership) => membership.facilityId === workspace.facilityId,
+    );
+    if (!allowed) {
+      return actionError("You cannot create marketplace listings.");
+    }
+    const facilityId = workspace.facilityId;
+    const parsed = CreateListingSchema.safeParse(listingFields(formData));
+    if (!parsed.success) {
+      throw new ServerActionValidationError(parsed.error);
+    }
+    const created = await createListing({
+      title: parsed.data.title,
+      kind: parsed.data.kind,
+      mode: parsed.data.mode,
+      location: parsed.data.location,
+      price: String(parsed.data.price),
+      currency: parsed.data.currency,
+      beds: parsed.data.beds ?? null,
+      rooms: parsed.data.rooms ?? null,
+      staff: parsed.data.staff ?? null,
+      cover: catalogueCoverClass(parsed.data.cover, DEFAULT_COVER),
+      description: parsed.data.description,
+      confidential: parsed.data.confidential,
+      ownerId: user.id,
+      status: parsed.data.status,
+      category: parsed.data.category,
+      condition: parsed.data.condition,
+      sellerType: "facility",
+      facilityId,
+    });
+    if (!created) {
+      return actionError("Could not create this listing.");
+    }
+    revalidateMarketplace(created.id);
+    return actionOk();
+  }
+
+  if (listingContext !== "admin" && user.role !== "admin") {
+    if (
+      !isVerifiedProfessional(user, { professionalMembership: true })
+    ) {
+      return actionError("You cannot create marketplace listings.");
+    }
+  } else if (user.role !== "admin") {
+    return actionError("You cannot create marketplace listings.");
   }
 
   const parsed = CreateListingSchema.safeParse(listingFields(formData));
   if (!parsed.success) {
     throw new ServerActionValidationError(parsed.error);
   }
+
+  const seller =
+    user.role === "admin"
+      ? { sellerType: null, facilityId: null, ownerId: user.id }
+      : {
+          sellerType: "professional" as const,
+          facilityId: null,
+          ownerId: user.id,
+        };
 
   const created = await createListing({
     title: parsed.data.title,
@@ -88,8 +176,12 @@ export async function createListingAction(
     cover: catalogueCoverClass(parsed.data.cover, DEFAULT_COVER),
     description: parsed.data.description,
     confidential: parsed.data.confidential,
-    ownerId: user.id,
+    ownerId: seller.ownerId,
     status: parsed.data.status,
+    category: parsed.data.category,
+    condition: parsed.data.condition,
+    sellerType: seller.sellerType,
+    facilityId: seller.facilityId,
   });
   if (!created) {
     return actionError("Could not create this listing.");
@@ -102,7 +194,7 @@ export async function createListingAction(
 export async function updateListingAction(
   formData: FormData,
 ): Promise<ActionResult> {
-  const user = await requireRole(["facility", "admin"]);
+  const user = await requireRole(["professional", "facility", "admin"]);
   if (!hasDbConfig()) {
     return actionError("Database is not configured.");
   }
@@ -119,40 +211,120 @@ export async function updateListingAction(
   if (!existing) {
     return actionError("Listing not found.");
   }
+  const facilityIds = await actorFacilityIdsForUser(user.id);
   if (
     !canManageListing({
       actor: user,
       listingOwnerId: existing.ownerId,
+      listingSellerType: existing.sellerType,
+      listingFacilityId: existing.facilityId,
+      actorFacilityIds: facilityIds,
     })
   ) {
     return actionError("You cannot edit this listing.");
   }
 
-  const updated = await updateListingForOwner(
-    parsed.data.id,
-    user.id,
-    {
-      title: parsed.data.title,
-      kind: parsed.data.kind,
-      mode: parsed.data.mode,
-      location: parsed.data.location,
-      price: String(parsed.data.price),
-      currency: parsed.data.currency,
-      beds: parsed.data.beds ?? null,
-      rooms: parsed.data.rooms ?? null,
-      staff: parsed.data.staff ?? null,
-      cover: catalogueCoverClass(parsed.data.cover, DEFAULT_COVER),
-      description: parsed.data.description,
-      confidential: parsed.data.confidential,
-      status: parsed.data.status,
-    },
-    user.role === "admin",
-  );
+  const updated = await updateListingById(parsed.data.id, {
+    title: parsed.data.title,
+    kind: parsed.data.kind,
+    mode: parsed.data.mode,
+    location: parsed.data.location,
+    price: String(parsed.data.price),
+    currency: parsed.data.currency,
+    beds: parsed.data.beds ?? null,
+    rooms: parsed.data.rooms ?? null,
+    staff: parsed.data.staff ?? null,
+    cover: catalogueCoverClass(parsed.data.cover, DEFAULT_COVER),
+    description: parsed.data.description,
+    confidential: parsed.data.confidential,
+    status: parsed.data.status,
+    category: parsed.data.category,
+    condition: parsed.data.condition,
+  });
   if (!updated) {
     return actionError("Could not update this listing.");
   }
 
   revalidateMarketplace(parsed.data.id);
+  return actionOk();
+}
+
+export async function setListingStatusAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireRole(["professional", "facility", "admin"]);
+  if (!hasDbConfig()) {
+    return actionError("Database is not configured.");
+  }
+  const parsed = ListingIdSchema.extend({
+    status: ListingStatusSchema,
+  }).safeParse({
+    listingId: formData.get("listingId"),
+    status: formData.get("status"),
+  });
+  if (!parsed.success) {
+    throw new ServerActionValidationError(parsed.error);
+  }
+  const existing = await getListingById(parsed.data.listingId);
+  if (!existing) {
+    return actionError("Listing not found.");
+  }
+  const facilityIds = await actorFacilityIdsForUser(user.id);
+  if (
+    !canManageListing({
+      actor: user,
+      listingOwnerId: existing.ownerId,
+      listingSellerType: existing.sellerType,
+      listingFacilityId: existing.facilityId,
+      actorFacilityIds: facilityIds,
+    })
+  ) {
+    return actionError("You cannot update this listing.");
+  }
+  const updated = await updateListingById(existing.id, {
+    status: parsed.data.status,
+  });
+  if (!updated) {
+    return actionError("Could not update this listing.");
+  }
+  revalidateMarketplace(existing.id);
+  return actionOk();
+}
+
+export async function deleteListingAction(
+  formData: FormData,
+): Promise<ActionResult> {
+  const user = await requireRole(["professional", "facility", "admin"]);
+  if (!hasDbConfig()) {
+    return actionError("Database is not configured.");
+  }
+  const parsed = ListingIdSchema.safeParse({
+    listingId: formData.get("listingId"),
+  });
+  if (!parsed.success) {
+    throw new ServerActionValidationError(parsed.error);
+  }
+  const existing = await getListingById(parsed.data.listingId);
+  if (!existing) {
+    return actionError("Listing not found.");
+  }
+  const facilityIds = await actorFacilityIdsForUser(user.id);
+  if (
+    !canManageListing({
+      actor: user,
+      listingOwnerId: existing.ownerId,
+      listingSellerType: existing.sellerType,
+      listingFacilityId: existing.facilityId,
+      actorFacilityIds: facilityIds,
+    })
+  ) {
+    return actionError("You cannot delete this listing.");
+  }
+  const deleted = await deleteListingById(existing.id);
+  if (!deleted) {
+    return actionError("Could not delete this listing.");
+  }
+  revalidateMarketplace(existing.id);
   return actionOk();
 }
 
@@ -179,13 +351,16 @@ export async function sendListingEnquiryAction(
   if (!listing) {
     return actionError("Listing not found.");
   }
-  if (listing.status !== "Open") {
+  if (!listingVisiblePublicly(listing.status)) {
     return actionError("This listing is not accepting enquiries.");
   }
+  const facilityIds = await actorFacilityIdsForUser(user.id);
   if (
     !canSendListingEnquiry({
       actor: user,
       listingOwnerId: listing.ownerId,
+      listingFacilityId: listing.facilityId,
+      actorFacilityIds: facilityIds,
     })
   ) {
     return actionError("You cannot enquire on your own listing.");

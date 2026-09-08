@@ -1,5 +1,11 @@
 import { z } from "zod";
 
+import {
+  LISTING_CATEGORIES,
+  LISTING_CONDITIONS,
+  LISTING_PUBLICATION_STATUSES,
+} from "@/lib/marketplace/taxonomy";
+
 export const ListingKindSchema = z.enum([
   "Clinic",
   "Pharmacy",
@@ -10,15 +16,23 @@ export const ListingKindSchema = z.enum([
 
 export const ListingModeSchema = z.enum(["Sale", "Lease"]);
 
-export const ListingStatusSchema = z.enum(["Open", "Closed"]);
+export const ListingStatusSchema = z.enum(LISTING_PUBLICATION_STATUSES);
+
+export const ListingCategorySchema = z.enum(LISTING_CATEGORIES);
+
+export const ListingConditionSchema = z.enum(LISTING_CONDITIONS);
 
 export const CreateListingSchema = z.object({
   title: z.string().trim().min(1, "Title is required").max(160),
-  kind: ListingKindSchema,
-  mode: ListingModeSchema,
+  description: z.string().trim().min(1, "Description is required").max(5000),
+  category: ListingCategorySchema,
+  condition: ListingConditionSchema,
   location: z.string().trim().min(1, "Location is required").max(160),
   price: z.coerce.number().min(0).max(1_000_000_000),
   currency: z.string().trim().min(1).max(8).default("USD"),
+  status: ListingStatusSchema.default("Open"),
+  kind: ListingKindSchema.default("Practice"),
+  mode: ListingModeSchema.default("Sale"),
   beds: z.preprocess(
     (value) => (value === "" || value == null ? undefined : value),
     z.coerce.number().int().min(0).max(10_000).optional(),
@@ -32,12 +46,10 @@ export const CreateListingSchema = z.object({
     z.coerce.number().int().min(0).max(10_000).optional(),
   ),
   cover: z.string().trim().max(160).optional(),
-  description: z.string().trim().min(1, "Description is required").max(5000),
   confidential: z.preprocess(
     (value) => value === "on" || value === "true" || value === true,
     z.boolean(),
   ),
-  status: ListingStatusSchema.default("Open"),
 });
 
 export const UpdateListingSchema = CreateListingSchema.extend({

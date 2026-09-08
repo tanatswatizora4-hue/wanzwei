@@ -44,6 +44,7 @@ export function toVerification(row: DbVerification): Verification {
     flags: row.flags.length > 0 ? row.flags : undefined,
     registeringBody: row.registeringBody ?? undefined,
     registrationNumber: row.registrationNumber ?? undefined,
+    regulatoryBodyOther: row.regulatoryBodyOther ?? undefined,
     matchedRegistryId: row.matchedRegistryId ?? undefined,
     matchOutcome: toMatchOutcome(row.matchOutcome),
   };

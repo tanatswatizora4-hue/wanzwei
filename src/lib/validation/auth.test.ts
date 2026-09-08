@@ -9,6 +9,7 @@ describe("auth validation", () => {
       email: "  pro@example.com  ",
       password: "secret1",
       profession: "Pharmacist",
+      registeringBody: "PCZ",
     });
 
     expect(parsed).toEqual({
@@ -17,6 +18,7 @@ describe("auth validation", () => {
       password: "secret1",
       role: "professional",
       profession: "Pharmacist",
+      registeringBody: "PCZ",
     });
   });
 
@@ -27,6 +29,7 @@ describe("auth validation", () => {
         email: "Pro@Example.com",
         password: "secret1",
         profession: "Pharmacist",
+        registeringBody: "PCZ",
       }).email,
     ).toBe("pro@example.com");
     expect(
@@ -44,6 +47,7 @@ describe("auth validation", () => {
       password: "secret1",
       role: null,
       profession: "Nurse",
+      registeringBody: "NCZ",
     });
 
     expect(parsed.role).toBe("professional");
@@ -94,9 +98,11 @@ describe("auth validation", () => {
       password: "secret1",
       role: "professional",
       profession: "Pharmacist",
+      registeringBody: "PCZ",
     });
     expect(parsed.role).toBe("professional");
     expect(parsed.profession).toBe("Pharmacist");
+    expect(parsed.registeringBody).toBe("PCZ");
   });
 
   it("requires a canonical profession for professional signup", () => {

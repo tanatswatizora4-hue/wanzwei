@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { signOut } from "@/lib/auth/session";
+import { clearWorkspacePreference } from "@/lib/auth/workspace";
 import { withRouteLogging } from "@/lib/observability/logger";
 
 export const runtime = "nodejs";
@@ -11,6 +12,7 @@ export async function POST(req: Request) {
 
 async function handlePOST(req: Request) {
   await signOut();
+  await clearWorkspacePreference();
   return NextResponse.redirect(new URL("/login", req.url), { status: 303 });
 }
 

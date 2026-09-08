@@ -19,6 +19,8 @@ import {
   listVerificationEvents,
 } from "@/lib/repos/verifications";
 import { findLatestVerificationEvidence } from "@/lib/repos/verification-evidence";
+import { displayRegulatoryBody } from "@/lib/regulatory-bodies";
+import { displayPractisingCertificateStatus, practisingCertificateStatusForAccount } from "@/lib/verification/practising-certificate";
 
 export default async function AdminVerificationDetailPage({
   params,
@@ -46,7 +48,7 @@ export default async function AdminVerificationDetailPage({
     <div className="flex flex-col gap-6">
       <PageHeader
         title={verification.name}
-        description="Manual verification case. Registry comparison is server-side and admin-only."
+        description="Manual verification case. Registry comparison is corroboration when a supported source exists, and is admin-only."
         meta={
           <Button variant="ghost" size="sm" asChild>
             <Link href="/admin/verification">
@@ -71,6 +73,42 @@ export default async function AdminVerificationDetailPage({
                 label="Account verified"
                 value={account?.verified ? "Verified" : "Not verified"}
               />
+              <Row
+                label="Identity evidence"
+                value={account?.identityVerificationStatus ?? "—"}
+              />
+              <Row
+                label="Credential status"
+                value={account?.credentialStatus ?? "—"}
+              />
+              <Row
+                label="Verification method"
+                value={
+                  account?.credentialVerificationMethod?.replaceAll("_", " ") ?? "—"
+                }
+              />
+              <Row
+                label="Practising certificate"
+                value={displayPractisingCertificateStatus(
+                  practisingCertificateStatusForAccount({
+                    verified: account?.verified,
+                    practisingCertificateExpiry: account?.practisingCertificateExpiry,
+                    practisingCertificateStatus: account?.practisingCertificateStatus,
+                  }),
+                )}
+              />
+              <Row
+                label="Certificate expiry"
+                value={account?.practisingCertificateExpiry ?? "—"}
+              />
+              <Row
+                label="Last reviewed"
+                value={
+                  account?.lastVerificationReviewAt
+                    ? timeAgoLong(account.lastVerificationReviewAt)
+                    : "—"
+                }
+              />
             </dl>
           </CardBody>
         </Card>
@@ -82,7 +120,13 @@ export default async function AdminVerificationDetailPage({
             </h2>
             <dl className="mt-3 grid gap-2 text-[13px]">
               <Row label="Profession" value={verification.profession} />
-              <Row label="Registering body" value={verification.registeringBody ?? "—"} />
+              <Row
+                label="Regulatory body"
+                value={displayRegulatoryBody(
+                  verification.registeringBody,
+                  verification.regulatoryBodyOther,
+                )}
+              />
               <Row label="Registration number" value={verification.registrationNumber ?? "—"} />
               <Row label="Submitted" value={timeAgoLong(verification.submittedAt)} />
               <Row label="Status" value={verification.status} />
@@ -138,6 +182,10 @@ export default async function AdminVerificationDetailPage({
               <Row
                 label="Registry result"
                 value={evidence.registryOutcome?.replaceAll("_", " ") ?? "—"}
+              />
+              <Row
+                label="Verification method"
+                value={evidence.verificationMethod.replaceAll("_", " ")}
               />
               <Row label="Analyzer status" value={evidence.analysisStatus} />
               <Row

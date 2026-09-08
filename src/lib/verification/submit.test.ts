@@ -28,7 +28,7 @@ const ADMIN: User = {
 };
 
 const INPUT = {
-  registeringBody: "HPA" as const,
+  registeringBody: "PCZ" as const,
   registrationNumber: "P01-6420-2026",
   profession: "Pharmacist",
   identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
@@ -61,6 +61,7 @@ type MemCase = {
   status: VerificationStatus;
   registeringBody: string | null;
   registrationNumber: string | null;
+  regulatoryBodyOther?: string | null;
   matchOutcome: string | null;
   matchedRegistryId: string | null;
   documentCount: number;
@@ -132,9 +133,17 @@ function memoryStore(options: {
     },
     findCurrentCase: async (userId) => {
       ops.push("findCurrentCase");
-      return pickCurrentCase(cases.filter((row) => row.userId === userId));
+      const row = pickCurrentCase(cases.filter((row) => row.userId === userId));
+      return row
+        ? { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null }
+        : null;
     },
-    getById: async (id) => cases.find((row) => row.id === id) ?? null,
+    getById: async (id) => {
+      const row = cases.find((row) => row.id === id) ?? null;
+      return row
+        ? { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null }
+        : null;
+    },
     insertCase: async (input) => {
       const now = new Date("2026-08-31T10:00:00.000Z");
       const row: MemCase = {
@@ -145,6 +154,7 @@ function memoryStore(options: {
         status: input.status,
         registeringBody: input.registeringBody,
         registrationNumber: input.registrationNumber,
+        regulatoryBodyOther: input.regulatoryBodyOther ?? null,
         matchOutcome: input.matchOutcome,
         matchedRegistryId: input.matchedRegistryId,
         documentCount: 0,
@@ -153,7 +163,7 @@ function memoryStore(options: {
         flags: [],
       };
       cases.push(row);
-      return row;
+      return { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null };
     },
     updateCase: async (id, patch) => {
       const row = cases.find((item) => item.id === id);
@@ -163,7 +173,7 @@ function memoryStore(options: {
       if (touchSubmittedAt) {
         row.submittedAt = new Date("2026-08-31T12:00:00.000Z");
       }
-      return { ...row };
+      return { ...row, regulatoryBodyOther: row.regulatoryBodyOther ?? null };
     },
     setUserVerified: async (userId, isVerified) => {
       if (options.failOnSetVerified) {
@@ -331,7 +341,7 @@ describe("submitProfessionalVerification", () => {
     });
     const salesResult = await submitProfessionalVerification(
       USER,
-      { ...INPUT, profession: "Sales Representative" },
+      INPUT,
       sales,
     );
     expect(salesResult.verification.matchOutcome).toBe(
@@ -365,7 +375,7 @@ describe("submitProfessionalVerification", () => {
     const store = memoryStore({ rows: [pharmacistRow()] });
     const result = await submitProfessionalVerification(
       USER,
-      { ...INPUT, profession: "Registered Nurse" },
+      { ...INPUT, profession: "Nurse", registeringBody: "NCZ" },
       store,
     );
     expect(result.verification.matchOutcome).toBe("profession_mismatch");
@@ -435,7 +445,7 @@ describe("submitProfessionalVerification", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Verified",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "matched",
           matchedRegistryId: "reg-1",
@@ -496,7 +506,7 @@ describe("submitProfessionalVerification", () => {
       name: USER.name,
       profession: "Pharmacist",
       status: "Verified",
-      registeringBody: "HPA",
+      registeringBody: "PCZ",
       registrationNumber: "P01-6420-2026",
       matchOutcome: "matched",
       matchedRegistryId: "reg-1",
@@ -558,7 +568,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Under Review",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "name_mismatch",
           matchedRegistryId: "reg-1",
@@ -597,7 +607,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Verified",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "name_mismatch",
           matchedRegistryId: "reg-1",
@@ -624,7 +634,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Verified",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "matched",
           matchedRegistryId: "reg-1",
@@ -639,7 +649,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Under Review",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-9999-2026",
           matchOutcome: "not_found",
           matchedRegistryId: null,
@@ -672,7 +682,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Verified",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "matched",
           matchedRegistryId: "reg-1",
@@ -706,7 +716,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Under Review",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "name_mismatch",
           matchedRegistryId: "reg-1",
@@ -721,7 +731,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Under Review",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-9999-2026",
           matchOutcome: "not_found",
           matchedRegistryId: null,
@@ -750,7 +760,7 @@ describe("applyAdminVerificationDecision", () => {
           name: USER.name,
           profession: "Pharmacist",
           status: "Verified",
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber: "P01-6420-2026",
           matchOutcome: "matched",
           matchedRegistryId: "reg-1",

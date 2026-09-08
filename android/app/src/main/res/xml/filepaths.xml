@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
+    <!-- ABH copies the splash drawable to files/twa_splash/splash_image.png. -->
+    <files-path path="twa_splash/" name="twa_splash" />
     <!-- Chrome TWA file sharing (uploads/downloads). Not an app-level offline cache. -->
     <cache-path path="." name="twa_files" />
 </paths>

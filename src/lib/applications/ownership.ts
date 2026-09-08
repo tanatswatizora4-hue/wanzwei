@@ -15,7 +15,6 @@ export function canFacilityAccessApplication(input: {
 }): boolean {
   if (!input.actor) return false;
   if (input.actor.role === "admin") return true;
-  if (input.actor.role !== "facility") return false;
   const facilityId = input.actor.facilityId?.trim();
   if (!facilityId) return false;
   return facilityId === input.jobFacilityId;

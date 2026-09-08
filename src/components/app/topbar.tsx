@@ -14,18 +14,28 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 import { CommandPalette } from "./command-palette";
-import type { User } from "@/lib/types";
+import { ProfileSwitcher } from "@/components/app/profile-switcher";
+import type { switcherProfiles } from "@/lib/auth/workspace-model";
+import type { Role, User } from "@/lib/types";
+
+type SwitcherItem = ReturnType<typeof switcherProfiles>[number];
 
 export function Topbar({
   user,
+  navRole,
   unreadNotificationCount = 0,
   onOpenMobileNav,
   mobileNavOpen = false,
+  switcherProfiles: profiles = [],
+  activeWorkspaceKey,
 }: {
   user: User;
+  navRole: Role;
   unreadNotificationCount?: number;
   onOpenMobileNav?: () => void;
   mobileNavOpen?: boolean;
+  switcherProfiles?: SwitcherItem[];
+  activeWorkspaceKey: string;
 }) {
   const openCommandPalette = React.useCallback(() => {
     document.dispatchEvent(
@@ -39,34 +49,34 @@ export function Topbar({
   };
 
   const roleLabel =
-    user.role === "professional"
+    navRole === "professional"
       ? "Professional"
-      : user.role === "facility"
+      : navRole === "facility"
         ? "Facility"
         : "Admin";
 
   const quickAction =
-    user.role === "facility"
+    navRole === "facility"
       ? { label: "Post Job", href: "/facility/jobs?new=1" }
-      : user.role === "admin"
+      : navRole === "admin"
         ? { label: "Review Queue", href: "/admin/verification" }
         : { label: "Quick Apply", href: "/professional/jobs" };
 
-  // Only the professional role has a dedicated notifications page today.
+  // Only the professional workspace has a dedicated notifications page today.
   const notificationsHref =
-    user.role === "professional" ? "/professional/notifications" : null;
+    navRole === "professional" ? "/professional/notifications" : null;
 
   const settingsHref =
-    user.role === "facility"
+    navRole === "facility"
       ? "/facility/settings"
-      : user.role === "admin"
+      : navRole === "admin"
         ? "/admin/settings"
         : "/professional/settings";
 
   const profileHref =
-    user.role === "facility"
+    navRole === "facility"
       ? "/facility/profile"
-      : user.role === "professional"
+      : navRole === "professional"
         ? "/professional/profile"
         : "/admin/users";
 
@@ -75,7 +85,7 @@ export function Topbar({
 
   return (
     <header className="topbar-band sticky top-0 z-30 flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] sm:gap-3 sm:px-5">
-      <CommandPalette role={user.role} />
+      <CommandPalette role={navRole} />
 
       {onOpenMobileNav ? (
         <button
@@ -184,6 +194,15 @@ export function Topbar({
             <DropdownMenuItem asChild>
               <Link href={settingsHref}>Settings</Link>
             </DropdownMenuItem>
+            {profiles.length > 1 ? (
+              <>
+                <DropdownMenuSeparator />
+                <ProfileSwitcher
+                  profiles={profiles}
+                  activeKey={activeWorkspaceKey}
+                />
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <form action="/api/auth/logout" method="post">
               <button

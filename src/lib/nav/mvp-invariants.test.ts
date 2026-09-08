@@ -218,7 +218,6 @@ describe("MVP navigation and security invariants", () => {
       "src/app/(app)/professional/availability/page.tsx",
       "src/app/(app)/facility/talent/page.tsx",
       "src/app/(app)/admin/matching/page.tsx",
-      "src/app/(app)/facility/cpd/page.tsx",
     ];
     for (const file of gated) {
       expect(readFileSync(file, "utf8"), file).toContain("mvpSurfaceUnavailable");
@@ -229,6 +228,7 @@ describe("MVP navigation and security invariants", () => {
       "src/app/(app)/admin/marketplace/page.tsx",
       "src/app/(app)/professional/cpd/page.tsx",
       "src/app/(app)/admin/cpd/page.tsx",
+      "src/app/(app)/facility/cpd/page.tsx",
     ];
     for (const file of restored) {
       expect(readFileSync(file, "utf8"), file).not.toContain("mvpSurfaceUnavailable");

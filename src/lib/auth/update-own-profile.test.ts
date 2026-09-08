@@ -135,6 +135,7 @@ describe("applyOwnProfileUpdate", () => {
         registrationNumber: "HACK",
         registeringBody: "HACK",
         profession: "Doctor",
+        practisingCertificateStatus: "current",
       }),
       {
         hasDbConfig: () => true,

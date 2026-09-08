@@ -23,13 +23,13 @@ import {
 } from "@/components/ui/table";
 import { requireRole } from "@/lib/auth/session";
 import { timeAgoLong } from "@/lib/format";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityForUser } from "@/lib/facility-for-user";
 import { getFacilityDashboardStats } from "@/lib/repos/dashboard-stats";
 import { listJobsForFacility } from "@/lib/repos/jobs";
 
 export default async function FacilityDashboardPage() {
   const user = await requireRole(["facility"]);
-  const facility = await findFacilityForUserEmail(user.email);
+  const facility = await resolveFacilityForUser(user);
   const [stats, recentJobs] = await Promise.all([
     facility
       ? getFacilityDashboardStats(facility.id)

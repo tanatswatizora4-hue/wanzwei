@@ -148,7 +148,12 @@ export const courseEnrolmentStatusEnum = pgEnum("course_enrolment_status", [
   "withdrawn",
 ]);
 
-export const listingStatusEnum = pgEnum("listing_status", ["Open", "Closed"]);
+export const listingStatusEnum = pgEnum("listing_status", [
+  "Open",
+  "Closed",
+  "Paused",
+  "Draft",
+]);
 
 // ---------------------------------------------------------------------------
 // facilities
@@ -200,6 +205,18 @@ export const users = pgTable(
     }),
     registeringBody: text("registering_body"),
     registrationNumber: text("registration_number"),
+    regulatoryBodyOther: text("regulatory_body_other"),
+    identityVerificationStatus: text("identity_verification_status"),
+    credentialStatus: text("credential_status"),
+    credentialVerifiedAt: timestamp("credential_verified_at", {
+      withTimezone: true,
+    }),
+    credentialVerificationMethod: text("credential_verification_method"),
+    practisingCertificateExpiry: date("practising_certificate_expiry"),
+    practisingCertificateStatus: text("practising_certificate_status"),
+    lastVerificationReviewAt: timestamp("last_verification_review_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -447,6 +464,7 @@ export const verifications = pgTable(
       .default(sql`'{}'::text[]`),
     registeringBody: text("registering_body"),
     registrationNumber: text("registration_number"),
+    regulatoryBodyOther: text("regulatory_body_other"),
     matchedRegistryId: uuid("matched_registry_id").references(
       () => practitionerRegistry.id,
       { onDelete: "set null" },
@@ -558,6 +576,8 @@ export const verificationEvidence = pgTable(
     detectedProfession: text("detected_profession"),
     registrationNumber: text("registration_number"),
     issuingBody: text("issuing_body"),
+    regulatoryBody: text("regulatory_body"),
+    regulatoryBodyOther: text("regulatory_body_other"),
     issueDate: text("issue_date"),
     expiryDate: text("expiry_date"),
     nameMatch: text("name_match"),
@@ -610,6 +630,9 @@ export const courses = pgTable(
     location: text("location"),
     startsAt: timestamp("starts_at", { withTimezone: true }),
     endsAt: timestamp("ends_at", { withTimezone: true }),
+    cpdPoints: numeric("cpd_points", { precision: 6, scale: 2 }),
+    accreditingBody: text("accrediting_body"),
+    accreditationReference: text("accreditation_reference"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -649,6 +672,12 @@ export const listings = pgTable(
       onDelete: "set null",
     }),
     status: listingStatusEnum("status").notNull().default("Open"),
+    category: text("category"),
+    condition: text("condition"),
+    sellerType: text("seller_type"),
+    facilityId: uuid("facility_id").references(() => facilities.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -662,6 +691,99 @@ export const listings = pgTable(
     index("listings_posted_idx").on(t.posted),
     index("listings_owner_id_idx").on(t.ownerId),
     index("listings_status_idx").on(t.status),
+    index("listings_category_idx").on(t.category),
+    index("listings_facility_id_idx").on(t.facilityId),
+    index("listings_seller_type_idx").on(t.sellerType),
+  ],
+);
+
+export const accountMemberships = pgTable(
+  "account_memberships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    profileType: text("profile_type").notNull(),
+    professionalProfileId: uuid("professional_profile_id").references(
+      () => users.id,
+      { onDelete: "cascade" },
+    ),
+    facilityId: uuid("facility_id").references(() => facilities.id, {
+      onDelete: "cascade",
+    }),
+    membershipRole: text("membership_role").notNull(),
+    status: text("status").notNull().default("active"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("account_memberships_user_id_idx").on(t.userId),
+    index("account_memberships_facility_id_idx").on(t.facilityId),
+  ],
+);
+
+export const listingImages = pgTable(
+  "listing_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listingId: uuid("listing_id")
+      .notNull()
+      .references(() => listings.id, { onDelete: "cascade" }),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    storagePath: text("storage_path").notNull(),
+    fileName: text("file_name").notNull(),
+    contentType: text("content_type").notNull(),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("listing_images_storage_path_uniq").on(t.storagePath),
+    index("listing_images_listing_id_idx").on(t.listingId),
+  ],
+);
+
+export const cpdCertificates = pgTable(
+  "cpd_certificates",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    certificateId: text("certificate_id").notNull(),
+    enrolmentId: uuid("enrolment_id")
+      .notNull()
+      .references(() => courseEnrolments.id, { onDelete: "restrict" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    courseId: uuid("course_id")
+      .notNull()
+      .references(() => courses.id, { onDelete: "restrict" }),
+    recipientDisplayName: text("recipient_display_name").notNull(),
+    courseTitle: text("course_title").notNull(),
+    providerName: text("provider_name").notNull(),
+    completionDate: date("completion_date").notNull(),
+    cpdPoints: numeric("cpd_points", { precision: 6, scale: 2 }),
+    accreditingBody: text("accrediting_body"),
+    accreditationReference: text("accreditation_reference"),
+    issuedAt: timestamp("issued_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("cpd_certificates_certificate_id_uniq").on(t.certificateId),
+    uniqueIndex("cpd_certificates_enrolment_id_uniq").on(t.enrolmentId),
+    index("cpd_certificates_user_id_idx").on(t.userId),
+    index("cpd_certificates_course_id_idx").on(t.courseId),
   ],
 );
 
@@ -824,6 +946,15 @@ export type NewDbCourse = typeof courses.$inferInsert;
 
 export type DbListing = typeof listings.$inferSelect;
 export type NewDbListing = typeof listings.$inferInsert;
+
+export type DbAccountMembership = typeof accountMemberships.$inferSelect;
+export type NewDbAccountMembership = typeof accountMemberships.$inferInsert;
+
+export type DbListingImage = typeof listingImages.$inferSelect;
+export type NewDbListingImage = typeof listingImages.$inferInsert;
+
+export type DbCpdCertificate = typeof cpdCertificates.$inferSelect;
+export type NewDbCpdCertificate = typeof cpdCertificates.$inferInsert;
 
 export type DbCourseEnrolment = typeof courseEnrolments.$inferSelect;
 export type NewDbCourseEnrolment = typeof courseEnrolments.$inferInsert;

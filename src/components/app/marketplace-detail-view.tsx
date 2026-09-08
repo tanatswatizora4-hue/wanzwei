@@ -1,4 +1,14 @@
-import Link from "next/link";
+import { ListingImageManager } from "@/components/app/listing-image-manager";
+import { ListingOwnerActions } from "@/components/app/listing-owner-actions";
+import { MarketplaceEnquiryDialog } from "@/components/app/marketplace-enquiry-dialog";
+import { PageHeader } from "@/components/app/topbar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardBody } from "@/components/ui/card";
+import { money } from "@/lib/format";
+import { canManageListing, canSendListingEnquiry } from "@/lib/marketplace/ownership";
+import type { ListingImageView } from "@/lib/marketplace/listing-image-types";
+import type { Listing, ListingEnquiry, User } from "@/lib/types";
 import {
   ArrowLeft,
   Bed,
@@ -8,37 +18,39 @@ import {
   MapPin,
   Users,
 } from "lucide-react";
-
-import { MarketplaceEnquiryDialog } from "@/components/app/marketplace-enquiry-dialog";
-import { MarketplaceListingDialog } from "@/components/app/marketplace-listing-dialog";
-import { PageHeader } from "@/components/app/topbar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardBody } from "@/components/ui/card";
-import { money } from "@/lib/format";
-import { canManageListing, canSendListingEnquiry } from "@/lib/marketplace/ownership";
-import type { Listing, ListingEnquiry, User } from "@/lib/types";
+import Link from "next/link";
 
 export function MarketplaceDetailView({
   listing,
   viewer,
   backHref,
   enquiries,
+  actorFacilityIds = [],
+  images = [],
+  listingContext = "professional",
 }: {
   listing: Listing;
   viewer: User;
   backHref: string;
   enquiries: ListingEnquiry[];
+  actorFacilityIds?: string[];
+  images?: ListingImageView[];
+  listingContext?: "professional" | "facility" | "admin";
 }) {
   const canManage = canManageListing({
     actor: viewer,
     listingOwnerId: listing.ownerId,
+    listingSellerType: listing.sellerType,
+    listingFacilityId: listing.facilityId,
+    actorFacilityIds,
   });
   const canEnquire =
     listing.status === "Open" &&
     canSendListingEnquiry({
       actor: viewer,
       listingOwnerId: listing.ownerId,
+      listingFacilityId: listing.facilityId,
+      actorFacilityIds,
     });
 
   return (
@@ -48,7 +60,9 @@ export function MarketplaceDetailView({
         description={`${listing.kind} · ${listing.location}`}
         actions={
           <div className="flex flex-wrap gap-2">
-            {canManage ? <MarketplaceListingDialog listing={listing} /> : null}
+            {canManage ? (
+              <ListingOwnerActions listing={listing} listingContext={listingContext} />
+            ) : null}
             <Button variant="secondary" size="sm" asChild>
               <Link href={backHref}>
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to marketplace
@@ -59,10 +73,19 @@ export function MarketplaceDetailView({
       />
 
       <Card className="overflow-hidden">
-        <div
-          className={`h-40 bg-gradient-to-br ${listing.cover}`}
-          aria-hidden
-        />
+        {images[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={images[0].url}
+            alt=""
+            className="h-40 w-full object-cover"
+          />
+        ) : (
+          <div
+            className={`h-40 bg-gradient-to-br ${listing.cover}`}
+            aria-hidden
+          />
+        )}
         <CardBody className="flex min-w-0 flex-col gap-4 pt-5">
           <div className="flex flex-wrap gap-2">
             <Badge>
@@ -80,6 +103,19 @@ export function MarketplaceDetailView({
               </Badge>
             ) : null}
           </div>
+          {images.length > 1 ? (
+            <div className="flex flex-wrap gap-2">
+              {images.slice(1).map((image) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={image.id}
+                  src={image.url}
+                  alt={image.fileName}
+                  className="h-20 w-24 rounded-[8px] object-cover"
+                />
+              ))}
+            </div>
+          ) : null}
           <p className="text-[13px] text-[color:var(--color-ink-500)]">
             {listing.ownerName
               ? `Listed by ${listing.ownerName}`
@@ -140,6 +176,21 @@ export function MarketplaceDetailView({
           ) : null}
         </CardBody>
       </Card>
+
+      {canManage ? (
+        <Card>
+          <CardBody className="pt-5">
+            <h2 className="text-[15px] font-semibold">Listing images</h2>
+            <p className="mt-1 text-[12.5px] text-[color:var(--color-ink-500)]">
+              Images are listing-specific. They are not stored with private
+              verification documents.
+            </p>
+            <div className="mt-3">
+              <ListingImageManager listingId={listing.id} images={images} />
+            </div>
+          </CardBody>
+        </Card>
+      ) : null}
 
       {canManage ? (
         <Card>

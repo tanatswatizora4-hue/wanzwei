@@ -22,6 +22,9 @@ describe("course mapping", () => {
         location: null,
         startsAt: null,
         endsAt: now,
+        cpdPoints: null,
+        accreditingBody: null,
+        accreditationReference: null,
         createdAt: now,
         updatedAt: now,
       }),
@@ -39,6 +42,9 @@ describe("course mapping", () => {
       location: undefined,
       startsAt: undefined,
       endsAt: "2026-06-09T08:30:00.000Z",
+      cpdPoints: null,
+      accreditingBody: null,
+      accreditationReference: null,
     });
   });
 });

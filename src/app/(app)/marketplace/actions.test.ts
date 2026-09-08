@@ -5,24 +5,49 @@ import { describe, expect, it } from "vitest";
 describe("marketplace actions", () => {
   const source = readFileSync("src/app/(app)/marketplace/actions.ts", "utf8");
 
-  it("creates listings only for facility or admin and stamps the signed-in owner", () => {
+  it("creates listings for verified professionals or facility members and stamps server-side seller identity", () => {
     const create = source.slice(
       source.indexOf("export async function createListingAction"),
       source.indexOf("export async function updateListingAction"),
     );
-    expect(create).toContain('requireRole(["facility", "admin"])');
-    expect(create).toContain("canCreateListing");
+    expect(create).toContain('requireRole(["professional", "facility", "admin"])');
     expect(create).toContain("ownerId: user.id");
+    expect(create).toContain("sellerType: \"facility\"");
+    expect(create).toContain("isVerifiedProfessional");
+    expect(create).not.toContain("formData.get(\"seller_id\")");
+    const upload = readFileSync(
+      "src/app/api/uploads/listing-images/route.ts",
+      "utf8",
+    );
+    expect(upload).toContain("canManageListing");
+    expect(upload).toContain("LISTING_IMAGES_BUCKET");
+    expect(upload).not.toContain("DOCUMENTS_BUCKET");
   });
 
   it("blocks unauthorized listing edits", () => {
     const update = source.slice(
       source.indexOf("export async function updateListingAction"),
-      source.indexOf("export async function sendListingEnquiryAction"),
+      source.indexOf("export async function setListingStatusAction"),
     );
     expect(update).toContain("canManageListing");
     expect(update).toContain("You cannot edit this listing.");
-    expect(update).toContain("user.role === \"admin\"");
+    expect(update).toContain("updateListingById");
+  });
+
+  it("lets owners pause, republish, and delete; non-owners cannot", () => {
+    const status = source.slice(
+      source.indexOf("export async function setListingStatusAction"),
+      source.indexOf("export async function deleteListingAction"),
+    );
+    const del = source.slice(
+      source.indexOf("export async function deleteListingAction"),
+      source.indexOf("export async function sendListingEnquiryAction"),
+    );
+    expect(status).toContain("canManageListing");
+    expect(status).toContain("status: parsed.data.status");
+    expect(del).toContain("canManageListing");
+    expect(del).toContain("You cannot delete this listing.");
+    expect(source).toContain("listingVisiblePublicly");
   });
 
   it("persists enquiries instead of toasting a fake send", () => {
@@ -51,7 +76,7 @@ describe("marketplace pages", () => {
       "src/app/(app)/professional/marketplace/[id]/page.tsx",
       "utf8",
     );
-    expect(detail).toContain("getListingById");
+    expect(detail).toContain("loadMarketplaceListingPage");
     expect(detail).toContain("MarketplaceDetailView");
   });
 

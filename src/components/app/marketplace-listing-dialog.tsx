@@ -17,17 +17,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input, Label, Textarea } from "@/components/ui/input";
+import {
+  LISTING_CATEGORIES,
+  LISTING_CATEGORY_LABELS,
+  LISTING_CONDITION_LABELS,
+  LISTING_CONDITIONS,
+} from "@/lib/marketplace/taxonomy";
 import type { Listing } from "@/lib/types";
-
-const KINDS = ["Clinic", "Pharmacy", "Hospital", "Laboratory", "Practice"] as const;
-const MODES = ["Sale", "Lease"] as const;
 
 export function MarketplaceListingDialog({
   listing,
-  triggerLabel = "List your practice",
+  triggerLabel = "Create Listing",
+  listingContext = "professional",
 }: {
   listing?: Listing;
   triggerLabel?: string;
+  listingContext?: "professional" | "facility" | "admin";
 }) {
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
@@ -44,7 +49,7 @@ export function MarketplaceListingDialog({
         ? await updateListingAction(formData)
         : await createListingAction(formData);
       if (result.ok) {
-        toast.success(isEdit ? "Listing updated" : "Listing published");
+        toast.success(isEdit ? "Listing updated" : "Listing saved");
         setOpen(false);
         router.refresh();
       } else {
@@ -61,7 +66,9 @@ export function MarketplaceListingDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant={isEdit ? "secondary" : "primary"}>
-          {isEdit ? "Edit listing" : (
+          {isEdit ? (
+            "Edit listing"
+          ) : (
             <>
               <Plus className="h-3.5 w-3.5" /> {triggerLabel}
             </>
@@ -74,6 +81,9 @@ export function MarketplaceListingDialog({
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex min-w-0 flex-col gap-3">
           {listing ? <input type="hidden" name="id" value={listing.id} /> : null}
+          <input type="hidden" name="listingContext" value={listingContext} />
+          <input type="hidden" name="kind" value={listing?.kind ?? "Practice"} />
+          <input type="hidden" name="mode" value={listing?.mode ?? "Sale"} />
           <div>
             <Label htmlFor="listing-title">Title</Label>
             <Input
@@ -83,33 +93,45 @@ export function MarketplaceListingDialog({
               defaultValue={listing?.title}
             />
           </div>
+          <div>
+            <Label htmlFor="listing-description">Description</Label>
+            <Textarea
+              id="listing-description"
+              name="description"
+              rows={4}
+              required
+              defaultValue={listing?.description}
+            />
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="listing-kind">Type</Label>
+              <Label htmlFor="listing-category">Category</Label>
               <select
-                id="listing-kind"
-                name="kind"
-                defaultValue={listing?.kind ?? "Clinic"}
+                id="listing-category"
+                name="category"
+                required
+                defaultValue={listing?.category ?? "medical_equipment"}
                 className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
               >
-                {KINDS.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {kind}
+                {LISTING_CATEGORIES.map((category) => (
+                  <option key={category} value={category}>
+                    {LISTING_CATEGORY_LABELS[category]}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <Label htmlFor="listing-mode">Mode</Label>
+              <Label htmlFor="listing-condition">Condition</Label>
               <select
-                id="listing-mode"
-                name="mode"
-                defaultValue={listing?.mode ?? "Sale"}
+                id="listing-condition"
+                name="condition"
+                required
+                defaultValue={listing?.condition ?? "good"}
                 className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
               >
-                {MODES.map((mode) => (
-                  <option key={mode} value={mode}>
-                    {mode}
+                {LISTING_CONDITIONS.map((condition) => (
+                  <option key={condition} value={condition}>
+                    {LISTING_CONDITION_LABELS[condition]}
                   </option>
                 ))}
               </select>
@@ -126,7 +148,7 @@ export function MarketplaceListingDialog({
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="listing-price">Asking price</Label>
+              <Label htmlFor="listing-price">Price</Label>
               <Input
                 id="listing-price"
                 name="price"
@@ -146,71 +168,23 @@ export function MarketplaceListingDialog({
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div>
-              <Label htmlFor="listing-beds">Beds</Label>
-              <Input
-                id="listing-beds"
-                name="beds"
-                type="number"
-                min="0"
-                defaultValue={listing?.beds}
-              />
-            </div>
-            <div>
-              <Label htmlFor="listing-rooms">Rooms</Label>
-              <Input
-                id="listing-rooms"
-                name="rooms"
-                type="number"
-                min="0"
-                defaultValue={listing?.rooms}
-              />
-            </div>
-            <div>
-              <Label htmlFor="listing-staff">Staff</Label>
-              <Input
-                id="listing-staff"
-                name="staff"
-                type="number"
-                min="0"
-                defaultValue={listing?.staff}
-              />
-            </div>
-          </div>
           <div>
-            <Label htmlFor="listing-description">Description</Label>
-            <Textarea
-              id="listing-description"
-              name="description"
-              rows={4}
-              required
-              defaultValue={listing?.description}
-            />
-          </div>
-          <div>
-            <Label htmlFor="listing-status">Availability</Label>
+            <Label htmlFor="listing-status">Status</Label>
             <select
               id="listing-status"
               name="status"
               defaultValue={listing?.status ?? "Open"}
               className="mt-1 h-11 w-full rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 text-sm sm:h-9"
             >
-              <option value="Open">Open</option>
-              <option value="Closed">Closed</option>
+              <option value="Open">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Closed">Sold / Closed</option>
+              <option value="Draft">Draft</option>
             </select>
           </div>
-          <label className="inline-flex items-center gap-2 text-[13px]">
-            <input
-              type="checkbox"
-              name="confidential"
-              defaultChecked={listing?.confidential === true}
-            />
-            Keep this enquiry confidential
-          </label>
           <Button type="submit" disabled={pending}>
             {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-            {isEdit ? "Save listing" : "Publish listing"}
+            {isEdit ? "Save listing" : "Save listing"}
           </Button>
         </form>
       </DialogContent>

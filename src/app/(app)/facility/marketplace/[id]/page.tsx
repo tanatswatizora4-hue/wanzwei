@@ -2,9 +2,7 @@ import { notFound } from "next/navigation";
 
 import { MarketplaceDetailView } from "@/components/app/marketplace-detail-view";
 import { requireRole } from "@/lib/auth/session";
-import { parseUuid } from "@/lib/ids";
-import { listEnquiriesForListing } from "@/lib/repos/listing-enquiries";
-import { getListingById } from "@/lib/repos/listings";
+import { loadMarketplaceListingPage } from "@/lib/marketplace/listing-page";
 
 export default async function FacilityMarketplaceDetailPage({
   params,
@@ -12,11 +10,10 @@ export default async function FacilityMarketplaceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireRole(["facility"]);
-  const listingId = parseUuid((await params).id);
-  if (!listingId) notFound();
-  const listing = await getListingById(listingId);
+  const { id } = await params;
+  const { listing, enquiries, actorFacilityIds, images } =
+    await loadMarketplaceListingPage(user, id);
   if (!listing) notFound();
-  const enquiries = await listEnquiriesForListing(listing.id, user);
 
   return (
     <MarketplaceDetailView
@@ -24,6 +21,9 @@ export default async function FacilityMarketplaceDetailPage({
       viewer={user}
       backHref="/facility/marketplace"
       enquiries={enquiries}
+      actorFacilityIds={actorFacilityIds}
+      images={images}
+      listingContext="facility"
     />
   );
 }

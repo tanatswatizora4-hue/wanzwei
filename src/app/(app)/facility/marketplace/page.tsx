@@ -1,5 +1,7 @@
+import { canCreateListing } from "@/lib/marketplace/ownership";
 import { MarketplaceView } from "@/components/app/marketplace-view";
 import { requireRole } from "@/lib/auth/session";
+import { resolveWorkspaceForUser } from "@/lib/auth/workspace";
 import { parseMarketplaceSearchParams } from "@/lib/marketplace/search";
 import { listListings } from "@/lib/repos/listings";
 
@@ -15,8 +17,15 @@ export default async function FacilityMarketplacePage({
   }>;
 }) {
   const user = await requireRole(["facility"]);
+  const { workspace } = await resolveWorkspaceForUser(user);
   const filters = parseMarketplaceSearchParams(await searchParams);
-  const listings = await listListings(200, filters, user.id);
+  const listings = await listListings(
+    200,
+    filters,
+    filters.mine && workspace?.type === "facility"
+      ? { sellerType: "facility", facilityId: workspace.facilityId }
+      : undefined,
+  );
 
   return (
     <MarketplaceView
@@ -24,7 +33,7 @@ export default async function FacilityMarketplacePage({
       filters={filters}
       basePath="/facility/marketplace"
       viewer={user}
-      canCreate
+      canCreate={canCreateListing({ actor: user, workspace })}
     />
   );
 }

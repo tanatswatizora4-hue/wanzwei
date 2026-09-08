@@ -3,6 +3,11 @@ import { z } from "zod";
 import { normalizeEmailAddress } from "@/lib/auth/email-normalize";
 import { parsePremisesNumberInput } from "@/lib/facilities/premises-number";
 import { CanonicalProfessionSchema } from "@/lib/professions";
+import {
+  RegulatoryBodyOtherSchema,
+  RegulatoryBodySchema,
+  isOtherRegulatoryBody,
+} from "@/lib/regulatory-bodies";
 
 const EmailSchema = z
   .string()
@@ -72,6 +77,14 @@ export const SignupSchema = z
       (value) => (value === null || value === "" ? undefined : value),
       CanonicalProfessionSchema.optional(),
     ),
+    registeringBody: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      RegulatoryBodySchema.optional(),
+    ),
+    regulatoryBodyOther: z.preprocess(
+      (value) => (value === null || value === "" ? undefined : value),
+      RegulatoryBodyOtherSchema.optional(),
+    ),
     premisesNumber: z.preprocess(
       (value) => (value === null || value === "" ? undefined : value),
       z.string().trim().max(40).optional(),
@@ -83,6 +96,24 @@ export const SignupSchema = z
         code: "custom",
         path: ["profession"],
         message: "Profession is required",
+      });
+    }
+    if (value.role === "professional" && !value.registeringBody) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["registeringBody"],
+        message: "Regulatory body is required",
+      });
+    }
+    if (
+      value.role === "professional" &&
+      isOtherRegulatoryBody(value.registeringBody) &&
+      !value.regulatoryBodyOther
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["regulatoryBodyOther"],
+        message: "Name of regulatory body is required",
       });
     }
     if (value.premisesNumber) {

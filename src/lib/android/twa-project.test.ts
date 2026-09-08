@@ -11,6 +11,10 @@ describe("Android TWA project", () => {
     "utf8",
   );
   const twaManifest = readFileSync("android/twa-manifest.json", "utf8");
+  const filepaths = readFileSync(
+    "android/app/src/main/res/xml/filepaths.xml",
+    "utf8",
+  );
 
   it("uses the Play package, origin, and target SDK 36", () => {
     expect(ANDROID_PACKAGE_ID).toBe("app.wanzwei.android");
@@ -36,6 +40,8 @@ describe("Android TWA project", () => {
     expect(manifest).toContain("android.permission.INTERNET");
     expect(manifest).toContain("FALLBACK_STRATEGY");
     expect(manifest).toContain("customtabs");
+    expect(filepaths).toContain('files-path path="twa_splash/"');
+    expect(filepaths).not.toContain("root-path");
   });
 
   it("declares App Links for confirmation without bypassing the human POST", () => {

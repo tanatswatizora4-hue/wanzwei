@@ -1,8 +1,9 @@
 import { professionSupportsHpaAutoVerify } from "@/lib/professions";
+import { HPA_BODY, classifyRegistryMatch, type RegistryMatchRecord } from "@/lib/registry/match";
 import {
-  classifyRegistryMatch,
-  type RegistryMatchRecord,
-} from "@/lib/registry/match";
+  isOtherRegulatoryBody,
+  regulatoryBodySupportsHpaCorroboration,
+} from "@/lib/regulatory-bodies";
 import type { RegistryEvidence } from "@/lib/verification/hybrid-types";
 
 export function registryEvidenceFromMatch(input: {
@@ -14,29 +15,44 @@ export function registryEvidenceFromMatch(input: {
   lookupFailed?: boolean;
 }): RegistryEvidence {
   const registrationNumber = input.registrationNumber?.trim() ?? "";
-  if (!registrationNumber) {
-    return {
-      outcome: professionSupportsHpaAutoVerify(input.submittedProfession)
-        ? "NOT_SUBMITTED"
-        : "UNAVAILABLE_FOR_PROFESSION",
-      registryAvailable: professionSupportsHpaAutoVerify(input.submittedProfession),
-      registryNameMatch: null,
-      registryProfessionMatch: null,
-      matchedRegistryId: null,
-      reason: professionSupportsHpaAutoVerify(input.submittedProfession)
-        ? "No registration number was submitted for registry lookup."
-        : "No compatible HPA register family exists for this profession.",
-    };
-  }
+  const registryAvailable = regulatoryBodySupportsHpaCorroboration(
+    input.registeringBody,
+    input.submittedProfession,
+  );
 
-  if (!professionSupportsHpaAutoVerify(input.submittedProfession)) {
+  if (isOtherRegulatoryBody(input.registeringBody)) {
     return {
       outcome: "UNAVAILABLE_FOR_PROFESSION",
       registryAvailable: false,
       registryNameMatch: null,
       registryProfessionMatch: null,
       matchedRegistryId: null,
-      reason: "No compatible HPA register family exists for this profession.",
+      reason:
+        "Other regulatory bodies are never treated as registry corroborated.",
+    };
+  }
+
+  if (!registryAvailable) {
+    return {
+      outcome: "UNAVAILABLE_FOR_PROFESSION",
+      registryAvailable: false,
+      registryNameMatch: null,
+      registryProfessionMatch: null,
+      matchedRegistryId: null,
+      reason: professionSupportsHpaAutoVerify(input.submittedProfession)
+        ? "Wanzwei has no authoritative registry integration for this regulatory body."
+        : "No compatible practitioner register exists for this profession.",
+    };
+  }
+
+  if (!registrationNumber) {
+    return {
+      outcome: "NOT_SUBMITTED",
+      registryAvailable: true,
+      registryNameMatch: null,
+      registryProfessionMatch: null,
+      matchedRegistryId: null,
+      reason: "No registration number was submitted for registry lookup.",
     };
   }
 
@@ -47,12 +63,12 @@ export function registryEvidenceFromMatch(input: {
       registryNameMatch: null,
       registryProfessionMatch: null,
       matchedRegistryId: null,
-      reason: "Registry lookup failed.",
+      reason: "Wanzwei could not automatically corroborate this registration.",
     };
   }
 
   const classified = classifyRegistryMatch({
-    registeringBody: input.registeringBody ?? "HPA",
+    registeringBody: HPA_BODY,
     registrationNumber,
     submittedName: input.submittedName,
     submittedProfession: input.submittedProfession,
@@ -60,6 +76,18 @@ export function registryEvidenceFromMatch(input: {
   });
 
   if (classified.autoVerify && classified.outcome === "matched") {
+    const placeholder = input.rows.some((row) => row.isPlaceholder);
+    if (placeholder) {
+      return {
+        outcome: "NOT_FOUND",
+        registryAvailable: true,
+        registryNameMatch: null,
+        registryProfessionMatch: null,
+        matchedRegistryId: classified.matchedRegistryId,
+        reason:
+          "Placeholder or invalid registry records cannot be used to corroborate registration.",
+      };
+    }
     return {
       outcome: "MATCH",
       registryAvailable: true,
@@ -92,6 +120,11 @@ export function registryEvidenceFromMatch(input: {
     registryNameMatch: null,
     registryProfessionMatch: null,
     matchedRegistryId: classified.matchedRegistryId,
-    reason: classified.reason,
+    reason:
+      classified.reason.includes("Placeholder") ||
+      classified.outcome === "ambiguous" ||
+      classified.outcome === "not_found"
+        ? "Wanzwei could not automatically corroborate this registration."
+        : classified.reason,
   };
 }

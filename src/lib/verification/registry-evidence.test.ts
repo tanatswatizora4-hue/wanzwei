@@ -16,6 +16,7 @@ describe("registry evidence provider mapping", () => {
     const result = registryEvidenceFromMatch({
       submittedName: "Tinashe Moyo",
       submittedProfession: "Pharmacist",
+      registeringBody: "PCZ",
       rows: [],
     });
     expect(result.outcome).toBe("NOT_SUBMITTED");

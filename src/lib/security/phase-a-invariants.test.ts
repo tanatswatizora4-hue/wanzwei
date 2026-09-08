@@ -30,8 +30,10 @@ describe("Phase A security invariants", () => {
     expect(
       SubmitVerificationSchema.safeParse({
         profession: "Pharmacist",
+        registeringBody: "PCZ",
         identityDocumentId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         credentialDocumentId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        registrationNumber: "P01-6420-2026",
         verified: true,
         decision: "verified",
         confidence: 0.99,
@@ -113,5 +115,16 @@ describe("Phase A security invariants", () => {
       "utf8",
     );
     expect(facilityApps).not.toContain("professional_documents");
+    const evidence = readFileSync(
+      "supabase/migrations/0012_hybrid_verification_evidence.sql",
+      "utf8",
+    );
+    expect(evidence).toContain("Intentionally no policies");
+    const council = readFileSync(
+      "supabase/migrations/0013_council_aware_verification.sql",
+      "utf8",
+    );
+    expect(council).toContain("Does not change users.verified");
+    expect(council).not.toMatch(/update public\.users\s+set verified/i);
   });
 });

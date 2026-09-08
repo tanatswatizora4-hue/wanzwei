@@ -17,6 +17,12 @@ describe("professional verification gate", () => {
       isVerifiedProfessional({ role: "facility", verified: true }),
     ).toBe(false);
     expect(
+      isVerifiedProfessional(
+        { role: "facility", verified: true },
+        { professionalMembership: true },
+      ),
+    ).toBe(true);
+    expect(
       isVerifiedProfessional({ role: "admin", verified: true }),
     ).toBe(false);
   });

@@ -48,7 +48,11 @@ export async function listEnquiriesForListing(
     async () => {
       const db = getDb();
       const listingRows = await db
-        .select({ ownerId: listings.ownerId })
+        .select({
+          ownerId: listings.ownerId,
+          facilityId: listings.facilityId,
+          sellerType: listings.sellerType,
+        })
         .from(listings)
         .where(eq(listings.id, listingId))
         .limit(1);

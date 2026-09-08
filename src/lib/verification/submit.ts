@@ -9,9 +9,21 @@ import { insertVerificationEvent } from "@/lib/repos/verification-events";
 import { toVerification } from "@/lib/repos/verifications";
 import {
   classifyRegistryMatch,
+  HPA_BODY,
   normalizeRegisteringBody,
   type RegistryMatchRecord,
 } from "@/lib/registry/match";
+import {
+  isOtherRegulatoryBody,
+  regulatoryBodySupportsHpaCorroboration,
+} from "@/lib/regulatory-bodies";
+import {
+  derivePractisingCertificateStatus,
+  formatIsoDateOnly,
+  type CredentialStatus,
+  type IdentityVerificationStatus,
+  type PractisingCertificateStatus,
+} from "@/lib/verification/practising-certificate";
 import {
   formatParsedPersonNumber,
   normalizeRegistrationNumber,
@@ -76,6 +88,7 @@ type CaseRow = {
   status: VerificationStatus;
   registeringBody: string | null;
   registrationNumber: string | null;
+  regulatoryBodyOther: string | null;
   matchOutcome: string | null;
   matchedRegistryId: string | null;
   documentCount: number;
@@ -104,6 +117,7 @@ export type VerificationWriteTx = {
     profession: string;
     registeringBody: string;
     registrationNumber: string;
+    regulatoryBodyOther?: string | null;
     status: VerificationStatus;
     matchOutcome: VerificationMatchOutcome;
     matchedRegistryId: string | null;
@@ -115,6 +129,7 @@ export type VerificationWriteTx = {
       profession: string;
       registeringBody: string;
       registrationNumber: string;
+      regulatoryBodyOther?: string | null;
       status: VerificationStatus;
       matchOutcome: VerificationMatchOutcome;
       matchedRegistryId: string | null;
@@ -128,6 +143,14 @@ export type VerificationWriteTx = {
       profession: string;
       registeringBody: string;
       registrationNumber: string;
+      regulatoryBodyOther?: string | null;
+      identityVerificationStatus?: IdentityVerificationStatus | null;
+      credentialStatus?: CredentialStatus | null;
+      credentialVerifiedAt?: Date | null;
+      credentialVerificationMethod?: string | null;
+      practisingCertificateExpiry?: string | null;
+      practisingCertificateStatus?: PractisingCertificateStatus | null;
+      lastVerificationReviewAt?: Date | null;
     },
   ) => Promise<void>;
   insertEvent: (event: {
@@ -151,6 +174,8 @@ export type VerificationWriteTx = {
     detectedProfession?: string | null;
     registrationNumber?: string | null;
     issuingBody?: string | null;
+    regulatoryBody?: string | null;
+    regulatoryBodyOther?: string | null;
     issueDate?: string | null;
     expiryDate?: string | null;
     nameMatch: string;
@@ -259,6 +284,7 @@ function toVerificationFromCase(row: CaseRow): Verification {
     flags: row.flags,
     registeringBody: row.registeringBody,
     registrationNumber: row.registrationNumber,
+    regulatoryBodyOther: row.regulatoryBodyOther,
     matchedRegistryId: row.matchedRegistryId,
     matchOutcome: row.matchOutcome,
     createdAt: row.createdAt,
@@ -302,12 +328,13 @@ export async function submitProfessionalVerification(
     const registrationNumber = input.registrationNumber?.trim() ?? "";
     let rows: RegistryMatchRecord[] = [];
     let lookupFailed = false;
-    if (registrationNumber) {
+    const shouldLookup = regulatoryBodySupportsHpaCorroboration(
+      input.registeringBody,
+      input.profession,
+    );
+    if (registrationNumber && shouldLookup) {
       try {
-        rows = await tx.lookupRegistry(
-          input.registeringBody ?? "HPA",
-          registrationNumber,
-        );
+        rows = await tx.lookupRegistry(HPA_BODY, registrationNumber);
       } catch {
         lookupFailed = true;
       }
@@ -346,9 +373,9 @@ export async function submitProfessionalVerification(
           matchedRegistryId: null,
           reason: "Registry lookup failed.",
         }
-      : registrationNumber
+      : shouldLookup && registrationNumber
         ? classifyRegistryMatch({
-            registeringBody: input.registeringBody ?? "HPA",
+            registeringBody: HPA_BODY,
             registrationNumber,
             submittedName: user.name,
             submittedProfession: input.profession,
@@ -366,6 +393,8 @@ export async function submitProfessionalVerification(
       hasCredentialDocument: Boolean(input.credentialDocumentId),
       submittedName: user.name,
       submittedProfession: input.profession,
+      submittedRegulatoryBody: input.registeringBody,
+      regulatoryBodyOther: input.regulatoryBodyOther,
       identity,
       credential,
       registry,
@@ -407,9 +436,27 @@ async function persistDecision(
     args.hybrid.decision,
   );
   const body = normalizeRegisteringBody(args.input.registeringBody ?? "");
+  const other = isOtherRegulatoryBody(body)
+    ? (args.input.regulatoryBodyOther?.trim() ?? null)
+    : null;
   const registrationNumber = args.input.registrationNumber
     ? canonicalRegistrationNumber(args.input.registrationNumber)
     : "";
+  const expiry = formatIsoDateOnly(args.credential.expiryDate);
+  const practisingStatus = derivePractisingCertificateStatus(expiry);
+  const identityStatus: IdentityVerificationStatus =
+    args.identity.status === "processed" ||
+    args.identity.status === "unreadable" ||
+    args.identity.status === "unavailable"
+      ? args.identity.status
+      : "pending";
+  const credentialStatus: CredentialStatus =
+    args.hybrid.decision === "verified"
+      ? "reviewed"
+      : args.hybrid.decision === "additional_evidence_required"
+        ? "insufficient"
+        : "pending_review";
+  const now = new Date();
 
   const preserveVerifiedHistory =
     args.existing?.status === "Verified" &&
@@ -451,6 +498,7 @@ async function persistDecision(
     profession: args.input.profession,
     registeringBody: body,
     registrationNumber,
+    regulatoryBodyOther: other,
     status: toStatus,
     matchOutcome: args.outcome,
     matchedRegistryId: args.matchedRegistryId,
@@ -471,6 +519,14 @@ async function persistDecision(
     profession: args.input.profession,
     registeringBody: body,
     registrationNumber,
+    regulatoryBodyOther: other,
+    identityVerificationStatus: identityStatus,
+    credentialStatus,
+    credentialVerifiedAt: toStatus === "Verified" ? now : null,
+    credentialVerificationMethod: args.hybrid.verificationMethod,
+    practisingCertificateExpiry: expiry,
+    practisingCertificateStatus: practisingStatus,
+    lastVerificationReviewAt: now,
   });
 
   let userVerified =
@@ -504,6 +560,8 @@ async function persistDecision(
     detectedProfession: args.credential.detectedProfession ?? null,
     registrationNumber: args.credential.registrationNumber ?? registrationNumber,
     issuingBody: args.credential.issuingBody ?? (body || null),
+    regulatoryBody: body || null,
+    regulatoryBodyOther: other,
     issueDate: args.credential.issueDate ?? null,
     expiryDate: args.credential.expiryDate ?? null,
     nameMatch: args.hybrid.nameMatch,
@@ -544,6 +602,7 @@ function mapCase(row: {
   status: VerificationStatus;
   registeringBody: string | null;
   registrationNumber: string | null;
+  regulatoryBodyOther?: string | null;
   matchOutcome: string | null;
   matchedRegistryId: string | null;
   documentCount: number;
@@ -551,7 +610,10 @@ function mapCase(row: {
   createdAt: Date;
   flags: string[];
 }): CaseRow {
-  return row;
+  return {
+    ...row,
+    regulatoryBodyOther: row.regulatoryBodyOther ?? null,
+  };
 }
 
 const currentCaseOrderBy = [
@@ -595,6 +657,7 @@ export function createDrizzleWriteTx(
           profession: input.profession,
           registeringBody: input.registeringBody,
           registrationNumber: input.registrationNumber,
+          regulatoryBodyOther: input.regulatoryBodyOther ?? null,
           status: input.status,
           matchOutcome: input.matchOutcome,
           matchedRegistryId: input.matchedRegistryId,
@@ -613,6 +676,7 @@ export function createDrizzleWriteTx(
           profession: patch.profession,
           registeringBody: patch.registeringBody,
           registrationNumber: patch.registrationNumber,
+          regulatoryBodyOther: patch.regulatoryBodyOther ?? null,
           status: patch.status,
           matchOutcome: patch.matchOutcome,
           matchedRegistryId: patch.matchedRegistryId,
@@ -639,6 +703,32 @@ export function createDrizzleWriteTx(
           registeringBody: patch.registeringBody,
           registrationNumber: patch.registrationNumber,
           updatedAt: new Date(),
+          ...(patch.regulatoryBodyOther !== undefined
+            ? { regulatoryBodyOther: patch.regulatoryBodyOther }
+            : {}),
+          ...(patch.identityVerificationStatus !== undefined
+            ? { identityVerificationStatus: patch.identityVerificationStatus }
+            : {}),
+          ...(patch.credentialStatus !== undefined
+            ? { credentialStatus: patch.credentialStatus }
+            : {}),
+          ...(patch.credentialVerifiedAt !== undefined
+            ? { credentialVerifiedAt: patch.credentialVerifiedAt }
+            : {}),
+          ...(patch.credentialVerificationMethod !== undefined
+            ? {
+                credentialVerificationMethod: patch.credentialVerificationMethod,
+              }
+            : {}),
+          ...(patch.practisingCertificateExpiry !== undefined
+            ? { practisingCertificateExpiry: patch.practisingCertificateExpiry }
+            : {}),
+          ...(patch.practisingCertificateStatus !== undefined
+            ? { practisingCertificateStatus: patch.practisingCertificateStatus }
+            : {}),
+          ...(patch.lastVerificationReviewAt !== undefined
+            ? { lastVerificationReviewAt: patch.lastVerificationReviewAt }
+            : {}),
         })
         .where(eq(users.id, userId));
     },
@@ -657,6 +747,8 @@ export function createDrizzleWriteTx(
           detectedProfession: row.detectedProfession ?? null,
           registrationNumber: row.registrationNumber ?? null,
           issuingBody: row.issuingBody ?? null,
+          regulatoryBody: row.regulatoryBody ?? null,
+          regulatoryBodyOther: row.regulatoryBodyOther ?? null,
           issueDate: row.issueDate ?? null,
           expiryDate: row.expiryDate ?? null,
           nameMatch: row.nameMatch,

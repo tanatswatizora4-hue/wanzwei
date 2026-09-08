@@ -12,9 +12,14 @@ import {
 } from "@/lib/marketplace/search";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type { DbListing, NewDbListing } from "@/lib/db/schema";
-import type { Listing } from "@/lib/types";
+import type { Listing, ListingSellerType } from "@/lib/types";
 
 const DEFAULT_COVER = "from-sky-500 to-slate-800";
+
+export type ListingMineScope =
+  | { sellerType: "professional"; ownerId: string }
+  | { sellerType: "facility"; facilityId: string }
+  | { ownerId: string };
 
 export function toListing(
   row: DbListing,
@@ -38,13 +43,28 @@ export function toListing(
     ownerId: row.ownerId ?? undefined,
     ownerName: ownerName ?? undefined,
     status: row.status,
+    category: row.category ?? null,
+    condition: row.condition ?? null,
+    sellerType: (row.sellerType as ListingSellerType | null) ?? null,
+    facilityId: row.facilityId ?? null,
   };
 }
 
-function listingSearchWhere(filters?: MarketplaceSearchFilters, ownerId?: string) {
+function listingSearchWhere(
+  filters?: MarketplaceSearchFilters,
+  mine?: ListingMineScope,
+) {
   const clauses = [];
-  if (filters?.mine && ownerId) {
-    clauses.push(eq(listings.ownerId, ownerId));
+  if (filters?.mine && mine) {
+    if ("sellerType" in mine && mine.sellerType === "professional") {
+      clauses.push(eq(listings.sellerType, "professional"));
+      clauses.push(eq(listings.ownerId, mine.ownerId));
+    } else if ("sellerType" in mine && mine.sellerType === "facility") {
+      clauses.push(eq(listings.sellerType, "facility"));
+      clauses.push(eq(listings.facilityId, mine.facilityId));
+    } else if ("ownerId" in mine) {
+      clauses.push(eq(listings.ownerId, mine.ownerId));
+    }
   } else {
     clauses.push(eq(listings.status, "Open"));
   }
@@ -77,7 +97,7 @@ function listingSearchWhere(filters?: MarketplaceSearchFilters, ownerId?: string
 export async function listListings(
   limit = 50,
   filters?: MarketplaceSearchFilters,
-  viewerId?: string,
+  mine?: ListingMineScope,
 ): Promise<Listing[]> {
   if (!hasDbConfig()) return [];
   return withRepositoryLogging(
@@ -92,12 +112,12 @@ export async function listListings(
         })
         .from(listings)
         .leftJoin(users, eq(users.id, listings.ownerId))
-        .where(listingSearchWhere(filters, viewerId))
+        .where(listingSearchWhere(filters, mine))
         .orderBy(desc(listings.posted))
         .limit(limit);
       return rows.map((row) => toListing(row.listing, row.ownerName));
     },
-    { limit, filters, viewerId },
+    { limit, filters, mine },
   );
 }
 
@@ -129,6 +149,31 @@ export async function createListing(
   });
 }
 
+export async function updateListingById(
+  id: string,
+  patch: Partial<NewDbListing>,
+): Promise<Listing | null> {
+  if (!hasDbConfig()) return null;
+  const frozen: Partial<NewDbListing> = { ...patch };
+  delete frozen.ownerId;
+  delete frozen.sellerType;
+  delete frozen.facilityId;
+  return withRepositoryLogging(
+    "listings",
+    "updateListingById",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .update(listings)
+        .set(frozen)
+        .where(eq(listings.id, id))
+        .returning();
+      return rows[0] ? toListing(rows[0]) : null;
+    },
+    { id },
+  );
+}
+
 export async function updateListingForOwner(
   id: string,
   ownerId: string | null,
@@ -136,6 +181,10 @@ export async function updateListingForOwner(
   asAdmin: boolean,
 ): Promise<Listing | null> {
   if (!hasDbConfig()) return null;
+  const frozen: Partial<NewDbListing> = { ...patch };
+  delete frozen.ownerId;
+  delete frozen.sellerType;
+  delete frozen.facilityId;
   return withRepositoryLogging(
     "listings",
     "updateListingForOwner",
@@ -144,9 +193,21 @@ export async function updateListingForOwner(
       const where = asAdmin
         ? eq(listings.id, id)
         : and(eq(listings.id, id), eq(listings.ownerId, ownerId ?? ""));
-      const rows = await db.update(listings).set(patch).where(where).returning();
+      const rows = await db.update(listings).set(frozen).where(where).returning();
       return rows[0] ? toListing(rows[0]) : null;
     },
     { id, ownerId, asAdmin },
   );
+}
+
+export async function deleteListingById(id: string): Promise<boolean> {
+  if (!hasDbConfig()) return false;
+  return withRepositoryLogging("listings", "deleteListingById", async () => {
+    const db = getDb();
+    const rows = await db
+      .delete(listings)
+      .where(eq(listings.id, id))
+      .returning({ id: listings.id });
+    return rows.length > 0;
+  }, { id });
 }

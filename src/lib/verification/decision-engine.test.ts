@@ -7,7 +7,8 @@ const PHARMACIST: HybridDecisionInput = {
   hasIdentityDocument: true,
   hasCredentialDocument: true,
   submittedName: "Tinashe Moyo",
-  submittedProfession: "Pharmacist",
+    submittedProfession: "Pharmacist",
+    submittedRegulatoryBody: "PCZ",
   identity: { status: "unavailable" },
   credential: { status: "unavailable" },
   registry: {
@@ -70,7 +71,7 @@ describe("hybrid verification decision engine", () => {
         reason: "No registry record matched this registration number.",
       },
     });
-    expect(result.decision).toBe("additional_evidence_required");
+    expect(result.decision).toBe("manual_review");
     expect(result.decision).not.toBe("verified");
   });
 
@@ -92,10 +93,11 @@ describe("hybrid verification decision engine", () => {
     expect(result.decision).not.toBe("verified");
   });
 
-  it("auto-verifies a non-registry profession with strong document evidence", () => {
+  it("sends a non-registry profession with strong evidence to manual review", () => {
     const result = decideHybridVerification({
       ...PHARMACIST,
       submittedProfession: "Digital Health Specialist",
+      submittedRegulatoryBody: "AHPCZ",
       identity: PROCESSED_ID,
       credential: {
         ...PROCESSED_CERT,
@@ -109,10 +111,11 @@ describe("hybrid verification decision engine", () => {
         registryNameMatch: null,
         registryProfessionMatch: null,
         matchedRegistryId: null,
-        reason: "No compatible HPA register family exists for this profession.",
+        reason: "No compatible practitioner register exists for this profession.",
       },
     });
-    expect(result.decision).toBe("verified");
+    expect(result.decision).toBe("manual_review");
+    expect(result.decision).not.toBe("verified");
     expect(result.verificationMethod).toBe("hybrid");
   });
 
@@ -181,7 +184,7 @@ describe("hybrid verification decision engine", () => {
         registryNameMatch: null,
         registryProfessionMatch: null,
         matchedRegistryId: null,
-        reason: "No compatible HPA register family exists for this profession.",
+        reason: "No compatible practitioner register exists for this profession.",
       },
     });
     expect(result.decision).toBe("processing");

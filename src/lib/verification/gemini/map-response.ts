@@ -25,7 +25,9 @@ Return JSON only. You are not a verification authority. Never return verified=tr
 Distinguish current practising/licensing documents from academic qualifications/degrees.
 Fields:
 credentialType: practising_certificate | professional_licence | registration_certificate | qualification | degree | diploma | other
-holderName, profession, qualification, institution, registrationNumber, issuingBody, issueDate, expiryDate, currentStatus
+holderName, profession, qualification, institution, registrationNumber, issuingBody, regulatoryBody, issueDate, expiryDate, currentStatus
+issuingBody/regulatoryBody: the council or registering body named on the document if present (for example Nurses Council of Zimbabwe)
+Never return national ID numbers or passport numbers.
 readability: readable | poor | unreadable
 extractionQuality: high | medium | poor
 confidence: number between 0 and 1
@@ -144,7 +146,7 @@ export function mapCredentialExtraction(
     qualification: asString(raw.qualification),
     institution: asString(raw.institution),
     registrationNumber: asString(raw.registrationNumber),
-    issuingBody: asString(raw.issuingBody),
+    issuingBody: asString(raw.issuingBody) ?? asString(raw.regulatoryBody),
     issueDate: asString(raw.issueDate),
     expiryDate: asString(raw.expiryDate),
     currentStatus: asString(raw.currentStatus),

@@ -10,7 +10,7 @@ import {
   getApplicationById,
   updateApplicationStatus,
 } from "@/lib/repos/applications";
-import { findFacilityForUserEmail } from "@/lib/repos/facilities";
+import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
 import { requireRole } from "@/lib/auth/session";
 import { UpdateApplicationStatusSchema } from "@/lib/validation/applications";
 import { ServerActionValidationError } from "@/lib/validation/errors";
@@ -31,14 +31,14 @@ export async function updateApplicationStatusAction(
     throw new ServerActionValidationError(parsed.error);
   }
 
-  if (user.role === "facility") {
-    const facility = await findFacilityForUserEmail(user.email);
-    if (!facility) {
+  if (user.role !== "admin") {
+    const facilityId = await resolveFacilityIdForUser(user);
+    if (!facilityId) {
       return actionError("Facility profile required.");
     }
     const allowed = await applicationBelongsToFacility(
       parsed.data.id,
-      facility.id,
+      facilityId,
     );
     if (!allowed) {
       return actionError("You cannot update this application.");

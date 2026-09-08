@@ -8,23 +8,23 @@ const DOCS = {
 };
 
 describe("SubmitVerificationSchema", () => {
-  it("accepts HPA credentials and identity/credential document ids", () => {
+  it("accepts PCZ credentials and identity/credential document ids", () => {
     expect(
       SubmitVerificationSchema.parse({
-        registeringBody: "hpa",
+        registeringBody: "PCZ",
         registrationNumber: "P01-6420-2026",
         profession: "Pharmacist",
         ...DOCS,
       }),
     ).toEqual({
-      registeringBody: "HPA",
+      registeringBody: "PCZ",
       registrationNumber: "P01-6420-2026",
       profession: "Pharmacist",
       ...DOCS,
     });
   });
 
-  it("accepts spaced, compact, lowercase, and padded HPA numbers", () => {
+  it("accepts spaced, compact, lowercase, and padded HPA-format numbers", () => {
     for (const registrationNumber of [
       "P01-6420-2026",
       "P01 6420 2026",
@@ -34,7 +34,7 @@ describe("SubmitVerificationSchema", () => {
     ]) {
       expect(
         SubmitVerificationSchema.parse({
-          registeringBody: "HPA",
+          registeringBody: "PCZ",
           registrationNumber,
           profession: "Pharmacist",
           ...DOCS,
@@ -43,20 +43,32 @@ describe("SubmitVerificationSchema", () => {
     }
   });
 
-  it("allows omitting a registration number for non-register professions", () => {
+  it("accepts a non-HPA registration number for a non-register council", () => {
     expect(
       SubmitVerificationSchema.parse({
-        profession: "Digital Health Specialist",
+        profession: "Physiotherapist",
+        registeringBody: "AHPCZ",
+        registrationNumber: "AH-4411",
         ...DOCS,
       }).registrationNumber,
-    ).toBeUndefined();
+    ).toBe("AH-4411");
   });
 
-  it("rejects an invalid registration number when one is submitted", () => {
+  it("rejects an empty registration number", () => {
+    expect(
+      SubmitVerificationSchema.safeParse({
+        registeringBody: "PCZ",
+        profession: "Pharmacist",
+        ...DOCS,
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects HPA as a selectable registering body", () => {
     expect(
       SubmitVerificationSchema.safeParse({
         registeringBody: "HPA",
-        registrationNumber: "not-a-licence",
+        registrationNumber: "P01-6420-2026",
         profession: "Pharmacist",
         ...DOCS,
       }).success,
@@ -74,6 +86,8 @@ describe("SubmitVerificationSchema", () => {
       expect(
         SubmitVerificationSchema.safeParse({
           profession: "Pharmacist",
+          registeringBody: "PCZ",
+          registrationNumber: "P01-6420-2026",
           ...DOCS,
           ...extra,
         }).success,

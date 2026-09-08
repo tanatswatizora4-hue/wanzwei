@@ -16,12 +16,14 @@ describe("professional CPD actions", () => {
     expect(enrol).toContain('requireRole(["professional"])');
     expect(enrol).not.toContain("requireVerifiedProfessional");
     expect(enrol).toContain("enrolUserInCourse(user.id, parsed.data.courseId)");
+    expect(enrol).toContain("professionalMembership: true");
   });
 
   it("blocks completion and withdraw unless the enrolment belongs to the user", () => {
     expect(source).toContain("getEnrolmentForUserCourse(user.id, parsed.data.courseId)");
     expect(source).toContain("existing.userId !== user.id");
     expect(source).toContain("completeEnrolmentForUser(user.id, parsed.data.courseId)");
+    expect(source).toContain("issueCertificateForCompletedEnrolment");
     expect(source).toContain("withdrawEnrolmentForUser(user.id, parsed.data.courseId)");
   });
 });
@@ -43,7 +45,6 @@ describe("CPD pages persist real catalogue and history routes", () => {
 
   it("does not ship fake certificates or shared catalogue progress as learner state", () => {
     const view = readFileSync("src/components/app/cpd-view.tsx", "utf8");
-    expect(view).not.toContain("Certificate");
     expect(view).not.toContain("2026 Cycle");
     expect(view).not.toContain("Certified");
     expect(view).not.toContain("href=\"#\"");

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
 import { requireRole } from "@/lib/auth/session";
+import { issueCertificateForCompletedEnrolment } from "@/lib/cpd/issue-certificate";
 import { canProfessionalEnrol } from "@/lib/cpd/ownership";
 import { hasDbConfig } from "@/lib/db/client";
 import {
@@ -25,7 +26,7 @@ export async function enrolInCourseAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireRole(["professional"]);
-  if (!canProfessionalEnrol({ actor: user })) {
+  if (!canProfessionalEnrol({ actor: user, professionalMembership: true })) {
     return actionError("Only professionals can register for CPD.");
   }
   if (!hasDbConfig()) {
@@ -81,7 +82,13 @@ export async function completeCourseEnrolmentAction(
     return actionError("Could not record completion.");
   }
 
+  await issueCertificateForCompletedEnrolment({
+    userId: user.id,
+    courseId: parsed.data.courseId,
+  });
+
   revalidateCpd(parsed.data.courseId);
+  revalidatePath("/professional/cpd/certificates");
   return actionOk();
 }
 

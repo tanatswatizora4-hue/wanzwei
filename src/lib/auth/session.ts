@@ -4,6 +4,11 @@ import { redirect } from "next/navigation";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 
 import { dashboardPathForRole } from "@/lib/auth/role-paths";
+import {
+  dashboardForUserWorkspace,
+  resolveWorkspaceForUser,
+  userHasProductRole,
+} from "@/lib/auth/workspace";
 import { findUserByEmail } from "@/lib/repos/users";
 import { getServerSupabase } from "@/lib/supabase/server";
 import type { Role, User } from "@/lib/types";
@@ -46,21 +51,29 @@ export async function requireUser(): Promise<User> {
 
 export async function requireRole(allowedRoles: Role[]): Promise<User> {
   const user = await requireUser();
-  if (!allowedRoles.includes(user.role)) {
-    redirect(dashboardPathForRole(user.role));
+  if (allowedRoles.includes(user.role)) {
+    return user;
   }
-  return user;
+  if (await userHasProductRole(user, allowedRoles)) {
+    return user;
+  }
+  const { workspace } = await resolveWorkspaceForUser(user);
+  redirect(dashboardForUserWorkspace(user, workspace));
 }
 
 /**
- * Authenticated professional whose HPA credentials are verified.
+ * Authenticated professional whose credentials are verified.
  * Does not redirect unverified users to login; callers must fail safely.
  */
 export async function requireVerifiedProfessional(): Promise<
   { ok: true; user: User } | { ok: false; error: string }
 > {
   const user = await requireRole(["professional"]);
-  if (!isVerifiedProfessional(user)) {
+  if (
+    !isVerifiedProfessional(user, {
+      professionalMembership: true,
+    })
+  ) {
     return { ok: false, error: PROFESSIONAL_VERIFICATION_REQUIRED_MESSAGE };
   }
   return { ok: true, user };
@@ -70,8 +83,10 @@ export async function getCurrentUserWithRole(
   allowedRoles: Role[],
 ): Promise<User | null> {
   const user = await getCurrentUser();
-  if (!user || !allowedRoles.includes(user.role)) return null;
-  return user;
+  if (!user) return null;
+  if (allowedRoles.includes(user.role)) return user;
+  if (await userHasProductRole(user, allowedRoles)) return user;
+  return null;
 }
 
 export async function signOut(): Promise<void> {

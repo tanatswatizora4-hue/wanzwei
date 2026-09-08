@@ -114,7 +114,7 @@ function Hero() {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              HPA credential review
+              Professional credential review
             </span>
             <span className="inline-flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
@@ -158,7 +158,7 @@ function HeroPreview() {
             {[
               {
                 title: "Credential review",
-                body: "Professionals submit HPA details for automated checks and admin verification.",
+                body: "Professionals submit identity and practising-certificate evidence. Wanzwei reviews it and, where supported, corroborates registration against available records.",
               },
               {
                 title: "Jobs and applications",
@@ -293,13 +293,13 @@ function ProductPreview() {
             One account. Real hiring steps.
           </h2>
           <p className="mt-3 text-[15px] text-[color:var(--color-ink-500)]">
-            Create a professional account, submit HPA credentials, browse jobs,
-            and track applications after you are verified.
+            Create a professional account, submit identity and credential
+            evidence, browse jobs, and track applications after you are verified.
           </p>
           <ul className="mt-5 grid gap-2.5 text-[13.5px] text-[color:var(--color-ink-700)]">
             {[
               "Email signup, confirmation, and password sign-in",
-              "HPA credential submission and verification status",
+              "Credential submission and verification status",
               "Job browsing, saved jobs, and applications",
               "Document uploads for your profile",
             ].map((l) => (
@@ -322,7 +322,7 @@ function ProductPreview() {
           <ol className="mt-3 grid gap-3">
             {[
               "Create an account and confirm your email",
-              "Submit HPA registration details for review",
+              "Submit identity, registration, and practising certificate details for review",
               "Browse open jobs while verification is pending",
               "Apply after your account is verified",
             ].map((step, index) => (

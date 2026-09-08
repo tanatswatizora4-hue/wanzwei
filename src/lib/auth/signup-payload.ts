@@ -7,6 +7,8 @@ export type SignupPayload = {
   location?: string;
   facilityType?: string;
   profession?: string;
+  registeringBody?: string;
+  regulatoryBodyOther?: string;
   premisesNumber?: string;
 };
 
@@ -18,6 +20,8 @@ export type SignupFieldFlags = {
   hasLocation: boolean;
   hasFacilityType: boolean;
   hasProfession: boolean;
+  hasRegisteringBody: boolean;
+  hasRegulatoryBodyOther: boolean;
   hasPremisesNumber: boolean;
   role?: string;
 };
@@ -41,6 +45,8 @@ export function readSignupPayload(formData: FormData): SignupPayload {
     location: readFormText(formData, "location"),
     facilityType: readFormText(formData, "facilityType"),
     profession: readFormText(formData, "profession"),
+    registeringBody: readFormText(formData, "registeringBody"),
+    regulatoryBodyOther: readFormText(formData, "regulatoryBodyOther"),
     premisesNumber: readFormText(formData, "premisesNumber"),
   };
 }
@@ -54,6 +60,8 @@ export function signupFieldFlags(payload: SignupPayload): SignupFieldFlags {
     hasLocation: Boolean(payload.location),
     hasFacilityType: Boolean(payload.facilityType),
     hasProfession: Boolean(payload.profession),
+    hasRegisteringBody: Boolean(payload.registeringBody),
+    hasRegulatoryBodyOther: Boolean(payload.regulatoryBodyOther),
     hasPremisesNumber: Boolean(payload.premisesNumber),
     role: payload.role,
   };

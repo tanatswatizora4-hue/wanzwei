@@ -2,6 +2,10 @@
 
 export const DOCUMENTS_BUCKET = "documents";
 
+export const LISTING_IMAGES_BUCKET = "listing-images";
+
+export const MAX_LISTING_IMAGE_BYTES = 5 * 1024 * 1024;
+
 export const ALLOWED_DOCUMENT_MIME = new Set([
   "application/pdf",
   "image/jpeg",

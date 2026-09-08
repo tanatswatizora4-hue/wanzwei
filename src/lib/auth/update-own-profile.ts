@@ -31,7 +31,19 @@ const PROTECTED_SETTINGS_KEYS = [
   "registration_number",
   "registeringBody",
   "registering_body",
+  "regulatoryBodyOther",
+  "regulatory_body_other",
   "profession",
+  "identityVerificationStatus",
+  "identity_verification_status",
+  "credentialStatus",
+  "credential_status",
+  "practisingCertificateStatus",
+  "practising_certificate_status",
+  "practisingCertificateExpiry",
+  "practising_certificate_expiry",
+  "credentialVerificationMethod",
+  "credential_verification_method",
 ] as const;
 
 function readOptional(formData: FormData, key: string): string | undefined {

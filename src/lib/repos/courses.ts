@@ -30,6 +30,9 @@ export function toCourse(row: DbCourse): Course {
     location: row.location ?? undefined,
     startsAt: row.startsAt?.toISOString(),
     endsAt: row.endsAt?.toISOString(),
+    cpdPoints: row.cpdPoints == null ? null : Number(row.cpdPoints),
+    accreditingBody: row.accreditingBody ?? null,
+    accreditationReference: row.accreditationReference ?? null,
   };
 }
 

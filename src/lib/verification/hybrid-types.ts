@@ -82,6 +82,8 @@ export type HybridDecisionInput = {
   hasCredentialDocument: boolean;
   submittedName: string;
   submittedProfession: string;
+  submittedRegulatoryBody?: string | null;
+  regulatoryBodyOther?: string | null;
   identity: IdentityAnalysis;
   credential: CredentialAnalysis;
   registry: RegistryEvidence;

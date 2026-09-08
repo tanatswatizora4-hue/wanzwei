@@ -32,10 +32,18 @@ const TARGET_TABLES = [
   "verification_evidence",
   "course_enrolments",
   "listing_enquiries",
+  "account_memberships",
+  "listing_images",
+  "cpd_certificates",
 ] as const;
 
 /** Unapplied additive migrations. Missing tables are skipped, not failed. */
-const OPTIONAL_UNAPPLIED_TABLES = new Set<string>(["verification_evidence"]);
+const OPTIONAL_UNAPPLIED_TABLES = new Set<string>([
+  "verification_evidence",
+  "account_memberships",
+  "listing_images",
+  "cpd_certificates",
+]);
 
 /** Registry/audit tables are RLS-enabled with no client policies (default deny). */
 const DEFAULT_DENY_TABLES = new Set<string>([
@@ -66,7 +74,10 @@ const METADATA_SQL = `
       'verification_events',
       'verification_evidence',
       'course_enrolments',
-      'listing_enquiries'
+      'listing_enquiries',
+      'account_memberships',
+      'listing_images',
+      'cpd_certificates'
     ]::text[]) AS table_name
   )
   SELECT

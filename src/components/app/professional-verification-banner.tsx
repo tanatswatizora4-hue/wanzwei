@@ -14,8 +14,9 @@ export function ProfessionalVerificationBanner() {
             Account verification: Not verified
           </p>
           <p className="mt-0.5 text-[12.5px] text-[color:var(--color-ink-600)]">
-            You can browse the app now. Submit your HPA registration to apply
-            for jobs and accept locum shifts.
+            You can browse the app now. Submit your identity document, practising
+            certificate, and registration details to apply for jobs and accept
+            locum shifts.
           </p>
         </div>
       </div>

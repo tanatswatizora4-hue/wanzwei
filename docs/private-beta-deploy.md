@@ -4,8 +4,10 @@ Deploy Wanzwei to Vercel for a small private beta. This guide covers environment
 
 ## Prerequisites
 
-- Supabase project with migrations `0001`–`0005` applied
+- Supabase project with migrations `0001`–`0012` applied in production
+- Migrations `0013`–`0016` are additive v1 closure migrations. Apply them in a review environment first. Do not apply them automatically to production from this workstream.
 - Storage bucket `documents` created as **private** (Public bucket disabled)
+- Storage bucket `listing-images` is created by `0015` as **private**. Do not reuse the documents bucket.
 - Seed data: `npm run db:seed` (optional, staging only; requires `WANZWEI_ALLOW_DESTRUCTIVE=I_UNDERSTAND` and seed identity env vars)
 - Auth bootstrap: `npm run auth:bootstrap` (creates a demo admin from env identities; never run against production without `WANZWEI_ALLOW_PRODUCTION=I_UNDERSTAND`)
 
@@ -40,14 +42,22 @@ Set these for **Production** (and Preview if you want staging):
 
 ### Professional verification (v1)
 
+Wanzwei reviews professional identity and credential evidence and, where supported, corroborates registration against authoritative regulatory records. It does **not** continuously verify every practitioner's licence with every Zimbabwean council.
+
 v1 uses:
 
-- Gemini document extraction for identity and professional credentials
+- Gemini document extraction for identity and practising certificates
 - a deterministic Wanzwei decision engine
-- HPA registry corroboration for Pharmacist, Pharmacy Technician, Nurse, and Midwife
-- manual review for exceptions
+- registry corroboration for professions/bodies where the existing practitioner register genuinely applies (currently PCZ pharmacy and NCZ nursing/midwifery families, using the imported HPA persons register)
+- manual review for Other bodies, unsupported councils, registry NOT_FOUND, contradictions, and exceptions
 
 Gemini extracts evidence. It does **not** set `users.verified`. Model confidence is never a verification grant by itself.
+
+**Legacy verified users:** migration `0013` is additive. Existing `users.verified = true` rows are not changed. Missing practising-certificate fields mean currency is `unable_to_confirm`, not expired, and must not mass-deverify production accounts.
+
+### CPD certificates
+
+Wanzwei issues a Certificate of Completion after a completed CPD enrolment. Public verification is `/certificates/verify/[certificateId]`. QR encoding is blocked in this environment by a local npm TLS certificate-chain failure; verification remains functional through the printed public URL. Adding a QR encoder later does not require a schema change.
 
 v1 Gemini analysis is **not** equivalent to dedicated government-ID authenticity or liveness verification.
 
