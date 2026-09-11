@@ -28,6 +28,7 @@ export function MarketplaceDetailView({
   actorFacilityIds = [],
   images = [],
   listingContext = "professional",
+  activeWorkspaceType,
 }: {
   listing: Listing;
   viewer: User;
@@ -36,6 +37,7 @@ export function MarketplaceDetailView({
   actorFacilityIds?: string[];
   images?: ListingImageView[];
   listingContext?: "professional" | "facility" | "admin";
+  activeWorkspaceType?: "professional" | "facility" | "admin";
 }) {
   const canManage = canManageListing({
     actor: viewer,
@@ -43,6 +45,7 @@ export function MarketplaceDetailView({
     listingSellerType: listing.sellerType,
     listingFacilityId: listing.facilityId,
     actorFacilityIds,
+    activeWorkspaceType: activeWorkspaceType ?? listingContext,
   });
   const canEnquire =
     listing.status === "Open" &&

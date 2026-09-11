@@ -16,14 +16,21 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { requireRole } from "@/lib/auth/session";
 import { getEmergencyAlertsForFacility } from "@/lib/repos/emergency-alerts";
-import { resolveFacilityForUser } from "@/lib/facility-for-user";
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
+import { getActiveFacilityContext } from "@/lib/facility-for-user";
+import { getFacility } from "@/lib/repos/facilities";
 import { timeAgoLong } from "@/lib/format";
 import { EmergencyAlertForm } from "./emergency-form";
 import { cancelAlertAction } from "./actions";
 
 export default async function FacilityEmergencyPage() {
   const user = await requireRole(["facility"]);
-  const facility = await resolveFacilityForUser(user);
+  const context = await getActiveFacilityContext(user);
+  const facility = context ? await getFacility(context.facilityId) : null;
+  const canManageEmergency = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageEmergency",
+  );
   const alerts = facility ? await getEmergencyAlertsForFacility(facility.id) : [];
 
   const stats = {
@@ -77,7 +84,18 @@ export default async function FacilityEmergencyPage() {
         />
       </div>
 
+      {canManageEmergency ? (
       <EmergencyAlertForm defaultLocation={facility?.location ?? "Harare"} />
+      ) : (
+        <Card>
+          <CardBody className="py-6">
+            <p className="text-[13px] text-[color:var(--color-ink-500)]">
+              Emergency requests can be viewed here. Only facility owners and
+              admins can send or cancel alerts.
+            </p>
+          </CardBody>
+        </Card>
+      )}
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -100,7 +118,11 @@ export default async function FacilityEmergencyPage() {
         ) : (
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {alerts.map((a) => (
-              <AlertListItem key={a.id} alert={a} />
+              <AlertListItem
+                key={a.id}
+                alert={a}
+                canCancel={canManageEmergency}
+              />
             ))}
           </div>
         )}
@@ -149,8 +171,10 @@ function MiniStat({
 
 function AlertListItem({
   alert,
+  canCancel,
 }: {
   alert: import("@/lib/types").EmergencyAlert;
+  canCancel: boolean;
 }) {
   const accepted = alert.recipients.filter((r) => r.status === "Accepted");
   const declined = alert.recipients.filter((r) => r.status === "Declined");
@@ -275,7 +299,7 @@ function AlertListItem({
           </div>
         ) : null}
 
-        {alert.status === "Sent" ? (
+        {canCancel && alert.status === "Sent" ? (
           <form action={cancelAlertAction} className="mt-1 flex justify-end">
             <input type="hidden" name="alertId" value={alert.id} />
             <Button variant="ghost" size="sm" type="submit">

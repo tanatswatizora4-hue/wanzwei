@@ -183,6 +183,25 @@ export function verificationDecisionTemplate({
   });
 }
 
+export function facilityWorkspaceInvitationTemplate(input: {
+  facilityName: string;
+  membershipRole: string;
+  inviteUrl: string;
+}): EmailContent {
+  const roleLabel =
+    input.membershipRole.charAt(0).toUpperCase() + input.membershipRole.slice(1);
+  return renderEmail({
+    subject: `You were invited to ${input.facilityName} on Wanzwei`,
+    preheader: `${input.facilityName} invited you to operate its Wanzwei workspace as ${roleLabel}.`,
+    greeting: "Hello,",
+    paragraphs: [
+      `${input.facilityName} invited you to help operate its Wanzwei workspace as ${roleLabel}.`,
+      "Facility membership controls access to this workspace and does not represent employment at the organisation.",
+      `Sign in with this email address, then open: ${input.inviteUrl}`,
+    ],
+  });
+}
+
 function renderEmail({
   subject,
   preheader,

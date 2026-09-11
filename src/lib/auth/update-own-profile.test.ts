@@ -106,6 +106,10 @@ describe("applyOwnProfileUpdate", () => {
           } satisfies Facility;
         },
       },
+      {
+        facilityId: FACILITY_USER.facilityId,
+        canManageFacilitySettings: true,
+      },
     );
 
     expect(result).toEqual({ ok: true });
@@ -121,6 +125,71 @@ describe("applyOwnProfileUpdate", () => {
     expect(JSON.stringify(facilityPatches)).not.toContain("verified");
     expect(JSON.stringify(userPatches)).not.toContain("role");
     expect(JSON.stringify(userPatches)).not.toContain("facilityId");
+  });
+
+  it("lets a professional-role user update the active facility workspace", async () => {
+    const facilityPatches: unknown[] = [];
+    const result = await applyOwnProfileUpdate(
+      PRO,
+      form({
+        name: "Tinashe Updated",
+        organisationName: "Borrowdale Medical Centre",
+        facilityLocation: "Harare",
+        facilityType: "Clinic",
+      }),
+      {
+        hasDbConfig: () => true,
+        updateOwnUserProfile: async () => PRO,
+        updateFacilityPublicProfile: async (facilityId, patch) => {
+          expect(facilityId).toBe(FACILITY_USER.facilityId);
+          facilityPatches.push(patch);
+          return {
+            id: facilityId,
+            name: patch.name ?? "Borrowdale Medical Centre",
+            type: patch.type ?? "Clinic",
+            location: patch.location ?? "Harare",
+            verified: false,
+            rating: 0,
+            openRoles: 0,
+            logoColor: "from-slate-400 to-slate-600",
+            initials: "BM",
+          } satisfies Facility;
+        },
+      },
+      {
+        facilityId: FACILITY_USER.facilityId,
+        canManageFacilitySettings: true,
+      },
+    );
+    expect(result).toEqual({ ok: true });
+    expect(facilityPatches).toEqual([
+      {
+        name: "Borrowdale Medical Centre",
+        location: "Harare",
+        type: "Clinic",
+      },
+    ]);
+  });
+
+  it("does not treat users.role=facility as facility mutation authority", async () => {
+    const facilityPatches: unknown[] = [];
+    const result = await applyOwnProfileUpdate(
+      FACILITY_USER,
+      form({
+        name: "Chipo Ncube",
+        organisationName: "Should Not Save",
+      }),
+      {
+        hasDbConfig: () => true,
+        updateOwnUserProfile: async () => FACILITY_USER,
+        updateFacilityPublicProfile: async (_facilityId, patch) => {
+          facilityPatches.push(patch);
+          return null;
+        },
+      },
+    );
+    expect(result).toEqual({ ok: true });
+    expect(facilityPatches).toEqual([]);
   });
 
   it("rejects protected fields even when mixed with valid updates", async () => {

@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { requireRole } from "@/lib/auth/session";
-import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
+import { getActiveFacilityContext } from "@/lib/facility-for-user";
 import { timeAgoLong } from "@/lib/format";
 import { parseUuid } from "@/lib/ids";
 import { facilityApplicationPath } from "@/lib/jobs/paths";
@@ -23,11 +24,16 @@ export default async function FacilityJobDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireRole(["facility"]);
+  const context = await getActiveFacilityContext(user);
+  const canManageJobs = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageJobs",
+  );
   const { id } = await params;
   const jobId = parseUuid(id);
   if (!jobId) notFound();
 
-  const facilityId = await resolveFacilityIdForUser(user);
+  const facilityId = context?.facilityId;
   if (!facilityId) notFound();
 
   const job = await getJobForFacility(jobId, facilityId);
@@ -54,6 +60,7 @@ export default async function FacilityJobDetailPage({
               jobId={job.id}
               jobTitle={job.title}
               status={job.status}
+              canManage={canManageJobs}
             />
           </>
         }

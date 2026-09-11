@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserWithRole } from "@/lib/auth/session";
+import { requireFacilityCapability } from "@/lib/facility-for-user";
 import { checkRateLimit, rateLimitJsonResponse } from "@/lib/rate-limit";
 import {
   DOCUMENTS_BUCKET,
@@ -14,7 +15,6 @@ import {
   withSignedDocumentUrl,
   withSignedDocumentUrls,
 } from "@/lib/supabase/private-storage";
-import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
 import {
   fieldValidationErrorResponse,
   validationErrorResponse,
@@ -38,13 +38,14 @@ async function handleGET() {
   if (!user) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-  const facilityId = await resolveFacilityIdForUser(user);
-  if (!facilityId) {
+  const context = await requireFacilityCapability(user, "manageVerification");
+  if (!context) {
     return NextResponse.json(
       { error: "Facility profile is not linked to this user." },
       { status: 409 },
     );
   }
+  const facilityId = context.facilityId;
   try {
     const supabase = createUploadClient();
     const { data, error } = await supabase
@@ -89,13 +90,14 @@ async function handlePOST(req: Request) {
     return rateLimitJsonResponse(rateLimit);
   }
 
-  const facilityId = await resolveFacilityIdForUser(user);
-  if (!facilityId) {
+  const context = await requireFacilityCapability(user, "manageVerification");
+  if (!context) {
     return NextResponse.json(
       { error: "Facility profile is not linked to this user." },
       { status: 409 },
     );
   }
+  const facilityId = context.facilityId;
 
   let formData: FormData;
   try {

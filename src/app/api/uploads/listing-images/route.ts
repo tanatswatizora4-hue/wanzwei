@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth/session";
-import { listCachedMembershipsForUser } from "@/lib/auth/workspace";
-import { facilityMemberships } from "@/lib/auth/workspace-model";
+import { marketplaceActorScope } from "@/lib/marketplace/actor-scope";
 import { canManageListing } from "@/lib/marketplace/ownership";
 import { checkRateLimit, rateLimitJsonResponse } from "@/lib/rate-limit";
 import {
@@ -31,16 +30,14 @@ async function actorCanManage(listingId: string) {
   if (!user) return { user: null, listing: null, allowed: false };
   const listing = await getListingById(listingId);
   if (!listing) return { user, listing: null, allowed: false };
-  const memberships = await listCachedMembershipsForUser(user.id);
-  const facilityIds = facilityMemberships(memberships)
-    .map((item) => item.facilityId)
-    .filter((id): id is string => Boolean(id));
+  const scope = await marketplaceActorScope(user);
   const allowed = canManageListing({
     actor: user,
     listingOwnerId: listing.ownerId,
     listingSellerType: listing.sellerType,
     listingFacilityId: listing.facilityId,
-    actorFacilityIds: facilityIds,
+    actorFacilityIds: scope.mutateFacilityIds,
+    activeWorkspaceType: scope.activeWorkspaceType,
   });
   return { user, listing, allowed };
 }

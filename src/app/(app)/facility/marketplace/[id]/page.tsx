@@ -11,7 +11,7 @@ export default async function FacilityMarketplaceDetailPage({
 }) {
   const user = await requireRole(["facility"]);
   const { id } = await params;
-  const { listing, enquiries, actorFacilityIds, images } =
+  const { listing, enquiries, actorFacilityIds, images, activeWorkspaceType } =
     await loadMarketplaceListingPage(user, id);
   if (!listing) notFound();
 
@@ -24,6 +24,7 @@ export default async function FacilityMarketplaceDetailPage({
       actorFacilityIds={actorFacilityIds}
       images={images}
       listingContext="facility"
+      activeWorkspaceType={activeWorkspaceType}
     />
   );
 }

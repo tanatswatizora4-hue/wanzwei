@@ -10,7 +10,7 @@ import {
   getApplicationById,
   updateApplicationStatus,
 } from "@/lib/repos/applications";
-import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
+import { requireFacilityCapability } from "@/lib/facility-for-user";
 import { requireRole } from "@/lib/auth/session";
 import { UpdateApplicationStatusSchema } from "@/lib/validation/applications";
 import { ServerActionValidationError } from "@/lib/validation/errors";
@@ -32,13 +32,15 @@ export async function updateApplicationStatusAction(
   }
 
   if (user.role !== "admin") {
-    const facilityId = await resolveFacilityIdForUser(user);
-    if (!facilityId) {
-      return actionError("Facility profile required.");
+    const context = await requireFacilityCapability(user, "manageApplicants");
+    if (!context) {
+      return actionError(
+        "Switch to a facility workspace with hiring permission to update applications.",
+      );
     }
     const allowed = await applicationBelongsToFacility(
       parsed.data.id,
-      facilityId,
+      context.facilityId,
     );
     if (!allowed) {
       return actionError("You cannot update this application.");

@@ -75,9 +75,8 @@ describe("cancelOwnedEmergencyAlert", () => {
       "src/app/(app)/facility/emergency/actions.ts",
       "utf8",
     );
-    expect(source).toContain("cancelOwnedEmergencyAlert");
+    expect(source).toContain("requireFacilityCapability");
     expect(source).toContain("cancelEmergencyAlertForFacility");
-    expect(source).toContain("resolveFacilityIdForUser");
     expect(source).not.toMatch(/cancelEmergencyAlert\(/);
   });
 });

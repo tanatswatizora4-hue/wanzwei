@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { cookies } from "next/headers";
+
 import {
   loginErrorForAuthApiFailure,
   loginErrorForCallbackAuthError,
@@ -7,9 +9,14 @@ import {
   parseCallbackSessionParams,
 } from "@/lib/auth/callback-params";
 import {
-  authorizedPostAuthPath,
+  authorizedPostAuthPathForAccount,
   loginErrorForProvisionFailure,
 } from "@/lib/auth/role-paths";
+import { listMembershipsForUser } from "@/lib/repos/account-memberships";
+import {
+  parseWorkspaceCookie,
+  WORKSPACE_COOKIE_NAME,
+} from "@/lib/auth/workspace-model";
 import {
   ensureOAuthUserProvisioned,
   createOAuthPersistAppRole,
@@ -99,7 +106,15 @@ async function handleGET(req: Request) {
     role: provisioned.role,
   });
 
-  const destination = authorizedPostAuthPath(next, provisioned.role);
+  const jar = await cookies();
+  const memberships = await listMembershipsForUser(provisioned.profile.id);
+  const destination = authorizedPostAuthPathForAccount({
+    next,
+    signupRole: provisioned.role,
+    preference: parseWorkspaceCookie(jar.get(WORKSPACE_COOKIE_NAME)?.value),
+    memberships,
+    userId: provisioned.profile.id,
+  });
   logAuthEvent("auth.google.redirect", {
     userId: sessionResult.data.user.id,
     role: provisioned.role,

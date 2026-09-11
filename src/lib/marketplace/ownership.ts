@@ -1,5 +1,6 @@
 import type { Role } from "@/lib/types";
 
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
 import type { ActiveWorkspace } from "@/lib/auth/workspace-model";
 
 export type ListingSellerType = "professional" | "facility";
@@ -20,9 +21,9 @@ export function canCreateListing(input: {
     return input.actor.verified === true;
   }
   if (input.workspace.type === "facility") {
-    return (
-      input.workspace.membershipRole === "owner" ||
-      input.workspace.membershipRole === "admin"
+    return hasFacilityCapability(
+      input.workspace.membershipRole,
+      "manageMarketplace",
     );
   }
   return false;
@@ -64,9 +65,22 @@ export function canManageListing(input: {
   listingSellerType?: ListingSellerType | null;
   listingFacilityId?: string | null;
   actorFacilityIds?: string[];
+  activeWorkspaceType?: "professional" | "facility" | "admin";
 }): boolean {
   if (!input.actor) return false;
   if (input.actor.role === "admin") return true;
+  if (
+    input.activeWorkspaceType === "professional" &&
+    input.listingSellerType === "facility"
+  ) {
+    return false;
+  }
+  if (
+    input.activeWorkspaceType === "facility" &&
+    input.listingSellerType === "professional"
+  ) {
+    return false;
+  }
   if (
     input.listingSellerType === "facility" &&
     input.listingFacilityId &&
@@ -82,6 +96,7 @@ export function canManageListing(input: {
     return false;
   }
   // Legacy listings without seller_type: owner_id only.
+  if (input.activeWorkspaceType === "facility") return false;
   return input.actor.id === input.listingOwnerId;
 }
 

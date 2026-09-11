@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { applyOwnProfileUpdate } from "@/lib/auth/update-own-profile";
 import { requireUser } from "@/lib/auth/session";
+import { requireFacilityCapability } from "@/lib/facility-for-user";
 import {
   deleteOwnAccount,
   readDeleteOwnAccountForm,
@@ -16,7 +17,14 @@ export async function updateOwnProfileAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const user = await requireUser();
-  const result = await applyOwnProfileUpdate(user, formData);
+  const facilityContext = await requireFacilityCapability(
+    user,
+    "manageFacilitySettings",
+  );
+  const result = await applyOwnProfileUpdate(user, formData, undefined, {
+    facilityId: facilityContext?.facilityId ?? null,
+    canManageFacilitySettings: Boolean(facilityContext),
+  });
   if (result.ok) {
     revalidatePath("/professional/settings");
     revalidatePath("/facility/settings");

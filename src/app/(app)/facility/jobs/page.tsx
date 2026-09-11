@@ -19,7 +19,9 @@ import {
 import { timeAgoLong } from "@/lib/format";
 import { facilityJobPath } from "@/lib/jobs/paths";
 import { requireRole } from "@/lib/auth/session";
-import { resolveFacilityForUser } from "@/lib/facility-for-user";
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
+import { getActiveFacilityContext } from "@/lib/facility-for-user";
+import { getFacility } from "@/lib/repos/facilities";
 import { listJobsForFacility } from "@/lib/repos/jobs";
 import type { JobStatus } from "@/lib/types";
 
@@ -30,7 +32,12 @@ export default async function FacilityJobsPage({
 }) {
   const user = await requireRole(["facility"]);
   const { new: newParam, status: statusParam } = await searchParams;
-  const facility = await resolveFacilityForUser(user);
+  const context = await getActiveFacilityContext(user);
+  const facility = context ? await getFacility(context.facilityId) : null;
+  const canManageJobs = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageJobs",
+  );
   const allJobs = facility ? await listJobsForFacility(facility.id, 100) : [];
   const statusFilter =
     statusParam === "Open" || statusParam === "Closed"
@@ -64,10 +71,12 @@ export default async function FacilityJobsPage({
                 Closed
               </StatusLink>
             </div>
+            {canManageJobs ? (
             <FacilityNewJobDialog
               defaultLocation={facility?.location ?? "Harare"}
               defaultOpen={newParam === "1"}
             />
+            ) : null}
           </>
         }
       />
@@ -83,12 +92,12 @@ export default async function FacilityJobsPage({
                 : "Complete your facility profile in Settings before posting jobs."
             }
             action={
-              facility ? (
+              facility && canManageJobs ? (
                 <FacilityNewJobDialog
                   defaultLocation={facility.location}
                   defaultOpen={false}
                 />
-              ) : (
+              ) : facility ? undefined : (
                 <Button size="sm" asChild>
                   <Link href="/facility/settings">Open settings</Link>
                 </Button>
@@ -137,6 +146,7 @@ export default async function FacilityJobsPage({
                         jobId={job.id}
                         jobTitle={job.title}
                         status={job.status}
+                        canManage={canManageJobs}
                       />
                     </TableCell>
                   </TableRow>

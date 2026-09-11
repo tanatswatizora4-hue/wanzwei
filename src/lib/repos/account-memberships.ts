@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
-import { accountMemberships, facilities } from "@/lib/db/schema";
+import { accountMemberships, facilities, users } from "@/lib/db/schema";
 import { withRepositoryLogging } from "@/lib/observability/logger";
 import type {
   AccountMembership,
@@ -21,6 +21,8 @@ export function toAccountMembership(row: {
   membershipRole: FacilityMembershipRole;
   status: MembershipStatus;
   facilityName?: string | null;
+  memberName?: string | null;
+  memberEmail?: string | null;
 }): AccountMembership {
   return {
     id: row.id,
@@ -29,6 +31,8 @@ export function toAccountMembership(row: {
     professionalProfileId: row.professionalProfileId,
     facilityId: row.facilityId,
     facilityName: row.facilityName,
+    memberName: row.memberName,
+    memberEmail: row.memberEmail,
     membershipRole: row.membershipRole,
     status: row.status,
   };
@@ -67,6 +71,77 @@ export async function listMembershipsForUser(
       );
     },
     { userId },
+  );
+}
+
+export async function listFacilityMembers(
+  facilityId: string,
+): Promise<AccountMembership[]> {
+  if (!hasDbConfig()) return [];
+  return withRepositoryLogging(
+    "account_memberships",
+    "listFacilityMembers",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({
+          id: accountMemberships.id,
+          userId: accountMemberships.userId,
+          profileType: accountMemberships.profileType,
+          professionalProfileId: accountMemberships.professionalProfileId,
+          facilityId: accountMemberships.facilityId,
+          membershipRole: accountMemberships.membershipRole,
+          status: accountMemberships.status,
+          facilityName: facilities.name,
+          memberName: users.name,
+          memberEmail: users.email,
+        })
+        .from(accountMemberships)
+        .leftJoin(facilities, eq(facilities.id, accountMemberships.facilityId))
+        .innerJoin(users, eq(users.id, accountMemberships.userId))
+        .where(
+          and(
+            eq(accountMemberships.facilityId, facilityId),
+            eq(accountMemberships.profileType, "facility"),
+            eq(accountMemberships.status, "active"),
+          ),
+        );
+      return rows.map((row) =>
+        toAccountMembership({
+          ...row,
+          profileType: row.profileType as MembershipProfileType,
+          membershipRole: row.membershipRole as FacilityMembershipRole,
+          status: row.status as MembershipStatus,
+        }),
+      );
+    },
+    { facilityId },
+  );
+}
+
+export async function countActiveFacilityOwners(
+  facilityId: string,
+): Promise<number> {
+  if (!hasDbConfig()) return 0;
+  return withRepositoryLogging(
+    "account_memberships",
+    "countActiveFacilityOwners",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .select({ id: accountMemberships.id })
+        .from(accountMemberships)
+        .where(
+          and(
+            eq(accountMemberships.facilityId, facilityId),
+            eq(accountMemberships.profileType, "facility"),
+            eq(accountMemberships.status, "active"),
+            eq(accountMemberships.membershipRole, "owner"),
+          ),
+        );
+      return rows.length;
+    },
+    { facilityId },
   );
 }
 
@@ -120,7 +195,25 @@ export async function insertFacilityMembership(input: {
           membership.status === "active",
       );
       if (current) return current;
+      const revoked = existing.find(
+        (membership) =>
+          membership.profileType === "facility" &&
+          membership.facilityId === input.facilityId &&
+          membership.status === "revoked",
+      );
       const db = getDb();
+      if (revoked) {
+        const rows = await db
+          .update(accountMemberships)
+          .set({
+            status: "active",
+            membershipRole: input.membershipRole ?? "owner",
+            updatedAt: sql`now()`,
+          })
+          .where(eq(accountMemberships.id, revoked.id))
+          .returning();
+        return rows[0] ? toAccountMembership(rows[0] as never) : null;
+      }
       const rows = await db
         .insert(accountMemberships)
         .values({
@@ -131,6 +224,38 @@ export async function insertFacilityMembership(input: {
           membershipRole: input.membershipRole ?? "owner",
           status: "active",
         })
+        .returning();
+      return rows[0] ? toAccountMembership(rows[0] as never) : null;
+    },
+    input,
+  );
+}
+
+export async function updateFacilityMembershipRole(input: {
+  userId: string;
+  facilityId: string;
+  membershipRole: FacilityMembershipRole;
+}): Promise<AccountMembership | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "account_memberships",
+    "updateFacilityMembershipRole",
+    async () => {
+      const db = getDb();
+      const rows = await db
+        .update(accountMemberships)
+        .set({
+          membershipRole: input.membershipRole,
+          updatedAt: sql`now()`,
+        })
+        .where(
+          and(
+            eq(accountMemberships.userId, input.userId),
+            eq(accountMemberships.facilityId, input.facilityId),
+            eq(accountMemberships.profileType, "facility"),
+            eq(accountMemberships.status, "active"),
+          ),
+        )
         .returning();
       return rows[0] ? toAccountMembership(rows[0] as never) : null;
     },

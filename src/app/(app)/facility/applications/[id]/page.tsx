@@ -9,7 +9,8 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { requireRole } from "@/lib/auth/session";
-import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
+import { getActiveFacilityContext } from "@/lib/facility-for-user";
 import { timeAgoLong } from "@/lib/format";
 import { parseUuid } from "@/lib/ids";
 import { facilityJobPath } from "@/lib/jobs/paths";
@@ -21,11 +22,16 @@ export default async function FacilityApplicationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await requireRole(["facility"]);
+  const context = await getActiveFacilityContext(user);
+  const canManageApplicants = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageApplicants",
+  );
   const { id } = await params;
   const applicationId = parseUuid(id);
   if (!applicationId) notFound();
 
-  const facilityId = await resolveFacilityIdForUser(user);
+  const facilityId = context?.facilityId;
   if (!facilityId) notFound();
 
   const row = await getApplicationForFacility(applicationId, facilityId);
@@ -93,10 +99,14 @@ export default async function FacilityApplicationDetailPage({
                 Status
               </dt>
               <dd className="mt-1">
+                {canManageApplicants ? (
                 <ApplicationStatusSelect
                   applicationId={application.id}
                   value={application.status}
                 />
+                ) : (
+                  <StatusBadge status={application.status} />
+                )}
               </dd>
             </div>
           </dl>

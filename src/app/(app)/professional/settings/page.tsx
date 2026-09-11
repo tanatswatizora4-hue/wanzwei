@@ -36,6 +36,7 @@ export default async function ProfessionalSettingsPage() {
       hasProfessionalMembership={hasActiveProfessionalMembership(memberships)}
       canAddFacility={user.role !== "admin"}
       showProfessionalCredentials
+      workspaceKind="professional"
     />
   );
 }

@@ -35,6 +35,7 @@ const TARGET_TABLES = [
   "account_memberships",
   "listing_images",
   "cpd_certificates",
+  "facility_invitations",
 ] as const;
 
 /** Unapplied additive migrations. Missing tables are skipped, not failed. */
@@ -43,6 +44,7 @@ const OPTIONAL_UNAPPLIED_TABLES = new Set<string>([
   "account_memberships",
   "listing_images",
   "cpd_certificates",
+  "facility_invitations",
 ]);
 
 /** Registry/audit tables are RLS-enabled with no client policies (default deny). */
@@ -50,6 +52,7 @@ const DEFAULT_DENY_TABLES = new Set<string>([
   "practitioner_registry",
   "verification_events",
   "verification_evidence",
+  "facility_invitations",
 ]);
 
 const METADATA_SQL = `
@@ -77,7 +80,8 @@ const METADATA_SQL = `
       'listing_enquiries',
       'account_memberships',
       'listing_images',
-      'cpd_certificates'
+      'cpd_certificates',
+      'facility_invitations'
     ]::text[]) AS table_name
   )
   SELECT

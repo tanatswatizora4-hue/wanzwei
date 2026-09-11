@@ -11,7 +11,7 @@ export default async function AdminMarketplaceDetailPage({
 }) {
   const user = await requireRole(["admin"]);
   const { id } = await params;
-  const { listing, enquiries, actorFacilityIds, images } =
+  const { listing, enquiries, actorFacilityIds, images, activeWorkspaceType } =
     await loadMarketplaceListingPage(user, id);
   if (!listing) notFound();
 
@@ -24,6 +24,7 @@ export default async function AdminMarketplaceDetailPage({
       actorFacilityIds={actorFacilityIds}
       images={images}
       listingContext="admin"
+      activeWorkspaceType={activeWorkspaceType}
     />
   );
 }

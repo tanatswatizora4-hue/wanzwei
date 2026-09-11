@@ -7,7 +7,10 @@ import { Sidebar } from "@/components/app/sidebar";
 import { Topbar } from "@/components/app/topbar";
 import { cn } from "@/lib/cn";
 import type { Role, User } from "@/lib/types";
-import type { switcherProfiles } from "@/lib/auth/workspace-model";
+import type {
+  FacilityMembershipRole,
+  switcherProfiles,
+} from "@/lib/auth/workspace-model";
 
 type SwitcherItem = ReturnType<typeof switcherProfiles>[number];
 
@@ -18,6 +21,8 @@ export function AppShell({
   navRole,
   switcherProfiles: profiles = [],
   activeWorkspaceKey,
+  facilityRole = null,
+  hasProfessional = true,
 }: {
   user: User;
   unreadNotificationCount?: number;
@@ -25,6 +30,8 @@ export function AppShell({
   navRole: Role;
   switcherProfiles?: SwitcherItem[];
   activeWorkspaceKey: string;
+  facilityRole?: FacilityMembershipRole | null;
+  hasProfessional?: boolean;
 }) {
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
@@ -78,6 +85,8 @@ export function AppShell({
           onNavigate={closeMobileNav}
           switcherProfiles={profiles}
           activeWorkspaceKey={activeWorkspaceKey}
+          facilityRole={facilityRole}
+          hasProfessional={hasProfessional}
         />
         <button
           type="button"
@@ -98,6 +107,8 @@ export function AppShell({
           mobileNavOpen={mobileNavOpen}
           switcherProfiles={profiles}
           activeWorkspaceKey={activeWorkspaceKey}
+          facilityRole={facilityRole}
+          hasProfessional={hasProfessional}
         />
         <main className="min-w-0 flex-1 overflow-x-hidden">{children}</main>
       </div>

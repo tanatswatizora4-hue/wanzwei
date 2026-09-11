@@ -23,7 +23,8 @@ import {
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
 import { ProfileSwitcher } from "@/components/app/profile-switcher";
-import type { switcherProfiles } from "@/lib/auth/workspace-model";
+import type { FacilityMembershipRole, switcherProfiles } from "@/lib/auth/workspace-model";
+import { facilityCapabilities } from "@/lib/auth/facility-capabilities";
 import type { Role, User } from "@/lib/types";
 
 type SwitcherItem = ReturnType<typeof switcherProfiles>[number];
@@ -125,7 +126,60 @@ function professionalNav(): NavSection[] {
   ];
 }
 
-function facilityNav(): NavSection[] {
+function facilityNav(role: FacilityMembershipRole): NavSection[] {
+  const caps = facilityCapabilities(role);
+  const hiring = [
+    {
+      label: "Jobs",
+      href: "/facility/jobs",
+      icon: <Briefcase className="h-4 w-4" />,
+    },
+    {
+      label: "Applicants",
+      href: "/facility/applications",
+      icon: <Users className="h-4 w-4" />,
+    },
+  ];
+  if (caps.manageEmergency || caps.viewFacility) {
+    hiring.push({
+      label: "Emergency",
+      href: "/facility/emergency",
+      icon: <Siren className="h-4 w-4" />,
+    });
+  }
+  hiring.push({
+    label: "Marketplace",
+    href: "/facility/marketplace",
+    icon: <Store className="h-4 w-4" />,
+  });
+  if (caps.manageMarketplace) {
+    hiring.push({
+      label: "My Listings",
+      href: "/facility/marketplace/mine",
+      icon: <Store className="h-4 w-4" />,
+    });
+  }
+
+  const settingsItems = [
+    {
+      label: "Facility Profile",
+      href: "/facility/profile",
+      icon: <Building2 className="h-4 w-4" />,
+    },
+  ];
+  if (caps.manageMembers) {
+    settingsItems.push({
+      label: "Members",
+      href: "/facility/members",
+      icon: <Users className="h-4 w-4" />,
+    });
+  }
+  settingsItems.push({
+    label: "Settings",
+    href: "/facility/settings",
+    icon: <Settings className="h-4 w-4" />,
+  });
+
   return [
     {
       heading: "Overview",
@@ -137,51 +191,8 @@ function facilityNav(): NavSection[] {
         },
       ],
     },
-    {
-      heading: "Hiring",
-      items: [
-        {
-          label: "Jobs",
-          href: "/facility/jobs",
-          icon: <Briefcase className="h-4 w-4" />,
-        },
-        {
-          label: "Applicants",
-          href: "/facility/applications",
-          icon: <Users className="h-4 w-4" />,
-        },
-        {
-          label: "Emergency",
-          href: "/facility/emergency",
-          icon: <Siren className="h-4 w-4" />,
-        },
-        {
-          label: "Marketplace",
-          href: "/facility/marketplace",
-          icon: <Store className="h-4 w-4" />,
-        },
-        {
-          label: "My Listings",
-          href: "/facility/marketplace/mine",
-          icon: <Store className="h-4 w-4" />,
-        },
-      ],
-    },
-    {
-      heading: "Settings",
-      items: [
-        {
-          label: "Facility Profile",
-          href: "/facility/profile",
-          icon: <Building2 className="h-4 w-4" />,
-        },
-        {
-          label: "Settings",
-          href: "/facility/settings",
-          icon: <Settings className="h-4 w-4" />,
-        },
-      ],
-    },
+    { heading: "Hiring", items: hiring },
+    { heading: "Settings", items: settingsItems },
   ];
 }
 
@@ -260,8 +271,11 @@ function adminNav(): NavSection[] {
   ];
 }
 
-export function navForRole(role: Role): NavSection[] {
-  if (role === "facility") return facilityNav();
+export function navForRole(
+  role: Role,
+  facilityRole: FacilityMembershipRole | null = null,
+): NavSection[] {
+  if (role === "facility") return facilityNav(facilityRole ?? "viewer");
   if (role === "admin") return adminNav();
   return professionalNav();
 }
@@ -271,24 +285,21 @@ export function Sidebar({
   onNavigate,
   switcherProfiles: profiles = [],
   activeWorkspaceKey,
+  facilityRole = null,
+  hasProfessional = true,
 }: {
   user: User;
   navRole: Role;
   onNavigate?: () => void;
   switcherProfiles?: SwitcherItem[];
   activeWorkspaceKey: string;
+  facilityRole?: FacilityMembershipRole | null;
+  hasProfessional?: boolean;
 }) {
   const pathname = usePathname();
-  const pathRole: Role | null = pathname?.startsWith("/admin")
-    ? "admin"
-    : pathname?.startsWith("/facility")
-      ? "facility"
-      : pathname?.startsWith("/professional")
-        ? "professional"
-        : null;
   const nav = React.useMemo(
-    () => navForRole(pathRole ?? navRole),
-    [pathRole, navRole],
+    () => navForRole(navRole, facilityRole),
+    [navRole, facilityRole],
   );
 
   return (
@@ -354,11 +365,13 @@ export function Sidebar({
       </nav>
 
       <div className="border-t border-white/60 px-3 pb-4 pt-2">
-        {profiles.length > 1 ? (
+        {navRole !== "admin" && profiles.length > 0 ? (
           <div className="mb-2 lg:hidden">
             <ProfileSwitcher
               profiles={profiles}
               activeKey={activeWorkspaceKey}
+              hasProfessional={hasProfessional}
+              showAddProfessional
             />
           </div>
         ) : null}

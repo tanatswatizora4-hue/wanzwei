@@ -2,9 +2,8 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 
-import { listCachedMembershipsForUser } from "@/lib/auth/workspace";
-import { facilityMemberships } from "@/lib/auth/workspace-model";
 import { parseUuid } from "@/lib/ids";
+import { marketplaceActorScope } from "@/lib/marketplace/actor-scope";
 import { canViewListingDetail } from "@/lib/marketplace/listing-access";
 import { listEnquiriesForListing } from "@/lib/repos/listing-enquiries";
 import { listSignedListingImages } from "@/lib/repos/listing-images";
@@ -20,15 +19,19 @@ export async function loadMarketplaceListingPage(
   enquiries: ListingEnquiry[];
   actorFacilityIds: string[];
   images: ListingImageView[];
+  activeWorkspaceType: "professional" | "facility" | "admin";
 }> {
   const listingId = parseUuid(rawId);
   if (!listingId) notFound();
   const listing = await getListingById(listingId);
   if (!listing) notFound();
-  const memberships = await listCachedMembershipsForUser(user.id);
-  const actorFacilityIds = facilityMemberships(memberships)
-    .map((item) => item.facilityId)
-    .filter((id): id is string => Boolean(id));
+  const scope = await marketplaceActorScope(user);
+  const viewFacilityIds =
+    user.role === "admin"
+      ? listing.facilityId
+        ? [listing.facilityId]
+        : []
+      : [...new Set([...scope.mutateFacilityIds, ...scope.identityFacilityIds])];
   if (
     !canViewListingDetail({
       actor: user,
@@ -36,7 +39,8 @@ export async function loadMarketplaceListingPage(
       listingOwnerId: listing.ownerId,
       listingSellerType: listing.sellerType,
       listingFacilityId: listing.facilityId,
-      actorFacilityIds,
+      actorFacilityIds: viewFacilityIds,
+      activeWorkspaceType: scope.activeWorkspaceType,
     })
   ) {
     notFound();
@@ -45,5 +49,11 @@ export async function loadMarketplaceListingPage(
     listEnquiriesForListing(listing.id, user),
     listSignedListingImages(listing.id),
   ]);
-  return { listing, enquiries, actorFacilityIds, images };
+  return {
+    listing,
+    enquiries,
+    actorFacilityIds: scope.mutateFacilityIds,
+    images,
+    activeWorkspaceType: scope.activeWorkspaceType,
+  };
 }

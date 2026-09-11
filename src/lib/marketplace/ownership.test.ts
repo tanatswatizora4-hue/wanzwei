@@ -28,7 +28,7 @@ describe("marketplace ownership", () => {
     ).toBe(false);
   });
 
-  it("lets a facility member create in a facility workspace", () => {
+  it("lets an owner create listings and blocks recruiter mutation", () => {
     expect(
       canCreateListing({
         actor: { role: "facility", id: "fac-user" },
@@ -39,6 +39,26 @@ describe("marketplace ownership", () => {
         },
       }),
     ).toBe(true);
+    expect(
+      canCreateListing({
+        actor: { role: "professional", id: "rec-user" },
+        workspace: {
+          type: "facility",
+          facilityId: FAC_A,
+          membershipRole: "recruiter",
+        },
+      }),
+    ).toBe(false);
+    expect(
+      canCreateListing({
+        actor: { role: "professional", id: "view-user" },
+        workspace: {
+          type: "facility",
+          facilityId: FAC_A,
+          membershipRole: "viewer",
+        },
+      }),
+    ).toBe(false);
   });
 
   it("blocks unauthorized listing edits and deletes", () => {
@@ -90,6 +110,25 @@ describe("marketplace ownership", () => {
         listingSellerType: "facility",
         listingFacilityId: FAC_A,
         actorFacilityIds: [],
+      }),
+    ).toBe(false);
+    expect(
+      canManageListing({
+        actor: { role: "professional", id: "pro-1" },
+        listingOwnerId: "pro-1",
+        listingSellerType: "professional",
+        activeWorkspaceType: "facility",
+        actorFacilityIds: [FAC_A],
+      }),
+    ).toBe(false);
+    expect(
+      canManageListing({
+        actor: { role: "professional", id: "pro-1" },
+        listingOwnerId: "other",
+        listingSellerType: "facility",
+        listingFacilityId: FAC_A,
+        actorFacilityIds: [],
+        activeWorkspaceType: "facility",
       }),
     ).toBe(false);
   });

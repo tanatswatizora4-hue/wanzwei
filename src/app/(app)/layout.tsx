@@ -6,7 +6,10 @@ import {
   resolveWorkspaceForUser,
   switcherForUser,
 } from "@/lib/auth/workspace";
-import { serializeWorkspaceCookie } from "@/lib/auth/workspace-model";
+import {
+  hasActiveProfessionalMembership,
+  serializeWorkspaceCookie,
+} from "@/lib/auth/workspace-model";
 import { countUnreadNotificationsForUser } from "@/lib/repos/notifications";
 import { ProfessionalVerificationBanner } from "@/components/app/professional-verification-banner";
 import type { Role } from "@/lib/types";
@@ -19,7 +22,7 @@ export default async function AppLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { workspace } = await resolveWorkspaceForUser(user);
+  const { workspace, memberships } = await resolveWorkspaceForUser(user);
   const navRole: Role =
     user.role === "admin"
       ? "admin"
@@ -39,6 +42,9 @@ export default async function AppLayout({
             facilityId: workspace.facilityId,
           })
         : "professional";
+  const facilityRole =
+    workspace?.type === "facility" ? workspace.membershipRole : null;
+  const hasProfessional = hasActiveProfessionalMembership(memberships);
 
   const unreadNotificationCount =
     navRole === "professional"
@@ -54,6 +60,8 @@ export default async function AppLayout({
         unreadNotificationCount={unreadNotificationCount}
         switcherProfiles={profiles}
         activeWorkspaceKey={activeWorkspaceKey}
+        facilityRole={facilityRole}
+        hasProfessional={hasProfessional}
       >
         <div className="mx-auto w-full max-w-[1280px] px-4 py-4 fade-in sm:px-6 sm:py-6">
           {navRole === "professional" && user.verified !== true ? (

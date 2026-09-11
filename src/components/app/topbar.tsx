@@ -15,7 +15,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 import { CommandPalette } from "./command-palette";
 import { ProfileSwitcher } from "@/components/app/profile-switcher";
-import type { switcherProfiles } from "@/lib/auth/workspace-model";
+import { facilityCapabilities } from "@/lib/auth/facility-capabilities";
+import type {
+  FacilityMembershipRole,
+  switcherProfiles,
+} from "@/lib/auth/workspace-model";
 import type { Role, User } from "@/lib/types";
 
 type SwitcherItem = ReturnType<typeof switcherProfiles>[number];
@@ -28,6 +32,8 @@ export function Topbar({
   mobileNavOpen = false,
   switcherProfiles: profiles = [],
   activeWorkspaceKey,
+  facilityRole = null,
+  hasProfessional = true,
 }: {
   user: User;
   navRole: Role;
@@ -36,6 +42,8 @@ export function Topbar({
   mobileNavOpen?: boolean;
   switcherProfiles?: SwitcherItem[];
   activeWorkspaceKey: string;
+  facilityRole?: FacilityMembershipRole | null;
+  hasProfessional?: boolean;
 }) {
   const openCommandPalette = React.useCallback(() => {
     document.dispatchEvent(
@@ -55,9 +63,14 @@ export function Topbar({
         ? "Facility"
         : "Admin";
 
+  const caps =
+    navRole === "facility" ? facilityCapabilities(facilityRole ?? "viewer") : null;
+
   const quickAction =
     navRole === "facility"
-      ? { label: "Post Job", href: "/facility/jobs?new=1" }
+      ? caps?.manageJobs
+        ? { label: "Post Job", href: "/facility/jobs?new=1" }
+        : null
       : navRole === "admin"
         ? { label: "Review Queue", href: "/admin/verification" }
         : { label: "Quick Apply", href: "/professional/jobs" };
@@ -85,7 +98,7 @@ export function Topbar({
 
   return (
     <header className="topbar-band sticky top-0 z-30 flex min-h-14 items-center gap-2 px-3 pt-[env(safe-area-inset-top)] sm:gap-3 sm:px-5">
-      <CommandPalette role={navRole} />
+      <CommandPalette role={navRole} facilityRole={facilityRole} />
 
       {onOpenMobileNav ? (
         <button
@@ -118,6 +131,7 @@ export function Topbar({
 
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         {/* Quick action pill */}
+        {quickAction ? (
         <Link
           href={quickAction.href}
           aria-label={quickAction.label}
@@ -126,6 +140,7 @@ export function Topbar({
           <Plus className="h-3.5 w-3.5" />
           {quickAction.label}
         </Link>
+        ) : null}
 
         {/* Icon group */}
         <div className="flex items-center gap-0.5 rounded-full bg-white/10 ring-1 ring-white/15 backdrop-blur p-0.5">
@@ -194,12 +209,14 @@ export function Topbar({
             <DropdownMenuItem asChild>
               <Link href={settingsHref}>Settings</Link>
             </DropdownMenuItem>
-            {profiles.length > 1 ? (
+            {navRole !== "admin" && profiles.length > 0 ? (
               <>
                 <DropdownMenuSeparator />
                 <ProfileSwitcher
                   profiles={profiles}
                   activeKey={activeWorkspaceKey}
+                  hasProfessional={hasProfessional}
+                  showAddProfessional
                 />
               </>
             ) : null}

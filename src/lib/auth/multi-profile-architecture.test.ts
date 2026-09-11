@@ -19,7 +19,7 @@ describe("multi-profile architecture", () => {
     expect(create).toContain("listingContext");
     expect(create).not.toContain("formData.get(\"facilityId\")");
     expect(create).not.toContain("formData.get(\"seller_id\")");
-    expect(create).toContain("facilityMemberships");
+    expect(create).toContain("requireFacilityCapability");
   });
 
   it("keeps Google OAuth, email login, confirmation, and password reset routes", () => {
@@ -30,7 +30,7 @@ describe("multi-profile architecture", () => {
       "exchangeCodeForSession",
     );
     expect(readFileSync("src/app/api/auth/login/route.ts", "utf8")).toContain(
-      "authorizedPostAuthPath",
+      "authorizedPostAuthPathForAccount",
     );
     expect(
       readFileSync("src/app/(marketing)/auth/confirm/actions.ts", "utf8"),
@@ -61,7 +61,9 @@ describe("multi-profile architecture", () => {
       "src/app/(app)/facility/profile/page.tsx",
       "src/app/(app)/facility/settings/page.tsx",
     ]) {
-      expect(readFileSync(file, "utf8"), file).toContain("resolveFacilityForUser");
+      expect(readFileSync(file, "utf8"), file).toMatch(
+        /resolveFacilityForUser|getActiveFacilityContext/,
+      );
       expect(readFileSync(file, "utf8"), file).not.toContain(
         "findFacilityForUserEmail",
       );

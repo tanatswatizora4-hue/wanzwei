@@ -5,11 +5,7 @@ import { revalidatePath } from "next/cache";
 import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
 import { isVerifiedProfessional } from "@/lib/auth/professional-verification";
 import { requireRole } from "@/lib/auth/session";
-import {
-  listCachedMembershipsForUser,
-  resolveWorkspaceForUser,
-} from "@/lib/auth/workspace";
-import { facilityMemberships } from "@/lib/auth/workspace-model";
+import { marketplaceActorScope } from "@/lib/marketplace/actor-scope";
 import { catalogueCoverClass } from "@/lib/catalogue/cover";
 import { hasDbConfig } from "@/lib/db/client";
 import {
@@ -17,6 +13,7 @@ import {
   canSendListingEnquiry,
   listingVisiblePublicly,
 } from "@/lib/marketplace/ownership";
+import { requireFacilityCapability } from "@/lib/facility-for-user";
 import { createNotification } from "@/lib/repos/notifications";
 import {
   createListing,
@@ -72,13 +69,6 @@ function listingFields(formData: FormData) {
   };
 }
 
-async function actorFacilityIdsForUser(userId: string): Promise<string[]> {
-  const memberships = await listCachedMembershipsForUser(userId);
-  return facilityMemberships(memberships)
-    .map((membership) => membership.facilityId)
-    .filter((id): id is string => Boolean(id));
-}
-
 export async function createListingAction(
   formData: FormData,
 ): Promise<ActionResult> {
@@ -87,27 +77,15 @@ export async function createListingAction(
     return actionError("Database is not configured.");
   }
 
-  const { workspace } = await resolveWorkspaceForUser(user);
   const listingContext = String(formData.get("listingContext") ?? "");
   if (listingContext === "facility") {
-    if (workspace?.type !== "facility") {
-      return actionError("Switch to a facility workspace to create facility listings.");
+    const context = await requireFacilityCapability(user, "manageMarketplace");
+    if (!context) {
+      return actionError(
+        "Switch to a facility workspace with listing permission to create facility listings.",
+      );
     }
-    if (
-      workspace.membershipRole !== "owner" &&
-      workspace.membershipRole !== "admin"
-    ) {
-      return actionError("You cannot create marketplace listings.");
-    }
-    const memberships = await listCachedMembershipsForUser(user.id);
-    const owned = facilityMemberships(memberships);
-    const allowed = owned.some(
-      (membership) => membership.facilityId === workspace.facilityId,
-    );
-    if (!allowed) {
-      return actionError("You cannot create marketplace listings.");
-    }
-    const facilityId = workspace.facilityId;
+    const facilityId = context.facilityId;
     const parsed = CreateListingSchema.safeParse(listingFields(formData));
     if (!parsed.success) {
       throw new ServerActionValidationError(parsed.error);
@@ -140,6 +118,12 @@ export async function createListingAction(
   }
 
   if (listingContext !== "admin" && user.role !== "admin") {
+    const scope = await marketplaceActorScope(user);
+    if (scope.activeWorkspaceType !== "professional") {
+      return actionError(
+        "Switch to your professional profile to create a personal listing.",
+      );
+    }
     if (
       !isVerifiedProfessional(user, { professionalMembership: true })
     ) {
@@ -211,14 +195,15 @@ export async function updateListingAction(
   if (!existing) {
     return actionError("Listing not found.");
   }
-  const facilityIds = await actorFacilityIdsForUser(user.id);
+  const scope = await marketplaceActorScope(user);
   if (
     !canManageListing({
       actor: user,
       listingOwnerId: existing.ownerId,
       listingSellerType: existing.sellerType,
       listingFacilityId: existing.facilityId,
-      actorFacilityIds: facilityIds,
+      actorFacilityIds: scope.mutateFacilityIds,
+      activeWorkspaceType: scope.activeWorkspaceType,
     })
   ) {
     return actionError("You cannot edit this listing.");
@@ -269,14 +254,15 @@ export async function setListingStatusAction(
   if (!existing) {
     return actionError("Listing not found.");
   }
-  const facilityIds = await actorFacilityIdsForUser(user.id);
+  const scope = await marketplaceActorScope(user);
   if (
     !canManageListing({
       actor: user,
       listingOwnerId: existing.ownerId,
       listingSellerType: existing.sellerType,
       listingFacilityId: existing.facilityId,
-      actorFacilityIds: facilityIds,
+      actorFacilityIds: scope.mutateFacilityIds,
+      activeWorkspaceType: scope.activeWorkspaceType,
     })
   ) {
     return actionError("You cannot update this listing.");
@@ -308,14 +294,15 @@ export async function deleteListingAction(
   if (!existing) {
     return actionError("Listing not found.");
   }
-  const facilityIds = await actorFacilityIdsForUser(user.id);
+  const scope = await marketplaceActorScope(user);
   if (
     !canManageListing({
       actor: user,
       listingOwnerId: existing.ownerId,
       listingSellerType: existing.sellerType,
       listingFacilityId: existing.facilityId,
-      actorFacilityIds: facilityIds,
+      actorFacilityIds: scope.mutateFacilityIds,
+      activeWorkspaceType: scope.activeWorkspaceType,
     })
   ) {
     return actionError("You cannot delete this listing.");
@@ -354,13 +341,13 @@ export async function sendListingEnquiryAction(
   if (!listingVisiblePublicly(listing.status)) {
     return actionError("This listing is not accepting enquiries.");
   }
-  const facilityIds = await actorFacilityIdsForUser(user.id);
+  const scope = await marketplaceActorScope(user);
   if (
     !canSendListingEnquiry({
       actor: user,
       listingOwnerId: listing.ownerId,
       listingFacilityId: listing.facilityId,
-      actorFacilityIds: facilityIds,
+      actorFacilityIds: scope.identityFacilityIds,
     })
   ) {
     return actionError("You cannot enquire on your own listing.");

@@ -6,7 +6,7 @@ import {
   cancelEmergencyAlertForFacility,
   createEmergencyAlert,
 } from "@/lib/repos/emergency-alerts";
-import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
+import { requireFacilityCapability } from "@/lib/facility-for-user";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { requireRole } from "@/lib/auth/session";
 import {
@@ -55,11 +55,12 @@ export async function createAlertAction(formData: FormData) {
     expiresInMinutes,
   } = parsed.data;
 
-  const facilityId = await resolveFacilityIdForUser(user);
-  if (!facilityId) {
+  const context = await requireFacilityCapability(user, "manageEmergency");
+  if (!context) {
     revalidatePath("/facility/emergency");
     return;
   }
+  const facilityId = context.facilityId;
 
   const now = new Date();
   const expiresAt = new Date(
@@ -93,9 +94,13 @@ export async function cancelAlertAction(formData: FormData) {
   if (!parsed.success) {
     throw new ServerActionValidationError(parsed.error);
   }
-  const facilityId = await resolveFacilityIdForUser(user);
+  const context = await requireFacilityCapability(user, "manageEmergency");
+  if (!context) {
+    revalidatePath("/facility/emergency");
+    return;
+  }
   await cancelOwnedEmergencyAlert(
-    { role: "facility", facilityId },
+    { role: "facility", facilityId: context.facilityId },
     parsed.data.alertId,
     { cancelForFacility: cancelEmergencyAlertForFacility },
   );

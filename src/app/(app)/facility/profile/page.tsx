@@ -12,14 +12,25 @@ import { FacilityLogo } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { DocumentUploadPanel } from "@/components/app/document-upload-panel";
 import { requireRole } from "@/lib/auth/session";
-import { resolveFacilityForUser } from "@/lib/facility-for-user";
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
+import { getActiveFacilityContext } from "@/lib/facility-for-user";
+import { getFacility } from "@/lib/repos/facilities";
 import { isSupabaseConfigured } from "@/lib/supabase/service";
 import { listFacilityVerificationDocuments } from "@/lib/supabase/documents-repo";
 
 export default async function FacilityProfilePage() {
   const user = await requireRole(["facility"]);
-  const f = await resolveFacilityForUser(user);
+  const context = await getActiveFacilityContext(user);
+  const f = context ? await getFacility(context.facilityId) : null;
   const facilityId = f?.id;
+  const canManageSettings = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageFacilitySettings",
+  );
+  const canManageVerification = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageVerification",
+  );
 
   const uploadsEnabled = isSupabaseConfigured();
   let initialFacilityDocs: Awaited<
@@ -41,11 +52,13 @@ export default async function FacilityProfilePage() {
         title="Facility Profile"
         description="The public-facing information clinicians see when applying to your roles."
         actions={
+          canManageSettings ? (
           <Button asChild>
             <Link href="/facility/settings">
               <Pencil className="h-3.5 w-3.5" /> Edit profile
             </Link>
           </Button>
+          ) : undefined
         }
       />
 
@@ -127,6 +140,7 @@ export default async function FacilityProfilePage() {
         </CardBody>
       </Card>
 
+      {canManageVerification ? (
       <DocumentUploadPanel
         title="Verification documents"
         description="Upload registration, accreditation, or compliance files for Wanzwei verification. Stored under your facility scope in Supabase."
@@ -135,6 +149,7 @@ export default async function FacilityProfilePage() {
         initialDocuments={initialFacilityDocs}
         enabled={uploadsEnabled}
       />
+      ) : null}
     </div>
   );
 }

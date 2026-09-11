@@ -1,10 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
 
+import { parseWorkspaceCookie } from "@/lib/auth/workspace-model";
 import { applyAuthCookies, updateSession } from "@/lib/supabase/middleware";
 import { isEmailAuthConfirmed } from "@/lib/auth/signup-session";
+import { WORKSPACE_COOKIE_NAME } from "@/lib/auth/workspace-model";
 
-const PROTECTED_PREFIXES = ["/professional", "/facility", "/admin"] as const;
+const PROTECTED_PREFIXES = [
+  "/professional",
+  "/facility",
+  "/admin",
+  "/workspaces",
+  "/invitations",
+] as const;
 
 type AppRole = "professional" | "facility" | "admin";
 
@@ -28,6 +36,17 @@ function dashboardForRole(role: AppRole | null): string {
   return "/professional/dashboard";
 }
 
+function dashboardForSession(
+  role: AppRole | null,
+  workspaceCookie: string | undefined,
+): string {
+  if (role === "admin") return "/admin/dashboard";
+  const preference = parseWorkspaceCookie(workspaceCookie);
+  if (preference?.type === "facility") return "/facility/dashboard";
+  if (preference?.type === "professional") return "/professional/dashboard";
+  return dashboardForRole(role);
+}
+
 /**
  * Middleware authenticates and keeps admin on /admin.
  * Professional vs facility prefixes are product workspaces: membership is
@@ -36,14 +55,9 @@ function dashboardForRole(role: AppRole | null): string {
  */
 function mayAccessPath(role: AppRole, pathname: string): boolean {
   const isAdminPath = pathname === "/admin" || pathname.startsWith("/admin/");
-  const isProfessionalPath =
-    pathname === "/professional" || pathname.startsWith("/professional/");
-  const isFacilityPath =
-    pathname === "/facility" || pathname.startsWith("/facility/");
-
   if (role === "admin") return isAdminPath;
   if (isAdminPath) return false;
-  return isProfessionalPath || isFacilityPath;
+  return true;
 }
 
 export async function middleware(req: NextRequest) {
@@ -58,7 +72,7 @@ export async function middleware(req: NextRequest) {
     if (!user) {
       const url = req.nextUrl.clone();
       url.pathname = "/login";
-      url.searchParams.set("next", pathname);
+      url.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
       return applyAuthCookies(NextResponse.redirect(url), response);
     }
 
@@ -80,7 +94,10 @@ export async function middleware(req: NextRequest) {
 
     if (!mayAccessPath(role, pathname)) {
       const url = req.nextUrl.clone();
-      url.pathname = dashboardForRole(role);
+      url.pathname = dashboardForSession(
+        role,
+        req.cookies.get(WORKSPACE_COOKIE_NAME)?.value,
+      );
       return applyAuthCookies(NextResponse.redirect(url), response);
     }
   }
@@ -93,7 +110,10 @@ export async function middleware(req: NextRequest) {
       return applyAuthCookies(NextResponse.redirect(url), response);
     }
     const url = req.nextUrl.clone();
-    url.pathname = dashboardForRole(readRole(user));
+    url.pathname = dashboardForSession(
+      readRole(user),
+      req.cookies.get(WORKSPACE_COOKIE_NAME)?.value,
+    );
     return applyAuthCookies(NextResponse.redirect(url), response);
   }
 
@@ -105,6 +125,8 @@ export const config = {
     "/professional/:path*",
     "/facility/:path*",
     "/admin/:path*",
+    "/workspaces/:path*",
+    "/invitations/:path*",
     "/login",
     "/signup",
   ],

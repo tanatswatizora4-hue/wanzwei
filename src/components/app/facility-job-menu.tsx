@@ -19,10 +19,12 @@ export function FacilityJobMenu({
   jobId,
   jobTitle,
   status,
+  canManage = true,
 }: {
   jobId: string;
   jobTitle: string;
   status: string;
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = React.useState(false);
@@ -65,6 +67,8 @@ export function FacilityJobMenu({
             <Eye className="h-3.5 w-3.5" /> View applicants
           </Link>
         </DropdownMenuItem>
+        {canManage ? (
+          <>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           danger
@@ -73,6 +77,8 @@ export function FacilityJobMenu({
         >
           Close role
         </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

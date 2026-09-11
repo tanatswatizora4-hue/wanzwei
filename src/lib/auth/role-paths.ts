@@ -1,6 +1,14 @@
 import type { Role } from "@/lib/types";
 
 import { postAuthNextPath } from "@/lib/auth/callback-params";
+import {
+  type AccountMembership,
+  type WorkspacePreference,
+  dashboardPathForWorkspace,
+  facilityMemberships,
+  hasActiveProfessionalMembership,
+  resolveActiveWorkspace,
+} from "@/lib/auth/workspace-model";
 
 export function dashboardPathForRole(role: Role): string {
   switch (role) {
@@ -38,6 +46,39 @@ export function pathAllowedForRole(role: Role, next: string): boolean {
   return false;
 }
 
+export function pathAllowedForAccount(
+  signupRole: Role,
+  memberships: AccountMembership[],
+  next: string,
+): boolean {
+  const pathname = pathnameFromNext(next);
+  if (pathname === "/reset-password") return true;
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return signupRole === "admin";
+  }
+  if (signupRole === "admin") return false;
+  if (
+    pathname === "/workspaces" ||
+    pathname.startsWith("/workspaces/") ||
+    pathname === "/invitations/accept"
+  ) {
+    return true;
+  }
+  if (pathname === "/facility" || pathname.startsWith("/facility/")) {
+    return (
+      signupRole === "facility" ||
+      facilityMemberships(memberships).length > 0
+    );
+  }
+  if (pathname === "/professional" || pathname.startsWith("/professional/")) {
+    return (
+      signupRole === "professional" ||
+      hasActiveProfessionalMembership(memberships)
+    );
+  }
+  return false;
+}
+
 export function authorizedPostAuthPath(
   next: string | null | undefined,
   role: Role,
@@ -46,6 +87,38 @@ export function authorizedPostAuthPath(
   const candidate = postAuthNextPath(next, dashboard);
   if (candidate === dashboard) return dashboard;
   if (pathAllowedForRole(role, candidate)) return candidate;
+  return dashboard;
+}
+
+/**
+ * Login / OAuth destination. Honours a valid workspace cookie, then
+ * professional membership, then first facility, then legacy signup role.
+ */
+export function authorizedPostAuthPathForAccount(input: {
+  next?: string | null;
+  signupRole: Role;
+  preference: WorkspacePreference | null;
+  memberships: AccountMembership[];
+  userId: string;
+}): string {
+  if (input.signupRole === "admin") {
+    return authorizedPostAuthPath(input.next, "admin");
+  }
+  const resolved = resolveActiveWorkspace({
+    preference: input.preference,
+    memberships: input.memberships,
+    signupRole: input.signupRole,
+    userId: input.userId,
+  });
+  const dashboard = dashboardPathForWorkspace(
+    resolved.workspace,
+    input.signupRole,
+  );
+  const candidate = postAuthNextPath(input.next, dashboard);
+  if (candidate === dashboard) return dashboard;
+  if (pathAllowedForAccount(input.signupRole, input.memberships, candidate)) {
+    return candidate;
+  }
   return dashboard;
 }
 

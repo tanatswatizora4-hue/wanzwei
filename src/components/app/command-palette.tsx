@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/cn";
 import type { Role } from "@/lib/types";
+import type { FacilityMembershipRole } from "@/lib/auth/workspace-model";
+import { facilityCapabilities } from "@/lib/auth/facility-capabilities";
 
 type Cmd = {
   group: string;
@@ -37,7 +39,10 @@ type Cmd = {
   shortcut?: string;
 };
 
-function commands(role: Role): Cmd[] {
+function commands(
+  role: Role,
+  facilityRole: FacilityMembershipRole | null = null,
+): Cmd[] {
   const base = role === "facility"
     ? "/facility"
     : role === "admin"
@@ -118,7 +123,8 @@ function commands(role: Role): Cmd[] {
   }
 
   if (role === "facility") {
-    return [
+    const caps = facilityCapabilities(facilityRole ?? "viewer");
+    const items: Cmd[] = [
       ...navCommon,
       {
         group: "Navigate",
@@ -135,8 +141,8 @@ function commands(role: Role): Cmd[] {
         shortcut: "G A",
       },
       {
-        group: "Actions",
-        label: "Send Emergency Locum Alert",
+        group: "Navigate",
+        label: "Emergency",
         href: "/facility/emergency",
         icon: <Siren className="h-3.5 w-3.5" />,
         shortcut: "G E",
@@ -154,6 +160,15 @@ function commands(role: Role): Cmd[] {
         icon: <Store className="h-3.5 w-3.5" />,
       },
     ];
+    if (caps.manageMembers) {
+      items.push({
+        group: "Navigate",
+        label: "Members",
+        href: "/facility/members",
+        icon: <Users className="h-3.5 w-3.5" />,
+      });
+    }
+    return items;
   }
 
   return [
@@ -210,7 +225,13 @@ function commands(role: Role): Cmd[] {
   ];
 }
 
-export function CommandPalette({ role }: { role: Role }) {
+export function CommandPalette({
+  role,
+  facilityRole = null,
+}: {
+  role: Role;
+  facilityRole?: FacilityMembershipRole | null;
+}) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
 
@@ -225,7 +246,10 @@ export function CommandPalette({ role }: { role: Role }) {
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  const cmds = React.useMemo(() => commands(role), [role]);
+  const cmds = React.useMemo(
+    () => commands(role, facilityRole),
+    [role, facilityRole],
+  );
 
   const grouped = React.useMemo(() => {
     const acc: Record<string, Cmd[]> = {};

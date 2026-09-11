@@ -15,6 +15,8 @@ export type AccountMembership = {
   professionalProfileId: string | null;
   facilityId: string | null;
   facilityName?: string | null;
+  memberName?: string | null;
+  memberEmail?: string | null;
   membershipRole: FacilityMembershipRole;
   status: MembershipStatus;
 };
@@ -167,25 +169,6 @@ function defaultWorkspace(input: {
   const facilities = facilityMemberships(input.memberships);
 
   if (input.signupRole === "admin") return null;
-
-  if (input.signupRole === "facility") {
-    const first = facilities[0];
-    if (first?.facilityId) {
-      return {
-        type: "facility",
-        facilityId: first.facilityId,
-        membershipRole: first.membershipRole,
-        facilityName: first.facilityName,
-      };
-    }
-    if (professional) {
-      return {
-        type: "professional",
-        professionalProfileId: professional.professionalProfileId ?? input.userId,
-      };
-    }
-    return null;
-  }
 
   if (professional) {
     return {

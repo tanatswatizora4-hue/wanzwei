@@ -37,6 +37,7 @@ const CreateFacilityWorkspaceSchema = z.object({
   organisationName: z.string().trim().min(1).max(160),
   location: z.string().trim().min(1).max(120),
   facilityType: FacilityTypeSchema,
+  premisesNumber: z.string().trim().max(40).optional(),
 });
 
 const CreateProfessionalWorkspaceSchema = z.object({
@@ -107,6 +108,7 @@ export async function createFacilityWorkspaceAction(
     organisationName: formData.get("organisationName"),
     location: formData.get("location"),
     facilityType: formData.get("facilityType"),
+    premisesNumber: formData.get("premisesNumber") || undefined,
   });
   if (!parsed.success) {
     throw new ServerActionValidationError(parsed.error);
@@ -117,6 +119,7 @@ export async function createFacilityWorkspaceAction(
     organisationName: parsed.data.organisationName,
     location: parsed.data.location,
     facilityType: parsed.data.facilityType,
+    premisesNumber: parsed.data.premisesNumber ?? null,
   });
   if (!created) {
     return actionError("Could not create this facility workspace.");
@@ -128,6 +131,7 @@ export async function createFacilityWorkspaceAction(
   });
   revalidatePath("/professional/settings");
   revalidatePath("/facility/settings");
+  revalidatePath("/workspaces/add");
   redirect("/facility/dashboard");
 }
 

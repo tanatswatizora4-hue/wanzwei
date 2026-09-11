@@ -44,8 +44,10 @@ function pipelineStage(status: ApplicationStatus): ApplicationStatus {
 
 export function FacilityApplicationsClient({
   applicants: initialApplicants,
+  canManage = true,
 }: {
   applicants: FacilityApplicant[];
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const [statusOverrides, setStatusOverrides] = React.useState<
@@ -129,6 +131,7 @@ export function FacilityApplicationsClient({
             <ApplicantDetail
               applicant={active}
               pending={pending}
+              canManage={canManage}
               runUpdate={(status) => void updateStatus(active.id, status)}
             />
           ) : null}
@@ -141,10 +144,12 @@ export function FacilityApplicationsClient({
 function ApplicantDetail({
   applicant,
   pending,
+  canManage,
   runUpdate,
 }: {
   applicant: FacilityApplicant;
   pending: ApplicationStatus | null;
+  canManage: boolean;
   runUpdate: (status: ApplicationStatus) => void;
 }) {
   const stageIdx = PIPELINE.indexOf(pipelineStage(applicant.status));
@@ -197,6 +202,7 @@ function ApplicantDetail({
           </div>
         </div>
 
+        {canManage ? (
         <div className="mt-4">
           <p className="text-[10.5px] uppercase tracking-wider text-[color:var(--color-ink-400)] font-semibold">
             Status
@@ -209,7 +215,18 @@ function ApplicantDetail({
             />
           </div>
         </div>
+        ) : (
+        <div className="mt-4">
+          <p className="text-[10.5px] uppercase tracking-wider text-[color:var(--color-ink-400)] font-semibold">
+            Status
+          </p>
+          <div className="mt-2">
+            <StatusBadge status={applicant.status} />
+          </div>
+        </div>
+        )}
 
+        {canManage ? (
         <div className="mt-4 flex flex-wrap gap-2">
           <Button
             size="sm"
@@ -238,6 +255,7 @@ function ApplicantDetail({
             Decline
           </Button>
         </div>
+        ) : null}
       </CardBody>
     </Card>
   );

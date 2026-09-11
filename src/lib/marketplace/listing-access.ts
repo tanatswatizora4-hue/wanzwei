@@ -12,6 +12,7 @@ export function canViewListingDetail(input: {
   listingSellerType?: ListingSellerType | null;
   listingFacilityId?: string | null;
   actorFacilityIds?: string[];
+  activeWorkspaceType?: "professional" | "facility" | "admin";
 }): boolean {
   if (listingVisiblePublicly(input.status)) return true;
   return canManageListing(input);

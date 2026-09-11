@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { cookies } from "next/headers";
+
 import { isEmailNotConfirmedError } from "@/lib/auth/auth-errors";
 import { completeLoginAfterAuth } from "@/lib/auth/complete-login";
 import { createSessionPersistAppRole } from "@/lib/auth/persist-app-role";
-import { authorizedPostAuthPath } from "@/lib/auth/role-paths";
+import { authorizedPostAuthPathForAccount } from "@/lib/auth/role-paths";
+import { listMembershipsForUser } from "@/lib/repos/account-memberships";
+import { parseWorkspaceCookie, WORKSPACE_COOKIE_NAME } from "@/lib/auth/workspace-model";
 import { isEmailAuthConfirmed } from "@/lib/auth/signup-session";
 import { logAuthEvent, logAuthWarn } from "@/lib/observability/auth-log";
 import {
@@ -157,7 +161,15 @@ async function handlePOST(req: Request) {
     return NextResponse.redirect(url, { status: 303 });
   }
 
-  const redirectTo = authorizedPostAuthPath(nextPath, login.role);
+  const jar = await cookies();
+  const memberships = await listMembershipsForUser(login.profile.id);
+  const redirectTo = authorizedPostAuthPathForAccount({
+    next: nextPath,
+    signupRole: login.role,
+    preference: parseWorkspaceCookie(jar.get(WORKSPACE_COOKIE_NAME)?.value),
+    memberships,
+    userId: login.profile.id,
+  });
   logAuthEvent("auth.password.login_success", {
     userId: data.user.id,
     role: login.role,

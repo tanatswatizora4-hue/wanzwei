@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { actionError, actionOk, type ActionResult } from "@/lib/action-result";
 import { hasDbConfig } from "@/lib/db/client";
-import { resolveFacilityIdForUser } from "@/lib/facility-for-user";
+import { requireFacilityCapability } from "@/lib/facility-for-user";
 import { getFacility } from "@/lib/repos/facilities";
 import { closeJobForFacility, createJob } from "@/lib/repos/jobs";
 import { requireRole } from "@/lib/auth/session";
@@ -25,10 +25,13 @@ export async function createJobAction(formData: FormData): Promise<ActionResult>
     return actionError("Database is not configured.");
   }
 
-  const facilityId = await resolveFacilityIdForUser(user);
-  if (!facilityId) {
-    return actionError("Link your account to a facility before posting jobs.");
+  const context = await requireFacilityCapability(user, "manageJobs");
+  if (!context) {
+    return actionError(
+      "Switch to a facility workspace with hiring permission before posting jobs.",
+    );
   }
+  const facilityId = context.facilityId;
 
   const facility = await getFacility(facilityId);
 
@@ -74,10 +77,13 @@ export async function closeJobAction(jobId: string): Promise<ActionResult> {
     return actionError("Database is not configured.");
   }
 
-  const facilityId = await resolveFacilityIdForUser(user);
-  if (!facilityId) {
-    return actionError("Facility profile required.");
+  const context = await requireFacilityCapability(user, "manageJobs");
+  if (!context) {
+    return actionError(
+      "Switch to a facility workspace with hiring permission to close jobs.",
+    );
   }
+  const facilityId = context.facilityId;
 
   const parsed = JobIdSchema.safeParse({ jobId });
   if (!parsed.success) {

@@ -49,6 +49,8 @@ export function SettingsView({
   canAddFacility = false,
   canAddProfessional = false,
   showProfessionalCredentials = false,
+  showFacilitySettings = false,
+  workspaceKind = "professional",
 }: {
   user: User;
   facility?: Facility | null;
@@ -61,14 +63,16 @@ export function SettingsView({
   canAddFacility?: boolean;
   canAddProfessional?: boolean;
   showProfessionalCredentials?: boolean;
+  showFacilitySettings?: boolean;
+  workspaceKind?: "professional" | "facility" | "admin";
 }) {
   const [section, setSection] = React.useState<SettingsSection>("profile");
   const [saving, setSaving] = React.useState(false);
 
   const subtitle =
-    user.role === "facility"
-      ? (facility?.name ?? user.facilityName ?? user.title ?? "Facility account")
-      : user.role === "admin"
+    workspaceKind === "facility"
+      ? (facility?.name ?? user.facilityName ?? user.title ?? "Facility workspace")
+      : workspaceKind === "admin"
         ? (user.title ?? "Administrator")
         : (user.profession ?? user.title ?? "Healthcare professional");
 
@@ -116,6 +120,16 @@ export function SettingsView({
                   <div className="mt-2">
                     <ProfessionalCredentialSummary user={user} />
                   </div>
+                ) : workspaceKind === "facility" ? (
+                  facility?.verified ? (
+                    <Badge tone="success" withDot className="mt-2">
+                      Facility verification: Verified
+                    </Badge>
+                  ) : (
+                    <Badge tone="amber" withDot className="mt-2">
+                      Facility verification: Not verified
+                    </Badge>
+                  )
                 ) : user.verified ? (
                   <Badge tone="success" withDot className="mt-2">
                     Account verification: Verified
@@ -169,7 +183,7 @@ export function SettingsView({
           {section === "profile" ? (
             <>
             <WorkspaceSettingsCard
-              hasProfessional={hasProfessionalMembership || user.role === "professional"}
+              hasProfessional={hasProfessionalMembership}
               canAddFacility={canAddFacility && user.role !== "admin"}
               canAddProfessional={canAddProfessional && user.role !== "admin"}
             />
@@ -179,8 +193,8 @@ export function SettingsView({
                   Profile information
                 </h2>
                 <p className="text-[12.5px] text-[color:var(--color-ink-500)]">
-                  {user.role === "facility"
-                    ? "Update your contact details and facility profile."
+                  {showFacilitySettings
+                    ? "Update your contact details and this facility's organisation profile."
                     : "Update your personal details. Profession and verification credentials are managed through verification."}
                 </p>
                 <Separator className="my-4" />
@@ -199,7 +213,7 @@ export function SettingsView({
                       readOnly
                       disabled
                     />
-                    {user.role === "professional" ? (
+                    {showProfessionalCredentials || workspaceKind === "professional" ? (
                       <Field
                         label="Profession"
                         defaultValue={user.profession ?? ""}
@@ -207,7 +221,7 @@ export function SettingsView({
                         disabled
                       />
                     ) : null}
-                    {user.role === "facility" ? (
+                    {showFacilitySettings ? (
                       <>
                         <Field
                           label="Organisation name"
@@ -261,7 +275,7 @@ export function SettingsView({
                     ) : null}
                     <Field
                       label={
-                        user.role === "facility"
+                        showFacilitySettings
                           ? "Your location"
                           : "Location"
                       }

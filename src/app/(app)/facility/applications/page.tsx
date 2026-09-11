@@ -1,12 +1,19 @@
 import { requireRole } from "@/lib/auth/session";
 import { timeAgoLong } from "@/lib/format";
 import { listApplicationsForFacility } from "@/lib/repos/applications";
-import { resolveFacilityForUser } from "@/lib/facility-for-user";
+import { hasFacilityCapability } from "@/lib/auth/facility-capabilities";
+import { getActiveFacilityContext } from "@/lib/facility-for-user";
+import { getFacility } from "@/lib/repos/facilities";
 import { FacilityApplicationsClient } from "./applications-client";
 
 export default async function FacilityApplicationsPage() {
   const user = await requireRole(["facility"]);
-  const facility = await resolveFacilityForUser(user);
+  const context = await getActiveFacilityContext(user);
+  const facility = context ? await getFacility(context.facilityId) : null;
+  const canManageApplicants = hasFacilityCapability(
+    context?.membership.membershipRole,
+    "manageApplicants",
+  );
   const rows = facility
     ? await listApplicationsForFacility(facility.id, 200)
     : [];
@@ -23,5 +30,10 @@ export default async function FacilityApplicationsPage() {
     applied: timeAgoLong(application.appliedAt),
   }));
 
-  return <FacilityApplicationsClient applicants={applicants} />;
+  return (
+    <FacilityApplicationsClient
+      applicants={applicants}
+      canManage={canManageApplicants}
+    />
+  );
 }

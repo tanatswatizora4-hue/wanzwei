@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   authorizedPostAuthPath,
+  authorizedPostAuthPathForAccount,
   dashboardPathForRole,
   loginErrorForProvisionFailure,
   pathAllowedForRole,
@@ -72,3 +73,103 @@ describe("authorizedPostAuthPath", () => {
     );
   });
 });
+
+const USER = "11111111-1111-4111-8111-111111111111";
+const FAC_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const FAC_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
+describe("authorizedPostAuthPathForAccount", () => {
+  it("honours a valid facility workspace cookie over signup role", () => {
+    expect(
+      authorizedPostAuthPathForAccount({
+        next: null,
+        signupRole: "professional",
+        preference: { type: "facility", facilityId: FAC_A },
+        memberships: [
+          {
+            id: "m-pro",
+            userId: USER,
+            profileType: "professional",
+            professionalProfileId: USER,
+            facilityId: null,
+            membershipRole: "owner",
+            status: "active",
+          },
+          {
+            id: "m-fac",
+            userId: USER,
+            profileType: "facility",
+            professionalProfileId: null,
+            facilityId: FAC_A,
+            membershipRole: "owner",
+            status: "active",
+          },
+        ],
+        userId: USER,
+      }),
+    ).toBe("/facility/dashboard");
+  });
+
+  it("ignores a revoked or unknown facility cookie and prefers professional", () => {
+    expect(
+      authorizedPostAuthPathForAccount({
+        next: null,
+        signupRole: "professional",
+        preference: { type: "facility", facilityId: FAC_B },
+        memberships: [
+          {
+            id: "m-pro",
+            userId: USER,
+            profileType: "professional",
+            professionalProfileId: USER,
+            facilityId: null,
+            membershipRole: "owner",
+            status: "active",
+          },
+          {
+            id: "m-fac",
+            userId: USER,
+            profileType: "facility",
+            professionalProfileId: null,
+            facilityId: FAC_A,
+            membershipRole: "recruiter",
+            status: "active",
+          },
+        ],
+        userId: USER,
+      }),
+    ).toBe("/professional/dashboard");
+  });
+
+  it("lets a professional-signup user with facility membership open facility next paths", () => {
+    expect(
+      authorizedPostAuthPathForAccount({
+        next: "/facility/jobs",
+        signupRole: "professional",
+        preference: { type: "professional" },
+        memberships: [
+          {
+            id: "m-pro",
+            userId: USER,
+            profileType: "professional",
+            professionalProfileId: USER,
+            facilityId: null,
+            membershipRole: "owner",
+            status: "active",
+          },
+          {
+            id: "m-fac",
+            userId: USER,
+            profileType: "facility",
+            professionalProfileId: null,
+            facilityId: FAC_A,
+            membershipRole: "admin",
+            status: "active",
+          },
+        ],
+        userId: USER,
+      }),
+    ).toBe("/facility/jobs");
+  });
+});
+

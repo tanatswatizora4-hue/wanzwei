@@ -83,6 +83,10 @@ export async function applyOwnProfileUpdate(
   actor: User,
   formData: FormData,
   store: UpdateOwnProfileStore = defaultStore,
+  options: {
+    facilityId?: string | null;
+    canManageFacilitySettings?: boolean;
+  } = {},
 ): Promise<ActionResult> {
   if (!store.hasDbConfig()) {
     return actionError("Database is not configured.");
@@ -109,12 +113,8 @@ export async function applyOwnProfileUpdate(
     return actionError("Could not save your profile.");
   }
 
-  if (actor.role !== "facility") {
+  if (!options.canManageFacilitySettings || !options.facilityId) {
     return actionOk();
-  }
-
-  if (!actor.facilityId) {
-    return actionError("Your facility profile is not linked yet.");
   }
 
   const facilityPatch: {
@@ -140,7 +140,7 @@ export async function applyOwnProfileUpdate(
 
   if (Object.keys(facilityPatch).length > 0) {
     const facility = await store.updateFacilityPublicProfile(
-      actor.facilityId,
+      options.facilityId,
       facilityPatch,
     );
     if (!facility) {

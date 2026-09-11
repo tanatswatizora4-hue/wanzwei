@@ -190,6 +190,8 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull(),
+    // Legacy signup/provisioning metadata. Active identity is account_memberships
+    // plus the wanzwei_workspace cookie. Do not treat this as the workspace.
     role: roleEnum("role").notNull(),
     name: text("name").notNull(),
     title: text("title"),
@@ -200,6 +202,8 @@ export const users = pgTable(
     profession: text("profession"),
     cpdCredits: numeric("cpd_credits", { precision: 6, scale: 2 }),
     cpdTarget: numeric("cpd_target", { precision: 6, scale: 2 }),
+    // Legacy single-home link for facility-signup accounts. New workspace
+    // authorization uses account_memberships, not this column.
     facilityId: uuid("facility_id").references(() => facilities.id, {
       onDelete: "set null",
     }),
@@ -727,6 +731,40 @@ export const accountMemberships = pgTable(
   ],
 );
 
+export const facilityInvitations = pgTable(
+  "facility_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    facilityId: uuid("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    membershipRole: text("membership_role").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    status: text("status").notNull().default("pending"),
+    invitedBy: uuid("invited_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedBy: uuid("accepted_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("facility_invitations_token_hash_uniq").on(t.tokenHash),
+    index("facility_invitations_facility_id_idx").on(t.facilityId),
+    index("facility_invitations_email_idx").on(t.email),
+    index("facility_invitations_status_idx").on(t.status),
+  ],
+);
+
 export const listingImages = pgTable(
   "listing_images",
   {
@@ -969,3 +1007,6 @@ export type DbEmergencyAlertRecipient =
   typeof emergencyAlertRecipients.$inferSelect;
 export type NewDbEmergencyAlertRecipient =
   typeof emergencyAlertRecipients.$inferInsert;
+
+export type DbFacilityInvitation = typeof facilityInvitations.$inferSelect;
+export type NewDbFacilityInvitation = typeof facilityInvitations.$inferInsert;
