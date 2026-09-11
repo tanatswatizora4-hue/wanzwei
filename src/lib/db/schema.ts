@@ -762,6 +762,8 @@ export const facilityInvitations = pgTable(
     index("facility_invitations_facility_id_idx").on(t.facilityId),
     index("facility_invitations_email_idx").on(t.email),
     index("facility_invitations_status_idx").on(t.status),
+    index("facility_invitations_invited_by_idx").on(t.invitedBy),
+    index("facility_invitations_accepted_by_idx").on(t.acceptedBy),
   ],
 );
 

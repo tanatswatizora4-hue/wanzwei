@@ -49,6 +49,16 @@ describe("facility workspace authorization v1", () => {
     expect(invitations).toContain("revoke all on public.facility_invitations");
     expect(invitations).toContain("token_hash");
     expect(invitations).not.toContain("create policy");
+    const fkIndexes = readFileSync(
+      "supabase/migrations/0019_facility_invitation_fk_indexes.sql",
+      "utf8",
+    );
+    expect(fkIndexes).toContain(
+      "create index if not exists facility_invitations_invited_by_idx",
+    );
+    expect(fkIndexes).toContain(
+      "create index if not exists facility_invitations_accepted_by_idx",
+    );
   });
 
   it("member management is owner/admin only and protects the last owner", () => {
