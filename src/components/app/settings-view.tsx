@@ -149,7 +149,7 @@ export function SettingsView({
                         type="button"
                         onClick={() => setSection(item.id)}
                         className={cn(
-                          "min-h-11 w-full rounded-[8px] px-2.5 py-2 text-left font-medium transition",
+                          "min-h-11 w-full rounded-[8px] px-2.5 py-2 text-left font-medium transition-colors duration-150",
                           section === item.id
                             ? "bg-[color:var(--color-brand-50)] text-[color:var(--color-brand-700)]"
                             : "text-[color:var(--color-ink-700)] hover:bg-[color:var(--color-ink-900)]/[0.04]",

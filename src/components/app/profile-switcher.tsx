@@ -48,7 +48,7 @@ export function ProfileSwitcher({
       <div className="mt-1 border-t border-[color:var(--color-border-default)] pt-2">
         <Link
           href="/workspaces/add"
-          className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] font-medium text-[color:var(--color-brand-700)] hover:bg-[color:var(--color-brand-50)]"
+          className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] font-medium text-[color:var(--color-brand-700)] transition-colors duration-150 hover:bg-[color:var(--color-brand-50)]"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
           Create or join a facility
@@ -56,7 +56,7 @@ export function ProfileSwitcher({
         {showAddProfessional && !hasProfessional ? (
           <Link
             href="/workspaces/add#professional"
-            className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] font-medium text-[color:var(--color-ink-700)] hover:bg-[color:var(--color-brand-50)]"
+            className="flex w-full items-center gap-2 rounded-[6px] px-2 py-1.5 text-left text-[13px] font-medium text-[color:var(--color-ink-700)] transition-colors duration-150 hover:bg-[color:var(--color-brand-50)]"
           >
             <Plus className="h-3.5 w-3.5 shrink-0" />
             Add Professional profile

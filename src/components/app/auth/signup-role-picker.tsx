@@ -45,7 +45,7 @@ export function SignupRolePicker({
           aria-pressed={selectedRole === "professional"}
           onClick={() => setSelectedRole("professional")}
           className={cn(
-            "rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 py-3 text-left transition-all",
+            "rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 py-3 text-left transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
             selectedRole === "professional" &&
               "border-[color:var(--color-brand-500)] ring-[3px] ring-[color:var(--color-brand-100)] bg-[color:var(--color-brand-50)]",
           )}
@@ -63,7 +63,7 @@ export function SignupRolePicker({
           aria-pressed={selectedRole === "facility"}
           onClick={() => setSelectedRole("facility")}
           className={cn(
-            "rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 py-3 text-left transition-all",
+            "rounded-[var(--radius-sm)] border border-[color:var(--color-border-default)] bg-white px-3 py-3 text-left transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
             selectedRole === "facility" &&
               "border-[color:var(--color-brand-500)] ring-[3px] ring-[color:var(--color-brand-100)] bg-[color:var(--color-brand-50)]",
           )}

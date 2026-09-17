@@ -63,7 +63,7 @@ export function SegmentedRadio({
             key={opt.value}
             htmlFor={id}
             className={cn(
-              "group relative flex flex-1 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-full font-medium transition select-none",
+              "group relative flex flex-1 min-w-0 cursor-pointer items-center justify-center gap-1.5 rounded-full font-medium transition-colors duration-150 select-none",
               text,
               "text-[color:var(--color-ink-500)] hover:text-[color:var(--color-ink-900)]",
             )}
@@ -78,7 +78,7 @@ export function SegmentedRadio({
             />
             <span
               className={cn(
-                "absolute inset-0 rounded-full transition opacity-0 ring-1 ring-transparent",
+                "absolute inset-0 rounded-full transition-opacity duration-150 ease-out opacity-0 ring-1 ring-transparent",
                 "peer-checked:opacity-100",
                 checkedClasses,
               )}
@@ -86,7 +86,7 @@ export function SegmentedRadio({
             />
             <span
               className={cn(
-                "relative z-[1] inline-flex min-w-0 max-w-full items-center justify-center gap-1 px-1.5 sm:px-2.5 truncate transition",
+                "relative z-[1] inline-flex min-w-0 max-w-full items-center justify-center gap-1 px-1.5 sm:px-2.5 truncate transition-colors duration-150",
                 "peer-checked:font-semibold peer-checked:text-[color:var(--color-ink-900)]",
                 optTone !== "default" && "peer-checked:!text-white",
               )}

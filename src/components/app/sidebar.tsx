@@ -353,7 +353,7 @@ export function Sidebar({
                       href={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "group relative flex min-h-11 items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13.5px] font-medium",
+                        "group relative flex min-h-11 items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-[13.5px] font-medium transition-colors duration-150 ease-out",
                         "text-[color:var(--color-ink-700)] hover:bg-white/60",
                         active &&
                           "bg-white/80 text-[color:var(--color-brand-700)] shadow-[0_1px_0_rgba(255,255,255,0.8)_inset,0_1px_2px_rgba(15,23,42,0.06)] ring-1 ring-white/70 hover:bg-white/80",

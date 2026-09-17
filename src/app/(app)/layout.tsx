@@ -63,7 +63,7 @@ export default async function AppLayout({
         facilityRole={facilityRole}
         hasProfessional={hasProfessional}
       >
-        <div className="mx-auto w-full max-w-[1280px] px-4 py-4 fade-in sm:px-6 sm:py-6">
+        <div className="mx-auto w-full max-w-[1280px] px-4 py-4 sm:px-6 sm:py-6">
           {navRole === "professional" && user.verified !== true ? (
             <ProfessionalVerificationBanner />
           ) : null}

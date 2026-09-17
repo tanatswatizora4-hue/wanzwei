@@ -146,7 +146,9 @@ body {
   }
 
   .card-hover {
-    @apply transition duration-150 ease-out;
+    transition:
+      box-shadow 150ms ease-out,
+      transform 150ms ease-out;
   }
   .card-hover:hover {
     @apply shadow-[var(--shadow-md)];
@@ -379,13 +381,67 @@ body {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 .fade-in {
-  animation: fadeIn 0.25s ease-out;
+  animation: fadeIn 160ms ease-out both;
+}
+
+@keyframes wz-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes wz-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.wz-overlay[data-state="open"] {
+  animation: wz-fade-in 160ms ease-out both;
+}
+.wz-overlay[data-state="closed"] {
+  animation: wz-fade-out 140ms ease-in both;
+}
+.wz-dialog[data-state="open"] {
+  animation: wz-fade-in 180ms ease-out both;
+}
+.wz-dialog[data-state="closed"] {
+  animation: wz-fade-out 140ms ease-in both;
+}
+.wz-popover[data-state="open"] {
+  animation: wz-fade-in 140ms ease-out both;
+}
+.wz-popover[data-state="closed"] {
+  animation: wz-fade-out 120ms ease-in both;
+}
+
+.wz-drawer-backdrop {
+  transition: opacity 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .skeleton {
+    animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

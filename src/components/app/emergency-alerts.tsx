@@ -190,14 +190,14 @@ function EmergencyAlertCard({
         {/* Countdown bar */}
         <div className="mt-2.5 h-1 w-full overflow-hidden rounded-full bg-[color:var(--color-ink-900)]/[0.06]">
           <div
-            className={`h-full rounded-full transition-all ${
+            className={`h-full w-full origin-left rounded-full transition-[transform,background-color] duration-150 ease-out ${
               pct <= 25
                 ? "bg-rose-500"
                 : pct <= 50
                   ? "bg-amber-500"
                   : "bg-emerald-500"
             }`}
-            style={{ width: `${pct}%` }}
+            style={{ transform: `scaleX(${Math.max(0, Math.min(100, pct)) / 100})` }}
           />
         </div>
       </div>

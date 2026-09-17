@@ -122,7 +122,7 @@ export function Topbar({
           title="Opens command palette · Ctrl K / ⌘ K"
           onFocus={onSearchFocus}
           readOnly
-          className="h-9 w-full cursor-pointer truncate rounded-full border border-white/15 bg-white/10 pl-9 pr-9 text-[13px] text-white placeholder:text-white/65 outline-none transition hover:bg-white/15 focus:bg-white/15 focus:border-white/30 sm:pr-[4.75rem]"
+          className="h-9 w-full cursor-pointer truncate rounded-full border border-white/15 bg-white/10 pl-9 pr-9 text-[13px] text-white placeholder:text-white/65 outline-none transition-colors duration-150 hover:bg-white/15 focus:bg-white/15 focus:border-white/30 sm:pr-[4.75rem]"
         />
         <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden h-5 -translate-y-1/2 items-center gap-0.5 rounded-md border border-white/15 bg-white/10 px-1.5 text-[10px] font-semibold text-white/75 sm:inline-flex">
           ⌘ K
@@ -135,7 +135,7 @@ export function Topbar({
         <Link
           href={quickAction.href}
           aria-label={quickAction.label}
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/95 hover:bg-white px-3 h-8 text-[12.5px] font-semibold text-[color:var(--color-brand-700)] shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_2px_8px_rgba(0,0,0,0.18)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white/95 hover:bg-white px-3 h-8 text-[12.5px] font-semibold text-[color:var(--color-brand-700)] shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_2px_8px_rgba(0,0,0,0.18)] transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
         >
           <Plus className="h-3.5 w-3.5" />
           {quickAction.label}
@@ -167,7 +167,7 @@ export function Topbar({
           <DropdownMenuTrigger
             className={cn(
               "flex items-center gap-2 rounded-full bg-white/10 ring-1 ring-white/15 backdrop-blur",
-              "pl-0.5 pr-2.5 py-0.5 hover:bg-white/15 focus:outline-none transition",
+              "pl-0.5 pr-2.5 py-0.5 hover:bg-white/15 focus:outline-none transition-colors duration-150",
             )}
           >
             <span className="relative">
@@ -237,7 +237,7 @@ export function Topbar({
 }
 
 const iconBtnClass =
-  "relative inline-flex h-11 w-11 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:h-8 sm:w-8";
+  "relative inline-flex h-11 w-11 items-center justify-center rounded-full text-white/80 hover:bg-white/15 hover:text-white transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 sm:h-8 sm:w-8";
 
 function Badge({ badge }: { badge?: string }) {
   if (!badge) return null;

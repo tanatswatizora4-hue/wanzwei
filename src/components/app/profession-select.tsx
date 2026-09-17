@@ -67,7 +67,8 @@ export function ProfessionSelect({
           <Popover.Content
             align="start"
             sideOffset={4}
-            className="z-50 w-[var(--radix-popover-trigger-width)] min-w-[min(100%,20rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white shadow-[var(--shadow-lg)]"
+            collisionPadding={8}
+            className="wz-popover z-50 w-[var(--radix-popover-trigger-width)] min-w-[min(100%,20rem)] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-[var(--radius-md)] border border-[color:var(--color-border-default)] bg-white shadow-[var(--shadow-lg)]"
             onOpenAutoFocus={(event) => event.preventDefault()}
           >
             <Command
