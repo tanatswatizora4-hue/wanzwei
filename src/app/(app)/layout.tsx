@@ -22,7 +22,10 @@ export default async function AppLayout({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { workspace, memberships } = await resolveWorkspaceForUser(user);
+  const [{ workspace, memberships }, profiles] = await Promise.all([
+    resolveWorkspaceForUser(user),
+    user.role === "admin" ? Promise.resolve([]) : switcherForUser(user),
+  ]);
   const navRole: Role =
     user.role === "admin"
       ? "admin"
@@ -32,7 +35,6 @@ export default async function AppLayout({
           ? "professional"
           : user.role;
 
-  const profiles = user.role === "admin" ? [] : await switcherForUser(user);
   const activeWorkspaceKey =
     user.role === "admin"
       ? "admin"

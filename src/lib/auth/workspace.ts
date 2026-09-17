@@ -50,20 +50,37 @@ export async function clearWorkspacePreference(): Promise<void> {
   jar.delete(WORKSPACE_COOKIE_NAME);
 }
 
+const resolveWorkspaceForUserId = cache(async function resolveWorkspaceForUserId(
+  userId: string,
+  signupRole: Role,
+): Promise<{
+  memberships: AccountMembership[];
+  workspace: ActiveWorkspace | null;
+  rejectedTamperedPreference: boolean;
+}> {
+  const memberships = await listCachedMembershipsForUser(userId);
+  const preference = await readWorkspacePreference();
+  const resolved = resolveActiveWorkspace({
+    preference,
+    memberships,
+    signupRole,
+    userId,
+  });
+  return { memberships, ...resolved };
+});
+
+/**
+ * Active workspace for this request. Per-request `cache()` keyed by user id
+ * and signup role, so layout/page callers share one cookie + membership
+ * resolution. Cookies are still read from the current request; this is not
+ * a cross-request cache.
+ */
 export async function resolveWorkspaceForUser(user: User): Promise<{
   memberships: AccountMembership[];
   workspace: ActiveWorkspace | null;
   rejectedTamperedPreference: boolean;
 }> {
-  const memberships = await listCachedMembershipsForUser(user.id);
-  const preference = await readWorkspacePreference();
-  const resolved = resolveActiveWorkspace({
-    preference,
-    memberships,
-    signupRole: user.role,
-    userId: user.id,
-  });
-  return { memberships, ...resolved };
+  return resolveWorkspaceForUserId(user.id, user.role);
 }
 
 export function dashboardForUserWorkspace(

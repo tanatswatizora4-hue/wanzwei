@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 
@@ -31,8 +32,12 @@ const ROLES: readonly Role[] = ["professional", "facility", "admin"];
  *
  * If an authenticated Supabase user has no profile row, return `null`.
  * Protected pages require a persisted app profile and will redirect to login.
+ *
+ * React `cache()` memoizes this for the current RSC/request only. Layout,
+ * nested layouts, and pages share one Auth + profile lookup. It does not
+ * persist across requests, so sessions cannot leak between users.
  */
-export async function getCurrentUser(): Promise<User | null> {
+export const getCurrentUser = cache(async function getCurrentUser(): Promise<User | null> {
   const supabase = await getServerSupabase();
   const {
     data: { user: authUser },
@@ -41,7 +46,7 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!authUser?.email) return null;
 
   return findUserByEmail(authUser.email);
-}
+});
 
 export async function requireUser(): Promise<User> {
   const user = await getCurrentUser();

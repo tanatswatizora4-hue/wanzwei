@@ -60,58 +60,51 @@ function mayAccessPath(role: AppRole, pathname: string): boolean {
   return true;
 }
 
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const { response, user } = await updateSession(req);
 
-  const isProtected = PROTECTED_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(p + "/"),
-  );
-
-  if (isProtected) {
-    if (!user) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
-      return applyAuthCookies(NextResponse.redirect(url), response);
-    }
-
-    if (!isEmailAuthConfirmed(user)) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/signup/check-email";
-      if (user.email) url.searchParams.set("email", user.email);
-      return applyAuthCookies(NextResponse.redirect(url), response);
-    }
-
-    const role = readRole(user);
-
-    if (!role) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/login";
-      url.searchParams.set("error", "no_role");
-      return applyAuthCookies(NextResponse.redirect(url), response);
-    }
-
-    if (!mayAccessPath(role, pathname)) {
-      const url = req.nextUrl.clone();
-      url.pathname = dashboardForSession(
-        role,
-        req.cookies.get(WORKSPACE_COOKIE_NAME)?.value,
-      );
-      return applyAuthCookies(NextResponse.redirect(url), response);
-    }
+  // Public/auth/marketing routes must never wait on remote Auth. The matcher
+  // already excludes them; this guard keeps a widened matcher from hanging
+  // /login behind supabase.auth.getUser().
+  if (!isProtectedPath(pathname)) {
+    return NextResponse.next();
   }
 
-  if ((pathname === "/login" || pathname === "/signup") && user) {
-    if (!isEmailAuthConfirmed(user)) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/signup/check-email";
-      if (user.email) url.searchParams.set("email", user.email);
-      return applyAuthCookies(NextResponse.redirect(url), response);
-    }
+  const { response, user } = await updateSession(req);
+
+  if (!user) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("next", `${pathname}${req.nextUrl.search}`);
+    return applyAuthCookies(NextResponse.redirect(url), response);
+  }
+
+  if (!isEmailAuthConfirmed(user)) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/signup/check-email";
+    if (user.email) url.searchParams.set("email", user.email);
+    return applyAuthCookies(NextResponse.redirect(url), response);
+  }
+
+  const role = readRole(user);
+
+  if (!role) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "no_role");
+    return applyAuthCookies(NextResponse.redirect(url), response);
+  }
+
+  if (!mayAccessPath(role, pathname)) {
     const url = req.nextUrl.clone();
     url.pathname = dashboardForSession(
-      readRole(user),
+      role,
       req.cookies.get(WORKSPACE_COOKIE_NAME)?.value,
     );
     return applyAuthCookies(NextResponse.redirect(url), response);
@@ -121,13 +114,13 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // Allowlist only. Do not add /login, /signup, /auth, marketing pages,
+  // static assets, or Next internals — those must render without Auth.
   matcher: [
     "/professional/:path*",
     "/facility/:path*",
     "/admin/:path*",
     "/workspaces/:path*",
     "/invitations/:path*",
-    "/login",
-    "/signup",
   ],
 };
