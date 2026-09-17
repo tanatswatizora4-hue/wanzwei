@@ -940,6 +940,128 @@ export const emergencyAlertRecipients = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// facility_professional_network
+// Talent/affiliation pool only. NOT workspace authorization.
+// ---------------------------------------------------------------------------
+
+export const facilityProfessionalNetwork = pgTable(
+  "facility_professional_network",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    facilityId: uuid("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    professionalUserId: uuid("professional_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    relationshipType: text("relationship_type").notNull(),
+    status: text("status").notNull().default("active"),
+    addedBy: uuid("added_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("facility_professional_network_facility_professional_uniq").on(
+      t.facilityId,
+      t.professionalUserId,
+    ),
+    index("facility_professional_network_facility_id_idx").on(t.facilityId),
+    index("facility_professional_network_professional_user_id_idx").on(
+      t.professionalUserId,
+    ),
+    index("facility_professional_network_added_by_idx").on(t.addedBy),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// workforce_broadcasts
+// ---------------------------------------------------------------------------
+
+export const workforceBroadcasts = pgTable(
+  "workforce_broadcasts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    facilityId: uuid("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    title: text("title").notNull(),
+    message: text("message").notNull(),
+    location: text("location"),
+    positionsNeeded: integer("positions_needed"),
+    shiftStart: timestamp("shift_start", { withTimezone: true }),
+    shiftEnd: timestamp("shift_end", { withTimezone: true }),
+    status: text("status").notNull().default("draft"),
+    targetingCriteria: jsonb("targeting_criteria")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    matchedRecipientCount: integer("matched_recipient_count")
+      .notNull()
+      .default(0),
+    jobId: uuid("job_id").references(() => jobs.id, { onDelete: "set null" }),
+    emergencyAlertId: uuid("emergency_alert_id").references(
+      () => emergencyAlerts.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("workforce_broadcasts_facility_id_idx").on(t.facilityId),
+    index("workforce_broadcasts_created_by_idx").on(t.createdBy),
+    index("workforce_broadcasts_job_id_idx").on(t.jobId),
+    index("workforce_broadcasts_emergency_alert_id_idx").on(t.emergencyAlertId),
+    index("workforce_broadcasts_status_idx").on(t.status),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// workforce_broadcast_recipients (auditable snapshot after send)
+// ---------------------------------------------------------------------------
+
+export const workforceBroadcastRecipients = pgTable(
+  "workforce_broadcast_recipients",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    broadcastId: uuid("broadcast_id")
+      .notNull()
+      .references(() => workforceBroadcasts.id, { onDelete: "cascade" }),
+    professionalUserId: uuid("professional_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("notified"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("workforce_broadcast_recipients_broadcast_professional_uniq").on(
+      t.broadcastId,
+      t.professionalUserId,
+    ),
+    index("workforce_broadcast_recipients_broadcast_id_idx").on(t.broadcastId),
+    index("workforce_broadcast_recipients_professional_user_id_idx").on(
+      t.professionalUserId,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Inferred row + insert types
 // ---------------------------------------------------------------------------
 
@@ -1012,3 +1134,16 @@ export type NewDbEmergencyAlertRecipient =
 
 export type DbFacilityInvitation = typeof facilityInvitations.$inferSelect;
 export type NewDbFacilityInvitation = typeof facilityInvitations.$inferInsert;
+
+export type DbFacilityProfessionalNetwork =
+  typeof facilityProfessionalNetwork.$inferSelect;
+export type NewDbFacilityProfessionalNetwork =
+  typeof facilityProfessionalNetwork.$inferInsert;
+
+export type DbWorkforceBroadcast = typeof workforceBroadcasts.$inferSelect;
+export type NewDbWorkforceBroadcast = typeof workforceBroadcasts.$inferInsert;
+
+export type DbWorkforceBroadcastRecipient =
+  typeof workforceBroadcastRecipients.$inferSelect;
+export type NewDbWorkforceBroadcastRecipient =
+  typeof workforceBroadcastRecipients.$inferInsert;

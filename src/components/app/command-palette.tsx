@@ -18,6 +18,8 @@ import {
   Bell,
   GraduationCap,
   Store,
+  Megaphone,
+  Network,
 } from "lucide-react";
 import { Command } from "cmdk";
 import {
@@ -91,6 +93,12 @@ function commands(
       },
       {
         group: "Navigate",
+        label: "Opportunities",
+        href: "/professional/opportunities",
+        icon: <Megaphone className="h-3.5 w-3.5" />,
+      },
+      {
+        group: "Navigate",
         label: "My profile",
         href: "/professional/profile",
         icon: <Stethoscope className="h-3.5 w-3.5" />,
@@ -146,6 +154,18 @@ function commands(
         href: "/facility/emergency",
         icon: <Siren className="h-3.5 w-3.5" />,
         shortcut: "G E",
+      },
+      {
+        group: "Navigate",
+        label: "Network",
+        href: "/facility/network",
+        icon: <Network className="h-3.5 w-3.5" />,
+      },
+      {
+        group: "Navigate",
+        label: "Broadcasts",
+        href: "/facility/broadcasts",
+        icon: <Megaphone className="h-3.5 w-3.5" />,
       },
       {
         group: "Navigate",

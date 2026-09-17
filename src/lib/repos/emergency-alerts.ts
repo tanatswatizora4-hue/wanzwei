@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, inArray, lt } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lt } from "drizzle-orm";
 
 import { getDb, hasDbConfig } from "@/lib/db/client";
 import {
@@ -377,6 +377,80 @@ export async function createEmergencyAlert(
       profession: payload.profession,
       location: payload.location,
       urgency: payload.urgency,
+    },
+  );
+}
+
+export async function createEmergencyAlertForRecipientIds(
+  payload: Omit<
+    EmergencyAlert,
+    "id" | "createdAt" | "status" | "recipients" | "matchedCount"
+  >,
+  recipientIds: string[],
+): Promise<EmergencyAlert | null> {
+  if (!hasDbConfig()) return null;
+  return withRepositoryLogging(
+    "emergency-alerts",
+    "createEmergencyAlertForRecipientIds",
+    async () => {
+      const uniqueIds = [...new Set(recipientIds)];
+      const loaded =
+        uniqueIds.length === 0
+          ? []
+          : await getDb()
+              .select()
+              .from(users)
+              .where(and(inArray(users.id, uniqueIds), isNull(users.deletedAt)));
+      const byId = new Map(loaded.map((row) => [row.id, toUser(row)]));
+      const verified = uniqueIds
+        .map((id) => byId.get(id))
+        .filter((professional): professional is User => {
+          if (!professional) return false;
+          if (professional.role !== "professional") return false;
+          return professional.verified === true;
+        });
+
+      const db = getDb();
+      const insert: NewDbEmergencyAlert = {
+        facilityId: payload.facilityId,
+        profession: payload.profession,
+        location: payload.location,
+        urgency: payload.urgency,
+        shiftStart: new Date(payload.shiftStart),
+        shiftEnd: new Date(payload.shiftEnd),
+        notes: payload.notes,
+        payMin: payload.payMin.toFixed(2),
+        payMax: payload.payMax.toFixed(2),
+        payCurrency: payload.payCurrency,
+        payPeriod: payload.payPeriod,
+        expiresAt: new Date(payload.expiresAt),
+        status: "Sent",
+        matchedCount: verified.length,
+      };
+
+      const rows = await db.insert(emergencyAlerts).values(insert).returning();
+      const alert = rows[0];
+      if (!alert) return null;
+
+      const recipientsToNotify = recipientsForEmergencyAlert(verified);
+      const recipientValues = recipientsToNotify.map((professional) => ({
+        alertId: alert.id,
+        professionalId: professional.id,
+        status: "Pending" as const,
+      }));
+
+      if (recipientValues.length > 0) {
+        await db.insert(emergencyAlertRecipients).values(recipientValues);
+      }
+
+      const recipients = await loadRecipients([alert.id]);
+      const created = toEmergencyAlert(alert, recipients.get(alert.id));
+      await sendEmergencyAlertNotifications(created, recipientsToNotify);
+      return created;
+    },
+    {
+      facilityId: payload.facilityId,
+      recipientCount: recipientIds.length,
     },
   );
 }

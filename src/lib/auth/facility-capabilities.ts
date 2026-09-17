@@ -12,7 +12,10 @@ export type FacilityCapability =
   | "manageMarketplace"
   | "manageMembers"
   | "manageFacilitySettings"
-  | "manageVerification";
+  | "manageVerification"
+  | "viewProfessionalNetwork"
+  | "manageProfessionalNetwork"
+  | "createRecruitmentBroadcast";
 
 export type FacilityCapabilityMap = Record<FacilityCapability, boolean>;
 
@@ -25,6 +28,9 @@ const OWNER_ADMIN: FacilityCapabilityMap = {
   manageMembers: true,
   manageFacilitySettings: true,
   manageVerification: true,
+  viewProfessionalNetwork: true,
+  manageProfessionalNetwork: true,
+  createRecruitmentBroadcast: true,
 };
 
 const RECRUITER: FacilityCapabilityMap = {
@@ -36,6 +42,9 @@ const RECRUITER: FacilityCapabilityMap = {
   manageMembers: false,
   manageFacilitySettings: false,
   manageVerification: false,
+  viewProfessionalNetwork: true,
+  manageProfessionalNetwork: false,
+  createRecruitmentBroadcast: true,
 };
 
 const VIEWER: FacilityCapabilityMap = {
@@ -47,6 +56,9 @@ const VIEWER: FacilityCapabilityMap = {
   manageMembers: false,
   manageFacilitySettings: false,
   manageVerification: false,
+  viewProfessionalNetwork: true,
+  manageProfessionalNetwork: false,
+  createRecruitmentBroadcast: false,
 };
 
 export function facilityCapabilities(

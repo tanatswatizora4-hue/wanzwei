@@ -24,6 +24,12 @@ describe("facility workspace authorization v1", () => {
     expect(
       readFileSync("src/app/(app)/facility/emergency/actions.ts", "utf8"),
     ).toContain('requireFacilityCapability(user, "manageEmergency")');
+    expect(readFileSync("src/app/(app)/facility/broadcasts/actions.ts", "utf8")).toContain(
+      "requireFacilityCapability",
+    );
+    expect(readFileSync("src/app/(app)/facility/network/actions.ts", "utf8")).toContain(
+      'requireFacilityCapability(user, "manageProfessionalNetwork")',
+    );
     expect(readFileSync("src/app/(app)/marketplace/actions.ts", "utf8")).toContain(
       'requireFacilityCapability(user, "manageMarketplace")',
     );
@@ -103,6 +109,7 @@ describe("workspace-aware navigation", () => {
       "Browse Jobs",
       "My Applications",
       "Saved Jobs",
+      "Opportunities",
       "CPD",
       "Certificates",
       "Marketplace",
@@ -117,7 +124,11 @@ describe("workspace-aware navigation", () => {
   it("gates facility members and listings on capability", () => {
     const sidebar = readFileSync("src/components/app/sidebar.tsx", "utf8");
     expect(sidebar).toContain('label: "Members"');
+    expect(sidebar).toContain('label: "Network"');
+    expect(sidebar).toContain('label: "Broadcasts"');
     expect(sidebar).toContain("caps.manageMembers");
+    expect(sidebar).toContain("caps.viewProfessionalNetwork");
+    expect(sidebar).toContain("caps.createRecruitmentBroadcast");
     expect(sidebar).toContain("caps.manageMarketplace");
     expect(facilityCapabilities("recruiter").manageMembers).toBe(false);
     expect(facilityCapabilities("recruiter").manageMarketplace).toBe(false);

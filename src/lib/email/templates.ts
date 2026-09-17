@@ -183,6 +183,30 @@ export function verificationDecisionTemplate({
   });
 }
 
+export function workforceBroadcastTemplate(input: {
+  professionalName: string;
+  facilityName: string;
+  title: string;
+  message: string;
+  typeLabel: string;
+  location?: string | null;
+}): EmailContent {
+  const paragraphs = [
+    `${input.facilityName} sent you a ${input.typeLabel.toLowerCase()} on Wanzwei: ${input.title}.`,
+    input.message,
+  ];
+  if (input.location) {
+    paragraphs.push(`Location: ${input.location}`);
+  }
+  paragraphs.push("Sign in to Wanzwei to review this opportunity.");
+  return renderEmail({
+    subject: `${input.facilityName}: ${input.title}`,
+    preheader: `${input.facilityName} sent you a ${input.typeLabel.toLowerCase()}.`,
+    greeting: `Hi ${input.professionalName},`,
+    paragraphs,
+  });
+}
+
 export function facilityWorkspaceInvitationTemplate(input: {
   facilityName: string;
   membershipRole: string;

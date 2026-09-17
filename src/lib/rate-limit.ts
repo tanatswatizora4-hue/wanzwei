@@ -20,7 +20,9 @@ type LimitName =
   | "upload"
   | "emergencyAlert"
   | "accountDeletion"
-  | "emailConfirmation";
+  | "emailConfirmation"
+  | "workforceBroadcast"
+  | "broadcastAi";
 
 export type RateLimitResult = {
   success: boolean;
@@ -43,6 +45,8 @@ const LIMITS: Record<LimitName, LimitConfig> = {
   emergencyAlert: { prefix: "emergency-alert", limit: 5, window: "15 m" },
   accountDeletion: { prefix: "account-deletion", limit: 3, window: "1 h" },
   emailConfirmation: { prefix: "email-confirmation", limit: 10, window: "10 m" },
+  workforceBroadcast: { prefix: "workforce-broadcast", limit: 20, window: "15 m" },
+  broadcastAi: { prefix: "broadcast-ai", limit: 20, window: "15 m" },
 };
 
 let redis: Redis | null | undefined;

@@ -26,6 +26,9 @@ describe("facility membership capabilities", () => {
     expect(hasFacilityCapability("recruiter", "manageMarketplace")).toBe(false);
     expect(hasFacilityCapability("recruiter", "manageMembers")).toBe(false);
     expect(hasFacilityCapability("recruiter", "manageVerification")).toBe(false);
+    expect(hasFacilityCapability("recruiter", "viewProfessionalNetwork")).toBe(true);
+    expect(hasFacilityCapability("recruiter", "createRecruitmentBroadcast")).toBe(true);
+    expect(hasFacilityCapability("recruiter", "manageProfessionalNetwork")).toBe(false);
   });
 
   it("keeps viewers read-only", () => {
@@ -33,5 +36,17 @@ describe("facility membership capabilities", () => {
     expect(hasFacilityCapability("viewer", "manageJobs")).toBe(false);
     expect(hasFacilityCapability("viewer", "manageApplicants")).toBe(false);
     expect(hasFacilityCapability("viewer", "manageMembers")).toBe(false);
+    expect(hasFacilityCapability("viewer", "viewProfessionalNetwork")).toBe(true);
+    expect(hasFacilityCapability("viewer", "manageProfessionalNetwork")).toBe(false);
+    expect(hasFacilityCapability("viewer", "createRecruitmentBroadcast")).toBe(false);
+  });
+
+  it("gives owner and admin network management and recruitment broadcasts", () => {
+    for (const role of ["owner", "admin"] as const) {
+      expect(hasFacilityCapability(role, "viewProfessionalNetwork")).toBe(true);
+      expect(hasFacilityCapability(role, "manageProfessionalNetwork")).toBe(true);
+      expect(hasFacilityCapability(role, "createRecruitmentBroadcast")).toBe(true);
+      expect(hasFacilityCapability(role, "manageEmergency")).toBe(true);
+    }
   });
 });

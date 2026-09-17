@@ -36,6 +36,9 @@ const TARGET_TABLES = [
   "listing_images",
   "cpd_certificates",
   "facility_invitations",
+  "facility_professional_network",
+  "workforce_broadcasts",
+  "workforce_broadcast_recipients",
 ] as const;
 
 /** Unapplied additive migrations. Missing tables are skipped, not failed. */
@@ -45,6 +48,9 @@ const OPTIONAL_UNAPPLIED_TABLES = new Set<string>([
   "listing_images",
   "cpd_certificates",
   "facility_invitations",
+  "facility_professional_network",
+  "workforce_broadcasts",
+  "workforce_broadcast_recipients",
 ]);
 
 /** Registry/audit tables are RLS-enabled with no client policies (default deny). */
@@ -53,6 +59,9 @@ const DEFAULT_DENY_TABLES = new Set<string>([
   "verification_events",
   "verification_evidence",
   "facility_invitations",
+  "facility_professional_network",
+  "workforce_broadcasts",
+  "workforce_broadcast_recipients",
 ]);
 
 const METADATA_SQL = `
@@ -81,7 +90,10 @@ const METADATA_SQL = `
       'account_memberships',
       'listing_images',
       'cpd_certificates',
-      'facility_invitations'
+      'facility_invitations',
+      'facility_professional_network',
+      'workforce_broadcasts',
+      'workforce_broadcast_recipients'
     ]::text[]) AS table_name
   )
   SELECT

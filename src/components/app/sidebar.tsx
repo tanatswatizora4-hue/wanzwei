@@ -19,6 +19,8 @@ import {
   Siren,
   GraduationCap,
   Store,
+  Megaphone,
+  Network,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Logo } from "./logo";
@@ -70,6 +72,11 @@ function professionalNav(): NavSection[] {
           label: "Saved Jobs",
           href: "/professional/saved",
           icon: <Bookmark className="h-4 w-4" />,
+        },
+        {
+          label: "Opportunities",
+          href: "/professional/opportunities",
+          icon: <Megaphone className="h-4 w-4" />,
         },
       ],
     },
@@ -145,6 +152,24 @@ function facilityNav(role: FacilityMembershipRole): NavSection[] {
       label: "Emergency",
       href: "/facility/emergency",
       icon: <Siren className="h-4 w-4" />,
+    });
+  }
+  if (caps.viewProfessionalNetwork) {
+    hiring.push({
+      label: "Network",
+      href: "/facility/network",
+      icon: <Network className="h-4 w-4" />,
+    });
+  }
+  if (
+    caps.createRecruitmentBroadcast ||
+    caps.manageEmergency ||
+    caps.viewFacility
+  ) {
+    hiring.push({
+      label: "Broadcasts",
+      href: "/facility/broadcasts",
+      icon: <Megaphone className="h-4 w-4" />,
     });
   }
   hiring.push({

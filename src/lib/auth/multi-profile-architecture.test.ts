@@ -60,6 +60,8 @@ describe("multi-profile architecture", () => {
       "src/app/(app)/facility/emergency/page.tsx",
       "src/app/(app)/facility/profile/page.tsx",
       "src/app/(app)/facility/settings/page.tsx",
+      "src/app/(app)/facility/network/page.tsx",
+      "src/app/(app)/facility/broadcasts/page.tsx",
     ]) {
       expect(readFileSync(file, "utf8"), file).toMatch(
         /resolveFacilityForUser|getActiveFacilityContext/,
